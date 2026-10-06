@@ -31,7 +31,7 @@ Nothing in the plan needs a credit card.
 ## Tech stack
 | Layer | Choice |
 |---|---|
-| App | **Expo SDK + TypeScript**, Expo Router (file-based screens) |
+| App | **Expo SDK 57 + TypeScript**, Expo Router (file-based screens, headless tabs for the custom floating bar) |
 | Backend | **Supabase**: Postgres + Auth + row-level security + one Edge Function (USDA proxy, so the key stays hidden) |
 | Data fetching | **TanStack Query** with optimistic updates, so logging feels instant and syncs in the background |
 | Offline | Query cache saved on the phone, so the app opens fast and shows today's data even without signal |
@@ -41,7 +41,7 @@ Nothing in the plan needs a credit card.
 | Charts | **Victory Native XL** (GPU-rendered with Skia, smooth and animated) |
 | Haptics | expo-haptics |
 | Barcode | expo-camera's built-in barcode scanner |
-| Styling | NativeWind (Tailwind) + a design-token theme file |
+| Styling | Typed design tokens (`src/theme/tokens.ts`) + `StyleSheet`. This replaces NativeWind: there are fewer build pieces, and it works directly with the animation libraries. |
 | Tests | Jest + React Native Testing Library |
 
 ---
@@ -235,7 +235,7 @@ health-app/
 │  │  └─ charts/             # TrendChart, CalorieBars, Heatmap
 │  ├─ features/              # hooks + queries per area: food/, logs/, weight/, water/, exercise/, profile/, checkin/
 │  ├─ lib/
-│  │  ├─ supabase.ts         # client, session in SecureStore
+│  │  ├─ supabase.ts         # client, session in expo-sqlite localStorage (SecureStore caps at 2 KB)
 │  │  ├─ nutrition.ts        # BMR/TDEE, targets, serving scaling, MET
 │  │  ├─ trend.ts            # trend weight (EMA)
 │  │  ├─ expenditure.ts      # adaptive TDEE + weekly target suggestion
@@ -246,7 +246,7 @@ health-app/
 ├─ supabase/
 │  ├─ migrations/            # tables, RLS, daily_summary view
 │  ├─ functions/usda-search/ # Edge Function (keeps USDA key secret)
-│  └─ seed.sql               # exercise MET list
+│  └─ tests/                 # RLS checks run by scripts/verify-db.sh (exercise list lives in a migration)
 ├─ __tests__/
 ├─ app.json · eas.json · .env.example · README.md
 ```
@@ -254,8 +254,8 @@ health-app/
 ---
 
 ## Build phases
-0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2, awaiting feedback).
-1. **Foundation**: Expo + TypeScript, Expo Router, theme tokens, base UI components, Jest, lint. Supabase project, migrations and RLS.
+0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2, approved as the base design).
+1. **Foundation** ✅: Expo SDK 57 + TypeScript, Expo Router with the floating tab bar, theme tokens + Geist fonts, base UI components, app icon/splash, Jest, ESLint. Supabase client, schema migrations, RLS, and a local database check (`npm run db:verify`).
 2. **Auth + onboarding**: wizard, `nutrition.ts` with tests, the animated targets reveal.
 3. **Dashboard**: calorie gauge, week rings, macros, insight card, tiles, timeline, Finish today, animations, haptics.
 4. **Logger core**: bottom sheet, quick add, custom foods, food detail + serving picker, edit/delete.
