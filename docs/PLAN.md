@@ -256,7 +256,7 @@ health-app/
 ## Build phases
 0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2, approved as the base design).
 1. **Foundation** ✅: Expo SDK 57 + TypeScript, Expo Router with the floating tab bar, theme tokens + Geist fonts, base UI components, app icon/splash, Jest, ESLint. Supabase client, schema migrations, RLS, and a local database check (`npm run db:verify`).
-2. **Auth + onboarding**: wizard, `nutrition.ts` with tests, the animated targets reveal.
+2. **Auth + onboarding** ✅: email + password sign-up / sign-in, route guards (signed out → welcome, not set up → onboarding, otherwise tabs), a 5–6 step wizard (goal, sex + age, height + weight in kg/cm or lb/ft, activity, goal weight + pace), `nutrition.ts` with tests, and the animated budget reveal with ±50 kcal adjustment. Saves the profile and the first weigh-in. Also: native touch ripple + UI-thread press animations, tabs switch on touch-down and are preloaded.
 3. **Dashboard**: calorie gauge, week rings, macros, insight card, tiles, timeline, Finish today, animations, haptics.
 4. **Logger core**: bottom sheet, quick add, custom foods, food detail + serving picker, edit/delete.
 5. **Food search**: Open Food Facts + USDA Edge Function, smart ranking, recents.

@@ -1,7 +1,7 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
-import { tick } from '@/lib/haptics';
 import { useTheme } from '@/theme/theme';
 import { radius } from '@/theme/tokens';
 
@@ -9,7 +9,8 @@ type Option<T extends string> = { value: T; label: string };
 
 type SegmentedControlProps<T extends string> = {
   options: Option<T>[];
-  value: T;
+  /** null shows no option selected yet. */
+  value: T | null;
   onChange: (value: T) => void;
   /** Read by screen readers, e.g. "Theme". */
   label: string;
@@ -22,21 +23,21 @@ export function SegmentedControl<T extends string>({ options, value, onChange, l
       {options.map((o) => {
         const selected = o.value === value;
         return (
-          <Pressable
+          <PressableScale
             key={o.value}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
+            haptic={selected ? 'none' : 'tick'}
+            hapticOn="pressIn"
+            pressedScale={0.96}
             onPress={() => {
-              if (!selected) {
-                tick();
-                onChange(o.value);
-              }
+              if (!selected) onChange(o.value);
             }}
             style={[styles.option, selected && { backgroundColor: colors.segmentOn }]}>
             <Text variant="smallStrong" color={selected ? 'text' : 'textSecondary'}>
               {o.label}
             </Text>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>
@@ -45,5 +46,5 @@ export function SegmentedControl<T extends string>({ options, value, onChange, l
 
 const styles = StyleSheet.create({
   track: { flexDirection: 'row', padding: 3, borderRadius: radius.md, gap: 3 },
-  option: { flex: 1, height: 34, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+  option: { flex: 1, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
 });

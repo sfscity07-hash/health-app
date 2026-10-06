@@ -1,13 +1,16 @@
 import Constants from 'expo-constants';
 import { StyleSheet, View } from 'react-native';
 
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Text } from '@/components/ui/Text';
-import { isSupabaseConfigured } from '@/lib/env';
+import { useAuth } from '@/features/auth/AuthProvider';
+import { useProfile, useUpdateProfile } from '@/features/profile/api';
+import { formatInt } from '@/lib/format';
+import { supabase } from '@/lib/supabase';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
-import { useTheme } from '@/theme/theme';
 import { space } from '@/theme/tokens';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
@@ -17,33 +20,57 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 ];
 
 export default function ProfileScreen() {
-  const { colors } = useTheme();
+  const { session } = useAuth();
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
   const theme = usePreferences((s) => s.theme);
   const setTheme = usePreferences((s) => s.setTheme);
   const version = Constants.expoConfig?.version ?? '1.0.0';
 
+  const targets = profile
+    ? [
+        { label: 'Calories', value: `${formatInt(profile.calorie_target ?? 0)}`, unit: 'kcal' },
+        { label: 'Protein', value: `${profile.protein_g ?? 0}`, unit: 'g' },
+        { label: 'Carbs', value: `${profile.carbs_g ?? 0}`, unit: 'g' },
+        { label: 'Fat', value: `${profile.fat_g ?? 0}`, unit: 'g' },
+      ]
+    : [];
+
   return (
-    <Screen eyebrow="Settings" title="Profile">
+    <Screen eyebrow={session?.user.email ?? 'Settings'} title="Profile">
+      <Card style={styles.section}>
+        <Text variant="label">Daily targets</Text>
+        <View style={styles.targets}>
+          {targets.map((t) => (
+            <View key={t.label} style={styles.target}>
+              <Text variant="caption">{t.label}</Text>
+              <Text variant="heading" tabular>
+                {t.value}
+                <Text variant="caption"> {t.unit}</Text>
+              </Text>
+            </View>
+          ))}
+        </View>
+        <Text variant="caption">Editing goals arrives in Phase 12. Your weekly check-in will tune these automatically.</Text>
+      </Card>
+
       <Card style={styles.section}>
         <Text variant="label">Appearance</Text>
-        <SegmentedControl label="Theme" options={THEME_OPTIONS} value={theme} onChange={setTheme} />
+        <SegmentedControl
+          label="Theme"
+          options={THEME_OPTIONS}
+          value={theme}
+          onChange={(value) => {
+            setTheme(value);
+            updateProfile.mutate({ theme: value });
+          }}
+        />
       </Card>
 
-      <Card style={styles.section}>
-        <Text variant="label">Cloud sync</Text>
-        <View style={styles.status}>
-          <View style={[styles.dot, { backgroundColor: isSupabaseConfigured ? colors.good : colors.warn }]} />
-          <Text variant="bodyStrong">{isSupabaseConfigured ? 'Connected to Supabase' : 'Not connected yet'}</Text>
-        </View>
-        <Text variant="small" color="textSecondary">
-          {isSupabaseConfigured
-            ? 'Your account and data will sync once sign-in arrives in Phase 2.'
-            : 'Add your Supabase URL and key to the .env file, then restart the app. The README walks through it.'}
-        </Text>
-      </Card>
+      <Button label="Sign out" variant="secondary" onPress={() => supabase?.auth.signOut()} />
 
       <Text variant="label" align="center">
-        Fuel {version} · Phase 1
+        Fuel {version} · Phase 2
       </Text>
     </Screen>
   );
@@ -51,6 +78,6 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   section: { padding: space.lg, gap: space.md },
-  status: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  targets: { flexDirection: 'row', justifyContent: 'space-between' },
+  target: { gap: 2 },
 });

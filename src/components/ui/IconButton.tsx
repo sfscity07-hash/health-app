@@ -1,28 +1,26 @@
-import { Pressable, StyleSheet, type PressableProps } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/Icon';
-import { tick } from '@/lib/haptics';
+import { PressableScale, type PressableScaleProps } from '@/components/ui/PressableScale';
 import { useTheme } from '@/theme/theme';
 
-type IconButtonProps = Omit<PressableProps, 'children' | 'style'> & {
+type IconButtonProps = Omit<PressableScaleProps, 'children' | 'style'> & {
   icon: IconName;
   /** Read by screen readers, e.g. "Back to results". */
   label: string;
   size?: number;
 };
 
-export function IconButton({ icon, label, size = 40, onPress, ...rest }: IconButtonProps) {
+export function IconButton({ icon, label, size = 40, ...rest }: IconButtonProps) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
-      onPress={(e) => {
-        tick();
-        onPress?.(e);
-      }}
-      style={({ pressed }) => [
+      haptic="tick"
+      pressedScale={0.92}
+      style={[
         styles.base,
         {
           width: size,
@@ -31,11 +29,10 @@ export function IconButton({ icon, label, size = 40, onPress, ...rest }: IconBut
           backgroundColor: colors.surface1,
           borderColor: colors.hairline,
         },
-        pressed && styles.pressed,
       ]}
       {...rest}>
       <Icon name={icon} size={Math.round(size * 0.48)} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -45,5 +42,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth * 2,
   },
-  pressed: { opacity: 0.7 },
 });

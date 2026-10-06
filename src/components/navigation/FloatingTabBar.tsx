@@ -1,15 +1,17 @@
 import type { TabListProps, TabTriggerSlotProps } from 'expo-router/ui';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Icon, type IconName } from '@/components/ui/Icon';
-import { tap, tick } from '@/lib/haptics';
+import { PressableScale } from '@/components/ui/PressableScale';
+import { tick } from '@/lib/haptics';
 import { useTheme } from '@/theme/theme';
 import { space } from '@/theme/tokens';
 
 const BAR_HEIGHT = 58;
+const SWITCH_ON_PRESS_IN = Platform.OS !== 'web';
 const FADE_HEIGHT = 118;
 
 /**
@@ -38,20 +40,17 @@ export function FloatingTabBar({ children, style, ...rest }: TabListProps) {
           style={[styles.pill, { backgroundColor: colors.glass, borderColor: colors.hairlineStrong }, style]}>
           {children}
         </View>
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel="Log food"
-          onPress={() => {
-            tap();
-            router.push('/log');
-          }}
-          style={({ pressed }) => [
-            styles.fab,
-            { backgroundColor: colors.accent, shadowColor: colors.accent },
-            pressed && styles.pressed,
-          ]}>
+          haptic="tap"
+          hapticOn="pressIn"
+          pressedScale={0.92}
+          ripple="rippleOnAccent"
+          onPress={() => router.push('/log')}
+          style={[styles.fab, { backgroundColor: colors.accent }]}>
           <Icon name="plus" size={24} color="accentInk" strokeWidth={2.2} />
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
@@ -59,21 +58,31 @@ export function FloatingTabBar({ children, style, ...rest }: TabListProps) {
 
 type TabButtonProps = TabTriggerSlotProps & { icon: IconName; label: string };
 
-export function TabButton({ icon, label, isFocused, onPress, ...rest }: TabButtonProps) {
+/**
+ * Switches tab on touch-down rather than on release, like the system tab
+ * bars do, so changing tabs never waits for your finger to lift.
+ */
+export function TabButton({ icon, label, isFocused, onPress, onPressIn, ...rest }: TabButtonProps) {
   const { colors } = useTheme();
   return (
-    <Pressable
+    <PressableScale
       {...rest}
       accessibilityRole="tab"
       accessibilityLabel={label}
       accessibilityState={{ selected: Boolean(isFocused) }}
-      onPress={(e) => {
-        if (!isFocused) tick();
-        onPress?.(e);
+      pressedScale={0.9}
+      onPressIn={(e) => {
+        onPressIn?.(e);
+        if (SWITCH_ON_PRESS_IN && !isFocused) {
+          tick();
+          onPress?.(e);
+        }
       }}
+      // On the web a tab is also a link, so it must handle the click itself.
+      onPress={SWITCH_ON_PRESS_IN ? undefined : onPress}
       style={[styles.tab, isFocused && { backgroundColor: colors.surface3 }]}>
       <Icon name={icon} size={21} color={isFocused ? 'text' : 'textTertiary'} strokeWidth={1.7} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -111,10 +120,6 @@ const styles = StyleSheet.create({
     borderRadius: BAR_HEIGHT / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  pressed: { transform: [{ scale: 0.94 }] },
 });

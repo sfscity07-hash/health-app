@@ -26,3 +26,13 @@ export function cmToFeetInches(cm: number): { feet: number; inches: number } {
 export function feetInchesToCm(feet: number, inches: number): number {
   return (feet * 12 + inches) * CM_PER_INCH;
 }
+
+/** "75.0 kg" or "165.3 lb", from a value stored in kg. */
+export function displayWeight(kg: number, units: 'metric' | 'imperial'): string {
+  return units === 'imperial' ? `${kgToLb(kg).toFixed(1)} lb` : `${kg.toFixed(1)} kg`;
+}
+
+/** "0.5 kg" or "1.1 lb" for a weekly pace stored in kg. */
+export function displayRate(kgPerWeek: number, units: 'metric' | 'imperial'): string {
+  return units === 'imperial' ? `${kgToLb(kgPerWeek).toFixed(1)} lb` : `${kgPerWeek} kg`;
+}

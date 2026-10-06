@@ -4,14 +4,6 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 
-jest.mock('expo-haptics', () => ({
-  selectionAsync: jest.fn(() => Promise.resolve()),
-  impactAsync: jest.fn(() => Promise.resolve()),
-  notificationAsync: jest.fn(() => Promise.resolve()),
-  ImpactFeedbackStyle: { Medium: 'medium' },
-  NotificationFeedbackType: { Success: 'success' },
-}));
-
 describe('UI components', () => {
   it('Button shows its label and trailing value and responds to presses', async () => {
     const onPress = jest.fn();

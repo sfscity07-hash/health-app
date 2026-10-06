@@ -1,52 +1,55 @@
-import { Pressable, StyleSheet, View, type PressableProps } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { PressableScale, type PressableScaleProps } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
-import { tap } from '@/lib/haptics';
 import { useTheme } from '@/theme/theme';
 import { radius, space, type ColorName } from '@/theme/tokens';
 
 type Variant = 'primary' | 'inverse' | 'secondary' | 'ghost';
 
-type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
+type ButtonProps = Omit<PressableScaleProps, 'children' | 'style'> & {
   label: string;
   /** Secondary text on the right, e.g. "309 kcal". */
   trailing?: string;
   icon?: IconName;
   variant?: Variant;
+  /** Shows a spinner and blocks presses while something is saving. */
+  loading?: boolean;
 };
 
-const looks: Record<Variant, { bg: ColorName | null; fg: ColorName }> = {
-  primary: { bg: 'accent', fg: 'accentInk' },
-  inverse: { bg: 'text', fg: 'bg' },
-  secondary: { bg: 'surface2', fg: 'text' },
-  ghost: { bg: null, fg: 'accent' },
+const looks: Record<Variant, { bg: ColorName | null; fg: ColorName; ripple: ColorName }> = {
+  primary: { bg: 'accent', fg: 'accentInk', ripple: 'rippleOnAccent' },
+  inverse: { bg: 'text', fg: 'bg', ripple: 'rippleOnAccent' },
+  secondary: { bg: 'surface2', fg: 'text', ripple: 'ripple' },
+  ghost: { bg: null, fg: 'accent', ripple: 'ripple' },
 };
 
-export function Button({ label, trailing, icon, variant = 'primary', disabled, onPress, ...rest }: ButtonProps) {
+export function Button({ label, trailing, icon, variant = 'primary', disabled, loading, ...rest }: ButtonProps) {
   const { colors } = useTheme();
   const look = looks[variant];
-  const spread = Boolean(trailing);
+  const blocked = Boolean(disabled || loading);
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
-      accessibilityState={{ disabled: Boolean(disabled) }}
-      disabled={disabled}
-      onPress={(e) => {
-        tap();
-        onPress?.(e);
-      }}
-      style={({ pressed }) => [
+      accessibilityState={{ disabled: blocked, busy: Boolean(loading) }}
+      disabled={blocked}
+      haptic="tap"
+      ripple={look.ripple}
+      style={[
         styles.base,
         variant === 'ghost' ? styles.ghost : styles.filled,
-        spread && styles.spread,
+        trailing ? styles.spread : null,
         { backgroundColor: look.bg ? colors[look.bg] : 'transparent' },
-        pressed && styles.pressed,
-        disabled && styles.disabled,
+        disabled && !loading ? styles.disabled : null,
       ]}
       {...rest}>
       <View style={styles.row}>
-        {icon ? <Icon name={icon} size={18} color={look.fg} strokeWidth={2.2} /> : null}
+        {loading ? (
+          <ActivityIndicator size="small" color={colors[look.fg]} />
+        ) : icon ? (
+          <Icon name={icon} size={18} color={look.fg} strokeWidth={2.2} />
+        ) : null}
         <Text variant="bodyStrong" color={look.fg}>
           {label}
         </Text>
@@ -56,7 +59,7 @@ export function Button({ label, trailing, icon, variant = 'primary', disabled, o
           {trailing}
         </Text>
       ) : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -73,11 +76,11 @@ const styles = StyleSheet.create({
   },
   ghost: {
     minHeight: 44,
-    paddingHorizontal: space.sm,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
   },
   spread: { justifyContent: 'space-between' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   trailing: { opacity: 0.7 },
-  pressed: { transform: [{ scale: 0.98 }], opacity: 0.92 },
   disabled: { opacity: 0.4 },
 });

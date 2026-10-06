@@ -29,6 +29,8 @@ const dark = {
   glass: 'rgba(24,27,37,0.94)',
   segmentOn: '#2A2E3D',
   scrim: 'rgba(0,0,0,0.5)',
+  ripple: 'rgba(255,255,255,0.10)',
+  rippleOnAccent: 'rgba(10,12,26,0.16)',
 };
 
 export type ThemeColors = typeof dark;
@@ -59,6 +61,8 @@ const light: ThemeColors = {
   glass: 'rgba(255,255,255,0.96)',
   segmentOn: '#FFFFFF',
   scrim: 'rgba(16,18,30,0.28)',
+  ripple: 'rgba(16,18,30,0.08)',
+  rippleOnAccent: 'rgba(255,255,255,0.22)',
 };
 
 export const palettes = { dark, light } as const;
@@ -119,6 +123,8 @@ export const typeScale = {
 export type TypeVariant = keyof typeof typeScale;
 
 export const motion = {
+  /** Press-down feedback on buttons and cards. */
+  press: 70,
   /** Gauge, rings and bars filling. */
   fill: 1000,
   /** Numbers counting to a new value. */
