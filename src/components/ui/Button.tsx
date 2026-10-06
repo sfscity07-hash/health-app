@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/Text';
 import { useTheme } from '@/theme/theme';
 import { radius, space, type ColorName } from '@/theme/tokens';
 
-type Variant = 'primary' | 'inverse' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'inverse' | 'secondary' | 'ghost' | 'danger';
 
 type ButtonProps = Omit<PressableScaleProps, 'children' | 'style'> & {
   label: string;
@@ -23,6 +23,8 @@ const looks: Record<Variant, { bg: ColorName | null; fg: ColorName; ripple: Colo
   inverse: { bg: 'text', fg: 'bg', ripple: 'rippleOnAccent' },
   secondary: { bg: 'surface2', fg: 'text', ripple: 'ripple' },
   ghost: { bg: null, fg: 'accent', ripple: 'ripple' },
+  /** A quiet text button for destructive actions. */
+  danger: { bg: null, fg: 'warn', ripple: 'ripple' },
 };
 
 export function Button({ label, trailing, icon, variant = 'primary', disabled, loading, ...rest }: ButtonProps) {
@@ -38,7 +40,7 @@ export function Button({ label, trailing, icon, variant = 'primary', disabled, l
       ripple={look.ripple}
       style={[
         styles.base,
-        variant === 'ghost' ? styles.ghost : styles.filled,
+        look.bg === null ? styles.ghost : styles.filled,
         trailing ? styles.spread : null,
         { backgroundColor: look.bg ? colors[look.bg] : 'transparent' },
         disabled && !loading ? styles.disabled : null,

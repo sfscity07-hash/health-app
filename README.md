@@ -5,21 +5,30 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–3 are done. See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–4 are done. See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 3 (dashboard + Recomp goal).**
+Updated with every release. **Latest: Phase 4 (logging food).**
 
-**Before running this version:** in Supabase's SQL Editor, run `supabase/migrations/20261006120000_recomp_goal.sql` once (it adds the Recomp goal and is safe to run again).
+**Before running this version:** nothing new in Supabase. Just `git pull`, `npm install`, then `npx expo start --clear`. (If you skipped it last time, run `supabase/migrations/20261006120000_recomp_goal.sql` once.)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
 - Setup: goal (lose weight, **recomp**, maintain, build muscle), body stats in kg/cm or lb/ft, activity, goal weight and pace, then your animated daily budget.
+- **Logging food** (the **+** button, or "Add …" on the dashboard and Food log):
+  - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap.
+  - Search the foods you've created or logged before.
+  - **Quick add**: just calories, or macros and it works the calories out.
+  - **New food**: copy a nutrition label (per serving or per 100 g). It's saved for next time.
+  - Food screen: switch between servings and grams, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.
+  - Tap the meal name at the top of the logger to switch meal.
+  - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
+- **Food log tab**: your day meal by meal with calories and macros; step back through earlier days.
 - Dashboard:
   - calorie gauge
   - protein/carbs/fat bars
-  - week rings (tap a day this week to look back at it)
+  - week rings (tap a day this week to look back at it; the logger then adds to that day)
   - insight card (tap for the next one)
   - trend weight and expenditure estimate
   - pull down to refresh
@@ -27,12 +36,12 @@ Updated with every release. **Latest: Phase 3 (dashboard + Recomp goal).**
 - **Finish today** (or yesterday, if you forgot): closes the day's ring, extends your streak, celebrates.
 - Theme (system, dark or light), saved to your account.
 
-🚧 **Not yet** (shows a placeholder or zeros)
-- Logging food: the **+** button and "Add dinner" open a placeholder (Phase 4). Until then, calories and macros stay at 0.
-- Food search (Phase 5) and barcode scanning (Phase 6).
+🚧 **Not yet** (shows a placeholder or "Soon")
+- Searching the big food databases, USDA and Open Food Facts (Phase 5). Only your own foods show up for now.
+- Barcode scanning (Phase 6) and saved meals / copying a meal (Phase 7). The Scan and Saved buttons say "Soon".
 - Logging your weight after setup (Phase 8). The trend tile shows your setup weigh-in only.
 - Exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
-- Food log and Progress tabs, editing goals, weeks before this one, reminders.
+- Progress tab, editing goals, reminders.
 
 ## Run it on your Android phone (free)
 
@@ -53,6 +62,7 @@ You only need to do this once.
 2. Open **SQL Editor**, then paste and run each file in [`supabase/migrations`](supabase/migrations) **once**, oldest first:
    1. `20261006090000_initial_schema.sql` (tables, privacy rules, daily summary)
    2. `20261006090100_exercise_catalog.sql` (the list of activities)
+   3. `20261006120000_recomp_goal.sql` (adds the Recomp goal)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 
@@ -109,14 +119,18 @@ You only need to do this once.
 ```
 src/
   app/            screens (Expo Router): (auth)/ welcome, sign-in, sign-up · onboarding · (tabs)/ dashboard,
-                  food-log, progress, profile · log sheet. _layout.tsx routes you by sign-in and setup state.
+                  food-log, progress, profile · log (the logger sheet) · quick-add · food/new · food/[id] ·
+                  entry/[id]. _layout.tsx routes you by sign-in and setup state.
   components/ui/  PressableScale (instant touch feedback), Button, TextField, OptionCard, SegmentedControl,
-                  StepProgress, Text, Card, Icon, AnimatedNumber, EmptyState, Screen
-  components/     CalorieGauge, BrandMark, navigation/FloatingTabBar
-  features/       auth (session, forms, errors), onboarding (steps, validation), profile (queries, saving)
+                  StepProgress, Text, Card, Icon, AnimatedNumber, EmptyState, Screen, ToastHost
+  components/     CalorieGauge, BrandMark, navigation/FloatingTabBar, dashboard/ (gauge, rings, tiles,
+                  timeline), food/ (FoodDetail, PortionRuler, QuickAddForm, FoodRow), foodlog/ (MealCard, DayNav)
+  features/       auth, onboarding, profile, dashboard (day queries, insights), food (logging queries,
+                  label/quick-add parsing, Recent ranking)
   theme/          design tokens (colors, type, spacing) and the theme provider
-  lib/            nutrition maths, supabase client, env, units, dates, formatting, meals, haptics
-  store/          small Zustand stores (UI preferences)
+  lib/            nutrition maths, portions, trend weight, streaks, supabase client, env, units, dates,
+                  formatting, meals, haptics
+  store/          small Zustand stores (theme, the day you're viewing, toasts)
 supabase/
   migrations/     database schema, privacy rules (RLS) and reference data
   tests/          database checks used by scripts/verify-db.sh

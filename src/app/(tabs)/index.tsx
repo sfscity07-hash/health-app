@@ -36,6 +36,7 @@ import { maintenanceCalories } from '@/lib/nutrition';
 import { streaks } from '@/lib/streak';
 import { nextMilestone, trendSeries, weeklyRate } from '@/lib/trend';
 import { displayWeight, kgToLb } from '@/lib/units';
+import { useDay, useViewedDate } from '@/store/day';
 import { useTheme } from '@/theme/theme';
 import { space } from '@/theme/tokens';
 
@@ -72,13 +73,17 @@ export default function DashboardScreen() {
   const now = new Date();
   const today = toISODate(now);
   const yesterday = toISODate(addDays(now, -1));
-  const [selected, setSelected] = useState(today);
+  const selected = useViewedDate();
+  const setSelected = useDay((s) => s.setDate);
   const selectedDate = fromISODate(selected);
   const isToday = selected === today;
 
   const week = weekOf(now).map(toISODate);
   const { data: profile } = useProfile();
   const summaries = useDaySummaries(week[0], week[6]);
+  // A day picked on the Food log can be outside this week; fetch it on its own.
+  const inWeek = week.includes(selected);
+  const otherDay = useDaySummaries(inWeek ? '' : selected, inWeek ? '' : selected);
   const logs = useFoodLogs(selected);
   const weighIns = useWeighIns();
   const closures = useClosures();
@@ -92,7 +97,7 @@ export default function DashboardScreen() {
 
   const units = profile?.units ?? 'metric';
   const budget = profile?.calorie_target ?? 2000;
-  const day = summaries.data?.[selected] ?? emptyDay(selected);
+  const day = (inWeek ? summaries.data : otherDay.data)?.[selected] ?? emptyDay(selected);
   const addback = profile?.exercise_addback ? day.kcal_out : 0;
   const dayBudget = budget + addback;
   const left = dayBudget - day.kcal_in;
@@ -159,6 +164,11 @@ export default function DashboardScreen() {
   });
 
   const canFinish = !closed && (isToday || selected === yesterday);
+
+  // Entries just added are saved in the background; they open once the server has them.
+  const openEntry = (e: { id: string }) => {
+    if (!e.id.startsWith('temp-')) router.push({ pathname: '/entry/[id]', params: { id: e.id } });
+  };
 
   function finish() {
     closeDay.mutate({ date: selected });
@@ -257,7 +267,13 @@ export default function DashboardScreen() {
             {formatInt(day.kcal_in)} kcal
           </Text>
         </View>
-        <FoodTimeline entries={entries} nextMeal={nextMeal} kcalLeft={left} onAdd={() => router.push('/log')} />
+        <FoodTimeline
+          entries={entries}
+          nextMeal={nextMeal}
+          kcalLeft={left}
+          onAdd={(meal) => router.push({ pathname: '/log', params: { date: selected, meal } })}
+          onPressEntry={openEntry}
+        />
 
         {canFinish || closed ? (
           <FinishDayButton

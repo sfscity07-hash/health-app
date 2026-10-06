@@ -25,6 +25,8 @@ import { radius } from '@/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
+const EDITOR = { presentation: 'modal', animation: 'slide_from_right' } as const;
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Geist_400Regular,
@@ -113,6 +115,11 @@ function RootStack() {
               contentStyle: { backgroundColor: colors.surface1 },
             }}
           />
+          {/* Editors open on top of the logger (or a screen), and go back to it when done. */}
+          <Stack.Screen name="quick-add" options={EDITOR} />
+          <Stack.Screen name="food/new" options={EDITOR} />
+          <Stack.Screen name="food/[id]" options={EDITOR} />
+          <Stack.Screen name="entry/[id]" options={EDITOR} />
         </Stack.Protected>
       </Stack>
     </NavigationThemeProvider>

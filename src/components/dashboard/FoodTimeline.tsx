@@ -9,6 +9,7 @@ import type { FoodLogEntry } from '@/features/dashboard/api';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { formatInt } from '@/lib/format';
 import { MEAL_LABEL, MEALS, type Meal } from '@/lib/meals';
+import { describeLogged } from '@/lib/portion';
 import { useTheme } from '@/theme/theme';
 import { radius, space } from '@/theme/tokens';
 
@@ -59,10 +60,12 @@ type FoodTimelineProps = {
   nextMeal: Meal | null;
   kcalLeft: number;
   onAdd: (meal: Meal) => void;
+  /** Opens an entry to change or delete it. */
+  onPressEntry: (entry: FoodLogEntry) => void;
 };
 
 /** Today's food on a time rail, one section per meal, with the next meal waiting to be filled. */
-export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd }: FoodTimelineProps) {
+export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd, onPressEntry }: FoodTimelineProps) {
   const { colors } = useTheme();
   const byMeal = new Map<Meal, FoodLogEntry[]>(MEALS.map((m) => [m, []]));
   for (const e of entries) byMeal.get(e.meal)?.push(e);
@@ -131,13 +134,19 @@ export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd }: FoodTimelin
                     </Text>
                   </View>
                   {items.map((it, n) => (
-                    <View key={it.id} style={[styles.item, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline }]}>
+                    <PressableScale
+                      key={it.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${it.name}, ${formatInt(it.kcal)} calories. Tap to edit.`}
+                      pressedScale={0.985}
+                      onPress={() => onPressEntry(it)}
+                      style={[styles.item, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline }]}>
                       <View style={styles.itemText}>
                         <Text variant="small" numberOfLines={1}>
                           {it.name}
                         </Text>
                         <Text variant="caption" color="textTertiary">
-                          {`${+it.quantity.toFixed(2)} ${it.unit}`}
+                          {it.unit === 'serving' && it.quantity === 1 ? 'Quick add' : describeLogged(it.quantity, it.unit, null)}
                         </Text>
                       </View>
                       <View style={styles.itemKcal}>
@@ -146,7 +155,7 @@ export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd }: FoodTimelin
                         </Text>
                         <MacroMix p={it.protein_g} c={it.carbs_g} f={it.fat_g} />
                       </View>
-                    </View>
+                    </PressableScale>
                   ))}
                 </View>
               )}

@@ -58,7 +58,7 @@ export function useDaySummaries(from: string, to: string) {
   const { session } = useAuth();
   return useQuery({
     queryKey: keys.summaries(from, to),
-    enabled: Boolean(session),
+    enabled: Boolean(session && from && to),
     queryFn: async (): Promise<Record<string, DaySummary>> => {
       const { data, error } = await requireSupabase()
         .from('daily_summary')
@@ -142,7 +142,7 @@ export function useClosures() {
 }
 
 /** Applies a change to one day in every cached summary range that contains it. */
-function patchSummaries(
+export function patchSummaries(
   queryClient: ReturnType<typeof useQueryClient>,
   date: string,
   patch: (d: DaySummary) => DaySummary,

@@ -7,6 +7,8 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { tick } from '@/lib/haptics';
+import { mealForTime } from '@/lib/meals';
+import { useDay, viewedDate } from '@/store/day';
 import { useTheme } from '@/theme/theme';
 import { space } from '@/theme/tokens';
 
@@ -47,7 +49,9 @@ export function FloatingTabBar({ children, style, ...rest }: TabListProps) {
           hapticOn="pressIn"
           pressedScale={0.92}
           ripple="rippleOnAccent"
-          onPress={() => router.push('/log')}
+          onPress={() =>
+            router.push({ pathname: '/log', params: { date: viewedDate(useDay.getState().picked), meal: mealForTime(new Date()) } })
+          }
           style={[styles.fab, { backgroundColor: colors.accent }]}>
           <Icon name="plus" size={24} color="accentInk" strokeWidth={2.2} />
         </PressableScale>

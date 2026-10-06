@@ -1,9 +1,12 @@
 import { TabList, TabSlot, TabTrigger, Tabs, type ExpoTabsScreenOptions } from 'expo-router/ui';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingTabBar, TabButton } from '@/components/navigation/FloatingTabBar';
+import { ToastHost } from '@/components/ui/ToastHost';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   return (
     // All four tabs are built up front (lazy: false) so switching never waits on
     // a first render; hidden tabs are frozen so they cost nothing while away.
@@ -25,6 +28,7 @@ export default function TabLayout() {
           </TabTrigger>
         </FloatingTabBar>
       </TabList>
+      <ToastHost bottom={insets.bottom + 96} />
     </Tabs>
   );
 }

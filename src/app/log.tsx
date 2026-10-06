@@ -1,72 +1,287 @@
-import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmptyState } from '@/components/ui/EmptyState';
+import { FoodRow } from '@/components/food/FoodRow';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
+import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
-import { MEAL_LABEL, mealForTime } from '@/lib/meals';
+import { ToastHost } from '@/components/ui/ToastHost';
+import { useFoodLogs } from '@/features/dashboard/api';
+import { useFavorites, useLogFood, useMyFoods, useRecentLogs } from '@/features/food/api';
+import { matches, rankRecents, type RecentFood } from '@/features/food/recents';
+import { useDayBudget } from '@/features/food/useDayBudget';
+import { fromISODate, toISODate } from '@/lib/dates';
+import { formatDayLabel, formatInt } from '@/lib/format';
+import { isMeal, MEAL_LABEL, MEALS, mealForTime, type Meal } from '@/lib/meals';
+import { defaultPortion, describeLogged, formatQty, nutrientsFor, type FoodRecord } from '@/lib/portion';
+import { useViewedDate } from '@/store/day';
+import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
-import { gutter, radius, space } from '@/theme/tokens';
+import { fonts, gutter, radius, space } from '@/theme/tokens';
 
-const QUICK_ACTIONS: { icon: IconName; label: string }[] = [
-  { icon: 'scan', label: 'Scan' },
-  { icon: 'bolt', label: 'Quick add' },
-  { icon: 'bookmark', label: 'Saved' },
-];
+type Action = { icon: IconName; label: string; onPress: () => void; soon?: boolean };
 
-/** The food logger sheet. Search, scan and quick add are built in Phases 4–6. */
+/** The food logger sheet: search your foods, repeat recent ones in one tap, quick add or create a food. */
 export default function LogSheet() {
   const { colors } = useTheme();
-  const meal = MEAL_LABEL[mealForTime(new Date())];
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ date?: string; meal?: string }>();
+  const viewedDay = useViewedDate();
+  const date = params.date || viewedDay;
+  const today = toISODate(new Date());
+  const [meal, setMeal] = useState<Meal>(isMeal(params.meal) ? params.meal : mealForTime(new Date()));
+  const [query, setQuery] = useState('');
+
+  const recentLogs = useRecentLogs();
+  const myFoods = useMyFoods();
+  const favorites = useFavorites();
+  const dayLogs = useFoodLogs(date);
+  const logFood = useLogFood();
+  const showToast = useToast((s) => s.show);
+  const { eaten, targets } = useDayBudget(date);
+
+  const q = query.trim();
+  const searching = q.length > 0;
+  const favs = new Set(favorites.data ?? []);
+  const recents = useMemo(
+    () => rankRecents(recentLogs.data ?? [], meal, today, searching ? 60 : 12),
+    [recentLogs.data, meal, today, searching],
+  );
+  const recentMatches = recents.filter((r) => matches(q, r.name, r.brand));
+  const shownIds = new Set(recentMatches.map((r) => r.foodId));
+  const foodMatches = (myFoods.data ?? [])
+    .filter((f) => !shownIds.has(f.id) && matches(q, f.name, f.brand))
+    .sort((a, b) => Number(favs.has(b.id)) - Number(favs.has(a.id)));
+  const loading = recentLogs.isPending || myFoods.isPending;
+  const nothingYet = !loading && !searching && recents.length === 0 && foodMatches.length === 0;
+
+  const mealKcal = (dayLogs.data ?? []).filter((e) => e.meal === meal).reduce((s, e) => s + e.kcal, 0);
+  const left = targets.kcal - eaten.kcal;
+
+  const openQuickAdd = (extra: Record<string, string> = {}) =>
+    router.push({ pathname: '/quick-add', params: { date, meal, ...extra } });
+  const openNewFood = (name?: string) => router.push({ pathname: '/food/new', params: { date, meal, name: name ?? '' } });
+
+  const actions: Action[] = [
+    { icon: 'bolt', label: 'Quick add', onPress: () => openQuickAdd() },
+    { icon: 'plus', label: 'New food', onPress: () => openNewFood() },
+    { icon: 'scan', label: 'Scan', soon: true, onPress: () => showToast('Barcode scanning arrives in Phase 6', 'info') },
+    { icon: 'bookmark', label: 'Saved', soon: true, onPress: () => showToast('Saved meals arrive in Phase 7', 'info') },
+  ];
+
+  function nextMeal() {
+    setMeal((m) => MEALS[(MEALS.indexOf(m) + 1) % MEALS.length]);
+  }
+
+  function logRecent(r: RecentFood) {
+    const l = r.last;
+    logFood.mutate({
+      date,
+      meal,
+      foodId: r.foodId,
+      name: r.name,
+      brand: r.brand,
+      quantity: l.quantity,
+      unit: l.unit,
+      grams: l.grams,
+      nutrients: { kcal: l.kcal, protein_g: l.protein_g, carbs_g: l.carbs_g, fat_g: l.fat_g },
+    });
+    showToast(`Added ${r.name} · ${formatInt(l.kcal)} kcal`);
+  }
+
+  function openRecent(r: RecentFood) {
+    const l = r.last;
+    if (r.foodId) {
+      router.push({ pathname: '/food/[id]', params: { id: r.foodId, date, meal, qty: String(l.quantity), unit: l.unit } });
+    } else {
+      const g = (v: number) => (v > 0 ? formatQty(v) : '');
+      openQuickAdd({ name: r.name, kcal: formatQty(l.kcal), protein: g(l.protein_g), carbs: g(l.carbs_g), fat: g(l.fat_g) });
+    }
+  }
+
+  function logFoodRecord(f: FoodRecord) {
+    const p = defaultPortion(f);
+    const nutrients = nutrientsFor(f, p.grams);
+    logFood.mutate({ date, meal, foodId: f.id, name: f.name, brand: f.brand, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients });
+    showToast(`Added ${f.name} · ${formatInt(nutrients.kcal)} kcal`);
+  }
+
+  const openFood = (f: FoodRecord) => router.push({ pathname: '/food/[id]', params: { id: f.id, date, meal } });
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface1 }]}>
       <View style={styles.header}>
-        <Text variant="title" accessibilityRole="header">
-          <Text variant="title" color="textTertiary">
-            Add to{' '}
+        <View style={styles.headerText}>
+          <Text variant="label">{date === today ? 'Today' : formatDayLabel(fromISODate(date))}</Text>
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={`Adding to ${MEAL_LABEL[meal]}. Tap to change meal.`}
+            haptic="tick"
+            hapticOn="pressIn"
+            pressedScale={0.97}
+            ripple={null}
+            onPress={nextMeal}
+            style={styles.mealButton}>
+            <Text variant="title">
+              <Text variant="title" color="textTertiary">
+                Add to{' '}
+              </Text>
+              {MEAL_LABEL[meal]}
+            </Text>
+            <Icon name="chevronDown" size={18} color="textSecondary" strokeWidth={2.2} />
+          </PressableScale>
+          <Text variant="caption" color="textSecondary" tabular>
+            {mealKcal > 0 ? `${MEAL_LABEL[meal]} so far ${formatInt(mealKcal)} kcal` : `Nothing in ${MEAL_LABEL[meal].toLowerCase()} yet`}
+            {' · '}
+            {left >= 0 ? `${formatInt(left)} kcal left today` : `${formatInt(-left)} kcal over today`}
           </Text>
-          {meal}
-        </Text>
+        </View>
         <IconButton icon="close" label="Close" size={36} onPress={() => router.back()} />
       </View>
 
       <View style={[styles.search, { backgroundColor: colors.surface2, borderColor: colors.hairline }]}>
         <Icon name="search" size={17} color="textTertiary" />
-        <Text variant="body" color="textTertiary" style={styles.searchText}>
-          Search foods
-        </Text>
-        <View style={[styles.scan, { backgroundColor: colors.surface3 }]}>
-          <Icon name="scan" size={17} />
-        </View>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search your foods"
+          placeholderTextColor={colors.textTertiary}
+          selectionColor={colors.accent}
+          cursorColor={colors.accent}
+          returnKeyType="search"
+          autoCorrect={false}
+          accessibilityLabel="Search your foods"
+          style={[styles.searchInput, { color: colors.text }, Platform.OS === 'web' && styles.noWebOutline]}
+        />
+        {searching ? (
+          <IconButton icon="close" label="Clear search" size={30} onPress={() => setQuery('')} />
+        ) : (
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Scan a barcode"
+            onPress={() => showToast('Barcode scanning arrives in Phase 6', 'info')}
+            style={[styles.scan, { backgroundColor: colors.surface3 }]}>
+            <Icon name="scan" size={17} />
+          </PressableScale>
+        )}
       </View>
 
-      <View style={styles.actions}>
-        {QUICK_ACTIONS.map((a) => (
-          <View key={a.label} style={[styles.action, { backgroundColor: colors.surface2 }]}>
-            <Icon name={a.icon} size={20} color="accent" />
-            <Text variant="caption" color="text">
-              {a.label}
-            </Text>
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 96 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled>
+        {!searching ? (
+          <View style={styles.actions}>
+            {actions.map((a) => (
+              <PressableScale
+                key={a.label}
+                accessibilityRole="button"
+                accessibilityLabel={a.soon ? `${a.label}, coming soon` : a.label}
+                haptic="tap"
+                onPress={a.onPress}
+                style={[styles.action, { backgroundColor: colors.surface2 }]}>
+                <Icon name={a.icon} size={20} color={a.soon ? 'textTertiary' : 'accent'} />
+                <Text variant="caption" color={a.soon ? 'textTertiary' : 'text'}>
+                  {a.label}
+                </Text>
+                {a.soon ? (
+                  <Text variant="label" style={styles.soon}>
+                    Soon
+                  </Text>
+                ) : null}
+              </PressableScale>
+            ))}
           </View>
-        ))}
-      </View>
+        ) : null}
 
-      <EmptyState
-        icon="search"
-        title="Logging opens here"
-        body="Food search, barcode scanning, quick add and saved meals arrive in Phases 4 to 7."
-      />
+        {nothingYet ? (
+          <Card style={styles.note}>
+            <Text variant="bodyStrong">Your foods will live here</Text>
+            <Text variant="small" color="textSecondary">
+              Log something with Quick add or New food. Next time it’s one tap away, and the foods you eat most rise to the top.
+            </Text>
+          </Card>
+        ) : null}
+
+        {recentMatches.length > 0 ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">{searching ? 'Recent' : `Recent for ${MEAL_LABEL[meal].toLowerCase()}`}</Text>
+              <Text variant="label">kcal</Text>
+            </View>
+            {recentMatches.map((r, i) => (
+              <FoodRow
+                key={r.key}
+                first={i === 0}
+                name={r.name}
+                detail={r.foodId ? [describeLogged(r.last.quantity, r.last.unit, r.last.grams), r.brand].filter(Boolean).join(' · ') : 'Quick add'}
+                kcal={r.last.kcal}
+                favorite={r.foodId ? favs.has(r.foodId) : false}
+                onPress={() => openRecent(r)}
+                onAdd={() => logRecent(r)}
+              />
+            ))}
+          </View>
+        ) : null}
+
+        {foodMatches.length > 0 ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">Your foods</Text>
+              <Text variant="label">kcal</Text>
+            </View>
+            {foodMatches.map((f, i) => {
+              const p = defaultPortion(f);
+              return (
+                <FoodRow
+                  key={f.id}
+                  first={i === 0}
+                  name={f.name}
+                  detail={[describeLogged(p.qty, p.unit, p.unit === 'g' ? null : p.grams), f.brand].filter(Boolean).join(' · ')}
+                  kcal={nutrientsFor(f, p.grams).kcal}
+                  favorite={favs.has(f.id)}
+                  onPress={() => openFood(f)}
+                  onAdd={() => logFoodRecord(f)}
+                />
+              );
+            })}
+          </View>
+        ) : null}
+
+        {searching && recentMatches.length === 0 && foodMatches.length === 0 ? (
+          <Card style={styles.note}>
+            <Text variant="bodyStrong">No “{q}” in your foods yet</Text>
+            <Text variant="small" color="textSecondary">
+              Searching the full food database arrives in Phase 5. For now, add it yourself.
+            </Text>
+            <View style={styles.noteActions}>
+              <Button label={`Create “${q.length > 18 ? `${q.slice(0, 18)}…` : q}”`} icon="plus" variant="secondary" onPress={() => openNewFood(q)} />
+              <Button label="Quick add instead" variant="ghost" onPress={() => openQuickAdd({ name: q })} />
+            </View>
+          </Card>
+        ) : null}
+      </ScrollView>
+
+      <ToastHost bottom={insets.bottom + 24} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, paddingHorizontal: gutter, paddingTop: space.xxl, gap: space.lg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  root: { flex: 1, paddingTop: space.xxl, gap: space.lg },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: gutter, gap: space.md },
+  headerText: { flex: 1, gap: 3 },
+  mealButton: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', borderRadius: radius.sm },
   search: {
     height: 46,
+    marginHorizontal: gutter,
     borderRadius: 15,
     borderWidth: StyleSheet.hairlineWidth * 2,
     flexDirection: 'row',
@@ -75,8 +290,15 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 6,
   },
-  searchText: { flex: 1 },
+  searchInput: { flex: 1, height: '100%', fontFamily: fonts.regular, fontSize: 15 },
+  noWebOutline: { outlineWidth: 0 },
   scan: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: gutter, gap: space.xl },
   actions: { flexDirection: 'row', gap: space.sm },
-  action: { flex: 1, alignItems: 'center', gap: space.sm, paddingVertical: 14, borderRadius: radius.lg },
+  action: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 14, borderRadius: radius.lg },
+  soon: { position: 'absolute', top: 6, right: 7, fontSize: 8, letterSpacing: 0.6 },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', paddingRight: 34 + space.sm, marginBottom: space.xs },
+  note: { padding: space.lg, gap: space.sm },
+  noteActions: { gap: space.xs, marginTop: space.xs },
 });
