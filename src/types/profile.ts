@@ -1,6 +1,6 @@
 /** Mirrors the enums and `profiles` table in supabase/migrations. */
 export type Sex = 'female' | 'male';
-export type Goal = 'lose' | 'maintain' | 'gain';
+export type Goal = 'lose' | 'recomp' | 'maintain' | 'gain';
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 export type UnitSystem = 'metric' | 'imperial';
 export type ThemeSetting = 'system' | 'light' | 'dark';

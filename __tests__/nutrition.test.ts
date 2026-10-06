@@ -82,3 +82,18 @@ describe('goal timing', () => {
     expect(projectedGoalDate(new Date(2026, 9, 6), 80, 75, 0)).toBeNull();
   });
 });
+
+describe('recomp', () => {
+  it('eats about 10% under maintenance', () => {
+    // maintenance 2759 → 2759 − 276 = 2483 → 2480
+    const t = calorieTarget({ ...man, activity: 'moderate', goal: 'recomp', kgPerWeek: 0 });
+    expect(t.calories).toBe(2480);
+    expect(t.delta).toBe(-276);
+  });
+
+  it('raises protein to 2.2 g/kg, capped at 40% of calories', () => {
+    expect(macroTargets(2480, 80, 'recomp').protein_g).toBe(176);
+    expect(macroTargets(1500, 120, 'recomp').protein_g).toBe(150);
+    expect(macroTargets(2480, 80, 'lose').protein_g).toBe(144);
+  });
+});

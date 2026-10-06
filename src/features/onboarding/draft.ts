@@ -35,9 +35,11 @@ export const emptyDraft: OnboardingDraft = {
 
 export type Step = 'goal' | 'about' | 'body' | 'activity' | 'target' | 'reveal';
 
-/** Maintainers skip the target-weight-and-pace step. */
+/** Goals without a weekly pace (maintain, recomp) skip the target-weight-and-pace step. */
+export const hasPace = (goal: Goal | null) => goal === 'lose' || goal === 'gain';
+
 export function stepsFor(goal: Goal | null): Step[] {
-  return goal === 'maintain'
+  return goal !== null && !hasPace(goal)
     ? ['goal', 'about', 'body', 'activity', 'reveal']
     : ['goal', 'about', 'body', 'activity', 'target', 'reveal'];
 }
@@ -132,8 +134,8 @@ export function buildPlan(d: OnboardingDraft, today: Date): OnboardingPlan | nul
   const age = parseNumber(d.age) as number;
   const heightCm = heightCmOf(d) as number;
   const weightKg = weightKgOf(d) as number;
-  const kgPerWeek = goal === 'maintain' ? 0 : (d.kgPerWeek as number);
-  const goalWeightKg = goal === 'maintain' ? null : goalWeightKgOf(d);
+  const kgPerWeek = hasPace(goal) ? (d.kgPerWeek as number) : 0;
+  const goalWeightKg = hasPace(goal) ? goalWeightKgOf(d) : null;
   const target = calorieTarget({ sex, age, heightCm, weightKg, activity, goal, kgPerWeek });
   return {
     sex,
@@ -145,7 +147,7 @@ export function buildPlan(d: OnboardingDraft, today: Date): OnboardingPlan | nul
     kgPerWeek,
     goalWeightKg,
     target,
-    macros: macroTargets(target.calories, weightKg),
+    macros: macroTargets(target.calories, weightKg, goal),
     goalDate: goalWeightKg === null ? null : projectedGoalDate(today, weightKg, goalWeightKg, kgPerWeek),
   };
 }

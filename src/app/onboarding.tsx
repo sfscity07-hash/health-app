@@ -85,7 +85,7 @@ export default function OnboardingScreen() {
   const finalCalories = plan
     ? Math.min(CALORIE_RANGE.max, Math.max(CALORIE_RANGE.min, plan.target.calories + adjustment))
     : 0;
-  const macros = plan ? macroTargets(finalCalories, plan.weightKg) : null;
+  const macros = plan ? macroTargets(finalCalories, plan.weightKg, plan.goal) : null;
 
   function goTo(next: number) {
     setDirection(next > index ? 1 : -1);

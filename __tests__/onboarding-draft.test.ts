@@ -32,8 +32,9 @@ describe('parsing', () => {
 });
 
 describe('steps and validation', () => {
-  it('skips the target step when maintaining', () => {
+  it('skips the target step when maintaining or recomping', () => {
     expect(stepsFor('maintain')).not.toContain('target');
+    expect(stepsFor('recomp')).not.toContain('target');
     expect(stepsFor('lose')).toContain('target');
   });
 
@@ -66,6 +67,16 @@ describe('buildPlan', () => {
     expect(plan?.kgPerWeek).toBe(0);
     expect(plan?.goalDate).toBeNull();
     expect(plan?.target.calories).toBe(2760);
+  });
+});
+
+describe('recomp plan', () => {
+  it('has no pace or goal weight and uses recomp protein', () => {
+    const plan = buildPlan({ ...complete, goal: 'recomp', goalWeight: '', kgPerWeek: null }, new Date(2026, 9, 6));
+    expect(plan?.kgPerWeek).toBe(0);
+    expect(plan?.goalWeightKg).toBeNull();
+    expect(plan?.target.calories).toBe(2480);
+    expect(plan?.macros.protein_g).toBe(176);
   });
 });
 

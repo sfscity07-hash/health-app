@@ -5,7 +5,34 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–2 are done: the app shell, plus sign-up / sign-in and the setup flow that works out your calorie and macro targets and saves them to Supabase. The dashboard comes next (Phase 3).
+- **Status:** Phases 1–3 are done. See [What works right now](#what-works-right-now) before you try a new version.
+
+## What works right now
+
+Updated with every release. **Latest: Phase 3 (dashboard + Recomp goal).**
+
+**Before running this version:** in Supabase's SQL Editor, run `supabase/migrations/20261006120000_recomp_goal.sql` once (it adds the Recomp goal and is safe to run again).
+
+✅ **Works**
+- Create an account, sign in, sign out.
+- Setup: goal (lose weight, **recomp**, maintain, build muscle), body stats in kg/cm or lb/ft, activity, goal weight and pace, then your animated daily budget.
+- Dashboard:
+  - calorie gauge
+  - protein/carbs/fat bars
+  - week rings (tap a day this week to look back at it)
+  - insight card (tap for the next one)
+  - trend weight and expenditure estimate
+  - pull down to refresh
+- Water: tap the tile to add a 250 ml glass, long-press to remove the last one.
+- **Finish today** (or yesterday, if you forgot): closes the day's ring, extends your streak, celebrates.
+- Theme (system, dark or light), saved to your account.
+
+🚧 **Not yet** (shows a placeholder or zeros)
+- Logging food: the **+** button and "Add dinner" open a placeholder (Phase 4). Until then, calories and macros stay at 0.
+- Food search (Phase 5) and barcode scanning (Phase 6).
+- Logging your weight after setup (Phase 8). The trend tile shows your setup weigh-in only.
+- Exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
+- Food log and Progress tabs, editing goals, weeks before this one, reminders.
 
 ## Run it on your Android phone (free)
 

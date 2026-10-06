@@ -1,5 +1,5 @@
-import type { PropsWithChildren, ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState, type PropsWithChildren, type ReactNode } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/Text';
@@ -15,15 +15,32 @@ type ScreenProps = PropsWithChildren<{
   title?: string;
   /** Element on the right of the title row, e.g. the streak counter. */
   accessory?: ReactNode;
+  /** Pull-to-refresh: called when you drag the screen down. */
+  onRefresh?: () => Promise<unknown>;
 }>;
 
-export function Screen({ eyebrow, title, accessory, children }: ScreenProps) {
+export function Screen({ eyebrow, title, accessory, onRefresh, children }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const [refreshing, setRefreshing] = useState(false);
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+              progressBackgroundColor={colors.surface2}
+              onRefresh={() => {
+                setRefreshing(true);
+                onRefresh().finally(() => setRefreshing(false));
+              }}
+            />
+          ) : undefined
+        }
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },

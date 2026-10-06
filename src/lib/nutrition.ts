@@ -21,7 +21,7 @@ export const MIN_CALORIES: Record<Sex, number> = { female: 1200, male: 1500 };
 
 export type PaceOption = { kgPerWeek: number; label: string; note?: string };
 
-export const PACE_OPTIONS: Record<Exclude<Goal, 'maintain'>, PaceOption[]> = {
+export const PACE_OPTIONS: Record<'lose' | 'gain', PaceOption[]> = {
   lose: [
     { kgPerWeek: 0.25, label: 'Relaxed' },
     { kgPerWeek: 0.5, label: 'Steady', note: 'Recommended' },
@@ -52,9 +52,12 @@ export function maintenanceCalories(stats: BodyStats & { activity: ActivityLevel
   return bmr(stats) * ACTIVITY_LEVELS[stats.activity].factor;
 }
 
+/** Recomp eats about 10% under maintenance: enough to lose fat, not so much that muscle can't grow. */
+export const RECOMP_DEFICIT = 0.1;
+
 /** Daily surplus (+) or deficit (−) needed for a weekly rate of change. */
 export function dailyDelta(goal: Goal, kgPerWeek: number): number {
-  if (goal === 'maintain') return 0;
+  if (goal === 'maintain' || goal === 'recomp') return 0;
   const delta = (kgPerWeek * KCAL_PER_KG) / 7;
   return goal === 'lose' ? -delta : delta;
 }
@@ -74,7 +77,7 @@ export function calorieTarget(
   input: BodyStats & { activity: ActivityLevel; goal: Goal; kgPerWeek: number },
 ): CalorieTarget {
   const maintenance = maintenanceCalories(input);
-  const delta = dailyDelta(input.goal, input.kgPerWeek);
+  const delta = input.goal === 'recomp' ? -RECOMP_DEFICIT * maintenance : dailyDelta(input.goal, input.kgPerWeek);
   const raw = roundTo(maintenance + delta, 10);
   const floor = MIN_CALORIES[input.sex];
   return {
@@ -88,11 +91,16 @@ export function calorieTarget(
 export type MacroTargets = { protein_g: number; carbs_g: number; fat_g: number };
 
 /**
- * Protein 1.8 g per kg of body weight (capped at 35% of calories),
- * fat 30% of calories, and carbs fill the rest.
+ * Protein by body weight: 1.8 g/kg (capped at 35% of calories), or 2.2 g/kg for
+ * recomp (capped at 40%), since building muscle in a deficit needs more.
+ * Fat is 30% of calories and carbs fill the rest.
  */
-export function macroTargets(calories: number, weightKg: number): MacroTargets {
-  const protein_g = Math.min(Math.round(1.8 * weightKg), Math.floor((0.35 * calories) / 4));
+export function macroTargets(calories: number, weightKg: number, goal: Goal = 'lose'): MacroTargets {
+  const recomp = goal === 'recomp';
+  const protein_g = Math.min(
+    Math.round((recomp ? 2.2 : 1.8) * weightKg),
+    Math.floor(((recomp ? 0.4 : 0.35) * calories) / 4),
+  );
   const fat_g = Math.round((0.3 * calories) / 9);
   const carbs_g = Math.max(0, Math.round((calories - protein_g * 4 - fat_g * 9) / 4));
   return { protein_g, carbs_g, fat_g };

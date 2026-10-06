@@ -4,7 +4,7 @@ import { OptionCard } from '@/components/ui/OptionCard';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Text } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
-import { goalWeightKgOf, weightKgOf, type OnboardingDraft } from '@/features/onboarding/draft';
+import { goalWeightKgOf, hasPace, weightKgOf, type OnboardingDraft } from '@/features/onboarding/draft';
 import { formatShortDate } from '@/lib/dates';
 import { formatInt } from '@/lib/format';
 import { ACTIVITY_LEVELS, dailyDelta, PACE_OPTIONS, projectedGoalDate } from '@/lib/nutrition';
@@ -20,8 +20,9 @@ export type StepProps = {
   autoAdvance: (patch: Partial<OnboardingDraft>) => void;
 };
 
-const GOALS: { value: Goal; title: string; description: string; icon: 'trendDown' | 'target' | 'bolt' }[] = [
+const GOALS: { value: Goal; title: string; description: string; icon: 'trendDown' | 'recomp' | 'target' | 'bolt' }[] = [
   { value: 'lose', title: 'Lose weight', description: 'Steady fat loss while keeping muscle', icon: 'trendDown' },
+  { value: 'recomp', title: 'Recomp', description: 'Lose fat and build muscle at the same time', icon: 'recomp' },
   { value: 'maintain', title: 'Maintain', description: 'Hold your weight and eat with structure', icon: 'target' },
   { value: 'gain', title: 'Build muscle', description: 'A small surplus for lean gains', icon: 'bolt' },
 ];
@@ -38,7 +39,7 @@ export function GoalStep({ draft, set, autoAdvance }: StepProps) {
           selected={draft.goal === g.value}
           onPress={() => {
             set('goal', g.value);
-            if (g.value === 'maintain') set('kgPerWeek', null);
+            if (!hasPace(g.value)) set('kgPerWeek', null);
             autoAdvance({ goal: g.value });
           }}
         />

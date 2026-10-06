@@ -38,15 +38,16 @@ export function RevealStep({ plan, units, calories, macros, onChangeCalories }: 
     { label: 'Fat', grams: macros.fat_g, color: colors.fat },
   ];
 
+  const maintenance = formatInt(plan.target.maintenance);
+  const deltaText = formatInt(Math.abs(plan.target.delta));
   const why =
     plan.goal === 'maintain'
-      ? `About ${formatInt(plan.target.maintenance)} kcal a day keeps your weight steady.`
-      : `About ${formatInt(plan.target.maintenance)} kcal keeps you steady. ${
-          plan.goal === 'lose' ? 'Eating' : 'Adding'
-        } ${formatInt(Math.abs(plan.target.delta))} ${plan.goal === 'lose' ? 'less' : 'more'} a day moves you about ${displayRate(
-          plan.kgPerWeek,
-          units,
-        )} a week.`;
+      ? `About ${maintenance} kcal a day keeps your weight steady.`
+      : plan.goal === 'recomp'
+        ? `About ${maintenance} kcal keeps you steady. Eating ${deltaText} less a day, with plenty of protein, lets you lose fat while you build muscle. Expect the scale to move slowly; your waist and lifts are the better guide.`
+        : `About ${maintenance} kcal keeps you steady. ${plan.goal === 'lose' ? 'Eating' : 'Adding'} ${deltaText} ${
+            plan.goal === 'lose' ? 'less' : 'more'
+          } a day moves you about ${displayRate(plan.kgPerWeek, units)} a week.`;
 
   return (
     <View style={styles.root}>
@@ -85,6 +86,11 @@ export function RevealStep({ plan, units, calories, macros, onChangeCalories }: 
           <Text variant="small" color="textSecondary">
             You’d reach {displayWeight(plan.goalWeightKg, units)} around{' '}
             <Text variant="smallStrong">{formatShortDate(plan.goalDate)}</Text>.
+          </Text>
+        ) : null}
+        {plan.goal === 'recomp' ? (
+          <Text variant="small" color="textSecondary">
+            Recomp works when you lift weights at least three times a week.
           </Text>
         ) : null}
         {plan.target.raisedToMinimum ? (

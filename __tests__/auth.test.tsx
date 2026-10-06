@@ -31,6 +31,9 @@ describe('credential checks', () => {
     expect(authErrorMessage({ code: 'invalid_credentials' })).toMatch(/don't match/);
     expect(authErrorMessage({ code: 'user_already_exists' })).toMatch(/Sign in instead/);
     expect(authErrorMessage({ name: 'AuthRetryableFetchError', message: 'Failed to fetch' })).toMatch(/internet/);
+    expect(authErrorMessage({ code: '22P02', message: 'invalid input value for enum goal_type: "recomp"' })).toMatch(
+      /missing an update/,
+    );
   });
 });
 

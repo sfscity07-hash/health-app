@@ -19,7 +19,7 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 
-update public.profiles set calorie_target = 1950, protein_g = 160, carbs_g = 181, fat_g = 65;
+update public.profiles set calorie_target = 1950, protein_g = 160, carbs_g = 181, fat_g = 65, goal = 'recomp';
 
 insert into public.foods (id, source, external_id, name, kcal_100g, protein_100g, fat_100g, default_serving_g)
 values ('10000000-0000-0000-0000-000000000001', 'usda', '175168', 'Salmon, Atlantic, cooked', 206, 22.1, 12.4, 150);
@@ -50,6 +50,7 @@ begin
   assert s.water_ml = 750, 'water total';
   assert s.closed, 'day is closed';
   assert (select calorie_target from public.profiles) = 1950, 'own profile is updatable';
+  assert (select goal from public.profiles) = 'recomp', 'the recomp goal can be saved';
 end $$;
 
 -- A user cannot write rows for someone else.

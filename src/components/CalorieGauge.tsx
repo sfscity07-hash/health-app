@@ -21,13 +21,17 @@ type CalorieGaugeProps = {
   /** Over budget turns the arc orange. */
   over?: boolean;
   children?: ReactNode;
+  /** Shown under the left end of the arc, e.g. "Eaten". */
+  startLabel?: ReactNode;
+  /** Shown under the right end of the arc, e.g. "Budget". */
+  endLabel?: ReactNode;
 };
 
 /**
  * The 270° instrument gauge from the design. The arc and its end point
  * animate on the UI thread, so they stay smooth even while the app is busy.
  */
-export function CalorieGauge({ fraction, size = 240, over = false, children }: CalorieGaugeProps) {
+export function CalorieGauge({ fraction, size = 240, over = false, children, startLabel, endLabel }: CalorieGaugeProps) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const c = size / 2;
@@ -62,7 +66,7 @@ export function CalorieGauge({ fraction, size = 240, over = false, children }: C
   });
 
   return (
-    <View style={{ width: size, height: size * 0.88 }}>
+    <View style={{ width: size, height: size * 0.95 }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <G>
           {Array.from({ length: TICKS + 1 }, (_, i) => {
@@ -108,10 +112,21 @@ export function CalorieGauge({ fraction, size = 240, over = false, children }: C
       <View style={[styles.center, { width: size, height: size }]} pointerEvents="none">
         {children}
       </View>
+      {startLabel ? (
+        <View style={[styles.foot, { left: x1 - 44, top: y1 + 10 }]} pointerEvents="none">
+          {startLabel}
+        </View>
+      ) : null}
+      {endLabel ? (
+        <View style={[styles.foot, { left: x2 - 44, top: y2 + 10 }]} pointerEvents="none">
+          {endLabel}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   center: { position: 'absolute', top: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  foot: { position: 'absolute', width: 88, alignItems: 'center' },
 });

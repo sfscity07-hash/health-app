@@ -1,6 +1,9 @@
 type MaybeAuthError = { code?: string; message?: string; status?: number; name?: string } | null | undefined;
 
-/** Turns Supabase auth errors into plain sentences that say what to do next. */
+const DB_UPDATE_NEEDED =
+  'Your database is missing an update. In Supabase, open SQL Editor and run the newest file in supabase/migrations, then try again.';
+
+/** Turns Supabase auth and database errors into plain sentences that say what to do next. */
 export function authErrorMessage(error: unknown): string {
   const e = error as MaybeAuthError;
   switch (e?.code) {
@@ -22,6 +25,9 @@ export function authErrorMessage(error: unknown): string {
     case 'signup_disabled':
       return 'New sign-ups are turned off for this Supabase project.';
   }
+  // Postgres / PostgREST errors that mean the database is behind the app.
+  if (e?.code === '22P02' && /enum/i.test(e?.message ?? '')) return DB_UPDATE_NEEDED;
+  if (e?.code === '42P01' || e?.code === '42703' || e?.code === 'PGRST204' || e?.code === 'PGRST205') return DB_UPDATE_NEEDED;
   if (e?.name === 'AuthRetryableFetchError' || /network|fetch/i.test(e?.message ?? '')) {
     return "Can't reach the server. Check your internet connection and try again.";
   }

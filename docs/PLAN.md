@@ -83,7 +83,7 @@ The interactive design preview is the reference for all of this: https://claude.
 
 ### 1. Onboarding (first-run, ~60 seconds)
 - Sign up with email (Supabase Auth). Google sign-in comes later, also free.
-- A step-by-step wizard with a progress bar: sex, age, height, weight, activity, goal (lose / maintain / gain) and pace.
+- A step-by-step wizard with a progress bar: goal (lose / recomp / maintain / gain), sex, age, height, weight, activity, and goal weight + pace (lose and gain only).
 - It calculates a starting calorie budget (Mifflin-St Jeor BMR × activity, adjusted for your goal) and macro targets. The reveal screen animates the ring, and every number can be edited.
 
 ### 2. Dashboard ("Today")
@@ -257,7 +257,7 @@ health-app/
 0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2, approved as the base design).
 1. **Foundation** ✅: Expo SDK 57 + TypeScript, Expo Router with the floating tab bar, theme tokens + Geist fonts, base UI components, app icon/splash, Jest, ESLint. Supabase client, schema migrations, RLS, and a local database check (`npm run db:verify`).
 2. **Auth + onboarding** ✅: email + password sign-up / sign-in, route guards (signed out → welcome, not set up → onboarding, otherwise tabs), a 5–6 step wizard (goal, sex + age, height + weight in kg/cm or lb/ft, activity, goal weight + pace), `nutrition.ts` with tests, and the animated budget reveal with ±50 kcal adjustment. Saves the profile and the first weigh-in. Also: native touch ripple + UI-thread press animations, tabs switch on touch-down and are preloaded.
-3. **Dashboard**: calorie gauge, week rings, macros, insight card, tiles, timeline, Finish today, animations, haptics.
+3. **Dashboard** ✅: calorie gauge with Eaten/Budget ends, week rings (tap to view a day), macro bars, rotating insight card, trend-weight / expenditure / water / exercise tiles, food timeline with the next meal highlighted, Finish today (today or yesterday) with streaks and confetti, pull to refresh. Also adds the **Recomp** goal (−10% of maintenance, 2.2 g/kg protein).
 4. **Logger core**: bottom sheet, quick add, custom foods, food detail + serving picker, edit/delete.
 5. **Food search**: Open Food Facts + USDA Edge Function, smart ranking, recents.
 6. **Barcode scanning.**
