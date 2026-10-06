@@ -5,6 +5,8 @@ import { DB_UPDATE_NEEDED, isDatabaseBehind } from '@/features/auth/errors';
 import { patchSummaries, type DaySummary, type FoodLogEntry } from '@/features/dashboard/api';
 import type { CustomFoodInsert } from '@/features/food/forms';
 import type { LoggedRow } from '@/features/food/recents';
+import { ensureFood } from '@/features/search/api';
+import type { ExternalFood } from '@/features/search/types';
 import { addDays, toISODate } from '@/lib/dates';
 import type { Meal } from '@/lib/meals';
 import { roundNutrients, type FoodRecord, type Nutrients, type Serving } from '@/lib/portion';
@@ -152,6 +154,8 @@ export type NewEntry = {
   unit: string;
   grams: number | null;
   nutrients: Nutrients;
+  /** A search result that isn't saved yet: it's saved first, then logged. */
+  external?: ExternalFood;
 };
 
 /**
@@ -194,12 +198,13 @@ export function useLogFood() {
   return useMutation({
     mutationFn: async (e: NewEntry) => {
       const n = roundNutrients(e.nutrients);
+      const foodId = e.external ? await ensureFood(e.external) : e.foodId;
       const { error } = await requireSupabase()
         .from('food_logs')
         .insert({
           log_date: e.date,
           meal: e.meal,
-          food_id: e.foodId,
+          food_id: foodId,
           name: e.name,
           brand: e.brand,
           quantity: Math.round(e.quantity * 100) / 100,

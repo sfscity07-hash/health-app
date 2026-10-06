@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
+import { MacroMix } from '@/components/food/MacroMix';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
@@ -34,22 +35,6 @@ function PulseDot() {
     <View style={styles.dotWrap}>
       <Animated.View style={[styles.halo, { backgroundColor: colors.accent }, halo]} />
       <View style={[styles.dot, { borderColor: colors.accent, backgroundColor: colors.bg }]} />
-    </View>
-  );
-}
-
-function MacroMix({ p, c, f }: { p: number; c: number; f: number }) {
-  const { colors } = useTheme();
-  const parts = [
-    { v: p * 4, color: colors.protein },
-    { v: c * 4, color: colors.carbs },
-    { v: f * 9, color: colors.fat },
-  ].filter((x) => x.v > 0.5);
-  return (
-    <View style={styles.mix}>
-      {parts.map((x, i) => (
-        <View key={i} style={{ flex: x.v, backgroundColor: x.color }} />
-      ))}
     </View>
   );
 }
@@ -180,7 +165,6 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   itemText: { flex: 1, minWidth: 0 },
   itemKcal: { alignItems: 'flex-end', gap: 5 },
-  mix: { flexDirection: 'row', width: 28, height: 3, borderRadius: 2, overflow: 'hidden', gap: 1 },
   slot: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.lg, padding: space.md, gap: space.sm + 2, marginTop: -3 },
   slotHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: 9, paddingHorizontal: 11, borderRadius: radius.md },

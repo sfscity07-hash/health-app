@@ -5,11 +5,11 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–4 are done. See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–5 are done. See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 4 (logging food).**
+Updated with every release. **Latest: Phase 5 (food database search), plus fibre tracking.**
 
 **Before running this version:** in Supabase's SQL Editor, run `supabase/migrations/20261006150000_fibre.sql` once (it adds fibre to your logs and daily totals, and is safe to run again). Then `git pull`, `npm install`, `npx expo start --clear`. Until you run it, the app shows "Your database is missing an update".
 
@@ -18,7 +18,7 @@ Updated with every release. **Latest: Phase 4 (logging food).**
 - Setup: goal (lose weight, **recomp**, maintain, build muscle), body stats in kg/cm or lb/ft, activity, goal weight and pace, then your animated daily budget.
 - **Logging food** (the **+** button, or "Add …" on the dashboard and Food log):
   - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap.
-  - Search the foods you've created or logged before.
+  - **Search**: type a food and you get your own foods first, then results from **USDA** (whole foods like "bananas, raw") and **Open Food Facts** (packaged products, worldwide). Tap a result to pick the amount (servings like "1 medium" or "1 slice", or grams), or tap **+** to log one serving straight away.
   - **Quick add**: just calories, or macros and it works the calories out. Fibre is optional.
   - **New food**: copy a nutrition label (per serving or per 100 g), including **fibre**. It's saved for next time.
   - Food screen: switch between servings and grams, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.
@@ -38,7 +38,6 @@ Updated with every release. **Latest: Phase 4 (logging food).**
 - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Searching the big food databases, USDA and Open Food Facts (Phase 5). Only your own foods show up for now.
 - Barcode scanning (Phase 6) and saved meals / copying a meal (Phase 7). The Scan and Saved buttons say "Soon".
 - Logging your weight after setup (Phase 8). The trend tile shows your setup weigh-in only.
 - Exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
@@ -100,6 +99,14 @@ You only need to do this once.
    EXPO_PUBLIC_SUPABASE_KEY=sb_publishable_9xQ2c7LmTq4ZbR1vN8wKpA_3fYhD0sE
    ```
 
+   Optional, for food search: USDA allows about 30 searches an hour on its shared demo key. For 1,000 an hour, get a free key at [api.data.gov/signup](https://api.data.gov/signup/) (it's emailed to you straight away) and add a third line:
+
+   ```
+   EXPO_PUBLIC_USDA_API_KEY=your-key-here
+   ```
+
+   Your `.env` is in a public GitHub repo, so anyone can read this key. The worst they can do is use up its hourly limit, and you can make a new one for free at any time. Open Food Facts needs no key.
+
    Common mistakes:
    - The file must be named exactly `.env`. Windows Notepad sometimes saves it as `.env.txt`.
    - No quotes, and no spaces around the `=`.
@@ -121,14 +128,14 @@ You only need to do this once.
 ```
 src/
   app/            screens (Expo Router): (auth)/ welcome, sign-in, sign-up · onboarding · (tabs)/ dashboard,
-                  food-log, progress, profile · log (the logger sheet) · quick-add · food/new · food/[id] ·
+                  food-log, progress, profile · log (the logger sheet) · quick-add · food/new · food/[id] · food/preview ·
                   entry/[id]. _layout.tsx routes you by sign-in and setup state.
   components/ui/  PressableScale (instant touch feedback), Button, TextField, OptionCard, SegmentedControl,
                   StepProgress, Text, Card, Icon, AnimatedNumber, EmptyState, Screen, ToastHost
   components/     CalorieGauge, BrandMark, navigation/FloatingTabBar, dashboard/ (gauge, rings, tiles,
                   timeline), food/ (FoodDetail, PortionRuler, QuickAddForm, FoodRow), foodlog/ (MealCard, DayNav)
   features/       auth, onboarding, profile, dashboard (day queries, insights), food (logging queries,
-                  label/quick-add parsing, Recent ranking)
+                  label/quick-add parsing, Recent ranking), search (USDA + Open Food Facts, ranking)
   theme/          design tokens (colors, type, spacing) and the theme provider
   lib/            nutrition maths, portions, trend weight, streaks, supabase client, env, units, dates,
                   formatting, meals, haptics

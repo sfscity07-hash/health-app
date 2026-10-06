@@ -21,3 +21,9 @@ export const supabaseKey = (process.env.EXPO_PUBLIC_SUPABASE_KEY ?? '').trim();
 
 /** False until you add your Supabase URL and publishable (anon) key to `.env`. */
 export const isSupabaseConfigured = supabaseUrl.startsWith('https://') && supabaseKey.length > 0;
+
+/**
+ * USDA FoodData Central key. The shared DEMO_KEY works without signing up but
+ * allows only about 30 searches an hour; a free personal key allows 1,000.
+ */
+export const usdaApiKey = (process.env.EXPO_PUBLIC_USDA_API_KEY ?? '').trim() || 'DEMO_KEY';

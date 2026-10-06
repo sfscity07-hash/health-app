@@ -20,7 +20,7 @@ It's your own design and name (placeholder name **"Fuel"**, easy to change). It 
 | Running it while we build | **Expo Go** app on your Android phone | Free |
 | Installable app | **APK built with EAS Build free tier** (or built locally with Gradle), installed directly on your phone | Monthly free build quota, plenty for a personal app. No Play Store ($25) needed. |
 | Backend, auth, sync | **Supabase free tier** | 500 MB database (years of food logs). A project **pauses after 7 days with no use**. Daily logging keeps it awake, and if it does pause, one click in the dashboard resumes it. |
-| Food database | **Open Food Facts** (no key) + **USDA FoodData Central** (free key) | Free |
+| Food database | **Open Food Facts** (no key) + **USDA FoodData Central** (works with USDA's shared demo key; a free personal key raises the limit) | Free |
 | Reminders | expo-notifications (local, on-device) | Free, no push server |
 | Fonts, icons, charts | Geist, Lucide icons, Victory Native XL | Open source |
 
@@ -32,7 +32,7 @@ Nothing in the plan needs a credit card.
 | Layer | Choice |
 |---|---|
 | App | **Expo SDK 57 + TypeScript**, Expo Router (file-based screens, headless tabs for the custom floating bar) |
-| Backend | **Supabase**: Postgres + Auth + row-level security + one Edge Function (USDA proxy, so the key stays hidden) |
+| Backend | **Supabase**: Postgres + Auth + row-level security. Food search calls USDA and Open Food Facts straight from the phone (no Edge Function to deploy); the optional USDA key lives in `.env`. |
 | Data fetching | **TanStack Query** with optimistic updates, so logging feels instant and syncs in the background |
 | Offline | Query cache saved on the phone, so the app opens fast and shows today's data even without signal |
 | Local state | Zustand |
@@ -239,13 +239,12 @@ health-app/
 │  │  ├─ nutrition.ts        # BMR/TDEE, targets, serving scaling, MET
 │  │  ├─ trend.ts            # trend weight (EMA)
 │  │  ├─ expenditure.ts      # adaptive TDEE + weekly target suggestion
-│  │  ├─ foodApi.ts          # OFF + USDA → one Food shape
+│  ├─ features/search/       # OFF + USDA → one Food shape, ranking, saving a picked food
 │  │  ├─ units.ts  haptics.ts  notifications.ts
 │  ├─ store/                 # Zustand (selected date, logger queue)
 │  └─ types/                 # generated DB types + domain types
 ├─ supabase/
 │  ├─ migrations/            # tables, RLS, daily_summary view
-│  ├─ functions/usda-search/ # Edge Function (keeps USDA key secret)
 │  └─ tests/                 # RLS checks run by scripts/verify-db.sh (exercise list lives in a migration)
 ├─ __tests__/
 ├─ app.json · eas.json · .env.example · README.md
@@ -259,7 +258,7 @@ health-app/
 2. **Auth + onboarding** ✅: email + password sign-up / sign-in, route guards (signed out → welcome, not set up → onboarding, otherwise tabs), a 5–6 step wizard (goal, sex + age, height + weight in kg/cm or lb/ft, activity, goal weight + pace), `nutrition.ts` with tests, and the animated budget reveal with ±50 kcal adjustment. Saves the profile and the first weigh-in. Also: native touch ripple + UI-thread press animations, tabs switch on touch-down and are preloaded.
 3. **Dashboard** ✅: calorie gauge with Eaten/Budget ends, week rings (tap to view a day), macro bars, rotating insight card, trend-weight / expenditure / water / exercise tiles, food timeline with the next meal highlighted, Finish today (today or yesterday) with streaks and confetti, pull to refresh. Also adds the **Recomp** goal (−10% of maintenance, 2.2 g/kg protein).
 4. **Logger core** ✅: the logger sheet (meal picker, search your foods, Recent ranked by meal and how often you eat it, one-tap repeat), quick add (calories worked out from macros), custom foods from a nutrition label, food detail with a unit switch, typed amount and a drag ruler with haptic ticks, a "your day after this" preview, favorites, edit/delete, and the Food log tab (day by day, meal cards). Saving updates the screen instantly and syncs in the background. Fibre is tracked on foods, quick adds, logs and daily totals (migration `20261006150000_fibre.sql`).
-5. **Food search**: Open Food Facts + USDA Edge Function, smart ranking, recents.
+5. **Food search** ✅: type in the logger to search USDA (whole and generic foods) and Open Food Facts (packaged products) at the same time, after a short pause in typing. Results are merged and ranked (every word must match, plain names and whole foods first, duplicates dropped), show a source tag, serving, kcal and a macro bar, and open instantly. A picked food (with fibre, sugar, sodium and household measures like "1 medium" or "1 slice") is saved to your account the first time you log it. If one database doesn't answer, the other's results still show.
 6. **Barcode scanning.**
 7. **Saved meals, multi-add, copy meal/day, favorites.**
 8. **Weight + trend**: `trend.ts` and the trend chart.
@@ -275,7 +274,7 @@ Each phase ends in a working app you can try in Expo Go, committed to `claude/qu
 
 ## What you'll need to set up (all free)
 1. A **Supabase** account → new project → copy its URL and anon key into `.env`.
-2. A **USDA FoodData Central** API key (free signup) → stored as a Supabase secret.
+2. Optional: a free **USDA FoodData Central** API key (api.data.gov signup) → `EXPO_PUBLIC_USDA_API_KEY` in `.env`. Without it, search uses USDA's shared demo key (about 30 searches an hour).
 3. An **Expo** account (for EAS builds) and the **Expo Go** app from the Play Store.
 4. On your phone, allow "Install unknown apps" when installing the APK.
 
