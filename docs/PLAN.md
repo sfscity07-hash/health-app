@@ -47,21 +47,35 @@ Nothing in the plan needs a credit card.
 ---
 
 ## Design system ("premium app" feel)
-This is what makes it feel like a paid app rather than a school project:
+The interactive design preview is the reference for all of this: https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq
 
-- **Dark-first theme** (true-black background, slightly raised cards) plus a light theme that follows the system setting.
-- **One accent color** and **fixed macro colors**: protein, carbs and fat each get one hue, used everywhere (rings, bars, charts, chips) so you recognize them at a glance.
-- **Typography**: Geist with **tabular (equal-width) numbers**, so digits don't jitter when they change. Key numbers are big and bold, labels small and muted.
-- **Cards**: 20 px rounded corners, generous padding, no heavy borders, consistent 4/8/16/24 spacing.
+- **Palette**:
+  - Dark-first: near-black ground (`#07080C`), one periwinkle accent (`#8F9BFF`), and fixed macro colors (protein rose, carbs amber, fat teal) used everywhere.
+  - Streak orange is the only other color.
+  - The light theme follows the system setting.
+- **Type carries the hierarchy**:
+  - Geist for text and Geist Mono for small uppercase labels.
+  - **Tabular (equal-width) digits** everywhere, so numbers don't jitter as they change.
+  - One large number per screen; everything else is small and quiet.
+- **Fewer boxes**:
+  - Cards (22 px radius, hairline edge + faint top highlight) only wrap things you act on as a group.
+  - Everything else sits on the background, separated by space and hairlines.
+- **Instrument details**:
+  - A 270° calorie gauge with tick marks and a soft glow at the arc's end.
+  - A macro mini-bar on every logged food.
+  - A pulsing dot on the next meal.
+  - A goal date on the progress bar.
+- **Navigation**: a floating frosted pill with 4 tabs, plus a separate round **+** button.
 - **Motion that rewards you**:
-  - Calorie ring and macro bars **animate as they fill** when you log something.
-  - Numbers **count up or down** to their new value.
-  - Spring-animated bottom sheets.
-  - A short **haptic tick** on log, stepper changes and goal hit, and a gentle celebration when you close out a day on target.
-- **Never leave context**: logging happens in a bottom sheet over the dashboard, not a separate page.
-- **Gestures**: swipe left/right on the dashboard to change days, swipe an entry to delete or duplicate it, long-press to multi-select and copy to another day.
-- **Loading states**: skeleton placeholders instead of spinners, and friendly empty states ("Nothing logged yet — tap + to add breakfast").
-- **Accessibility**: large touch targets, readable contrast in both themes.
+  - The gauge, ticks, rings and bars animate as they fill, and numbers count to their new value.
+  - Spring bottom sheets.
+  - Haptic ticks on the portion ruler and on log, plus a small confetti burst on "Finish today", a water goal, or an accepted check-in.
+- **Never leave context**: logging happens in a bottom sheet over the dashboard.
+- **Gestures**: swipe to change days, swipe an entry to delete or duplicate it, long-press to multi-select and copy.
+- **Loading & empty states**: skeletons instead of spinners. Empty meals show suggestions instead of blank space.
+- **Accessibility**:
+  - Large touch targets and readable contrast in both themes.
+  - All motion turns off when the phone asks for reduced motion.
 
 ---
 
@@ -73,35 +87,56 @@ This is what makes it feel like a paid app rather than a school project:
 - It calculates a starting calorie budget (Mifflin-St Jeor BMR × activity, adjusted for your goal) and macro targets. The reveal screen animates the ring, and every number can be edited.
 
 ### 2. Dashboard ("Today")
-- A **hero calorie ring** with remaining calories in the middle and the breakdown "Budget − Food + Exercise" below it.
-- **Three macro rings or bars** (protein, carbs, fat) showing grams eaten / target.
-- A **horizontal card carousel**:
-  - Trend weight
-  - Expenditure estimate
-  - Water
-  - Steps / exercise
-  - Streak
-- **Food timeline** grouped by meal, with time and calories per item, and a "log again" chip on each meal.
-- A **date strip** at the top (week view with a small dot on logged days). Swipe to change day.
-- A floating **+ button** that opens the logger sheet.
+- **Header**: date, greeting, and a **streak flame** counter.
+- **Week rings**: seven small rings (Mon–Sun). Each fills as you eat and closes with a check when you finish the day.
+- **Calorie gauge**:
+  - A 270° arc with tick marks, with the remaining kcal in the middle.
+  - **Eaten** and **Budget** sit at the two ends of the arc.
+  - It turns orange when you're over.
+- **Macros**: protein, carbs and fat as "98 / 160 g" with a bar and "62 g left". The label turns to a ✓ Done when you hit the target.
+- **Insight card** (tap to cycle). It changes as you eat:
+  - protein streak
+  - next weight milestone
+  - room left for dinner
+  - a supportive message on over-budget days
+- **2×2 tiles**:
+  - Trend weight with sparkline
+  - Expenditure with sparkline
+  - Water (tap to add 250 ml; 10 segments)
+  - Activity (steps + exercise kcal)
+- **Food timeline**: meals on a time rail, each food with kcal and a P/C/F mini-bar. The next empty meal shows one-tap suggestions ("Salmon & rice", "Same as last Tuesday").
+- **Finish today** button: closes the day, extends the streak, closes today's ring, and celebrates.
 
 ### 3. Fast food logger (the core loop — target: log a food in 3 taps)
-- One bottom sheet with tabs: **Search · Scan · Quick add · Saved meals**.
-- **Smart search** returns results as you type. Order: your foods, then recents, then USDA and Open Food Facts. Recents are ranked by **time of day** (oats come up first in the morning).
-- A **food detail sheet** with unit picker (g, ml, serving, cup…) and quantity stepper. The macros and calories shown update live, with a "this will put you at X / Y kcal" preview.
-- **Multi-add**: queue several foods, then log them all at once.
-- **Barcode scan**: scan, then a quick confirm, and it's logged. If the product isn't found, a "Create food" form opens with the barcode already filled in.
-- **Quick add**: just type calories and macros.
-- **Custom foods** and **saved meals** (a group of foods logged in one tap). Copy a meal or a whole day to another date.
+- **Bottom sheet**:
+  - The title "Add to **Dinner** ⌄" switches meals with a tap.
+  - The search field has a built-in barcode button.
+  - With an empty search it shows Scan · Quick add · Saved.
+- **Results**:
+  - Each row shows source (USDA / OFF / your meal), serving, P/C/F and kcal.
+  - Your foods and recents come first, then USDA and Open Food Facts.
+  - A separate "Often with dinner" section is ranked by meal and time of day.
+- **Multi-add**: the **+** on any row queues it. A bar slides up with "2 foods · 543 kcal · Add to Dinner".
+- **Food detail**:
+  - Big kcal number, a P/C/F calorie split bar, and unit tabs (g / fillet / oz…).
+  - A **draggable portion ruler** with haptic ticks.
+  - A **"Your day after this" preview**: striped bars show what this food adds to calories and each macro before you commit.
+- **Barcode scan**: scan, confirm, done. If the product isn't found, a "Create food" form opens with the barcode filled in.
+- **Quick add**, **custom foods**, **saved meals**, **favorites**, and copy a meal or day to another date.
 
 ### 4. Smart weight trend (MacroFactor-style)
 - Log your scale weight daily (a quick stepper starting from yesterday's value).
 - The **trend weight** smooths the noise out of daily weigh-ins (an exponential moving average). It's shown as a smooth line, with daily weigh-ins as faint dots.
-- Ranges: 1W / 1M / 3M / 6M / 1Y / All. Shows weekly rate of change and progress toward your goal.
+- Ranges: 1W / 1M / 3M / 6M / 1Y / All. Drag across the chart to inspect any day (trend and scale weight).
+- **Goal journey card**: start → goal bar with milestone notches every 2.5 kg, % done, "next milestone in ~N days", and a **projected goal date** that moves with your budget and habits.
 
 ### 5. Adaptive calorie budget (the "it learns me" feature)
 - **Expenditure estimate**: how many calories you burn per day, worked out from what you actually ate and how your trend weight actually changed over the last ~2–3 weeks. It starts from the formula and gradually trusts your own data more.
-- **Weekly check-in** (Monday): a full-screen summary of the week covering average intake, weight change, and updated expenditure. It **suggests a new calorie budget** to keep you on pace, which you can accept or tweak with one tap.
+- **Weekly check-in** (Monday), shown as a **four-card story** with tap-to-advance progress bars:
+  1. Consistency: days logged, shown as 7 rings.
+  2. Weight trend change for the week.
+  3. Expenditure, with a 6-week bar chart.
+  4. Next week's suggested budget. It has −/+ to adjust, the new macro split, and how many **days sooner** it moves your goal date. You accept with "Start next week" or keep the old budget.
 - This is what makes the app feel smart and keeps you coming back.
 
 ### 6. Water
@@ -112,16 +147,21 @@ This is what makes it feel like a paid app rather than a school project:
 - A setting controls whether exercise adds to your budget (off by default, because the adaptive budget already accounts for your activity).
 
 ### 8. Progress / insights
-- **Calories**: weekly bars vs budget, with a target line.
+- **Goal journey** and **weight trend** (above).
+- **Calories**: 7-day bars vs a dashed budget line. Today is highlighted and over-budget days are orange.
+- **Milestones**: badge rings that show progress *before* you earn them, e.g. "30-day streak 23 / 30" or "First 5 kg 4.8 / 5". Badges near completion glow.
+- **Consistency**: current and best streak, plus a 13-week heatmap of logged and closed days.
 - **Macros**: average split, plus how many days you hit your protein target.
-- **Weight**: trend chart.
-- **Streaks**: current and best streak, and a GitHub-style calendar heatmap of days you logged.
 
 ### 9. Habit hooks (why you'll keep opening it)
-- **Logging streak** with a flame counter (logging anything counts).
-- **Smart reminders** (local notifications, free). For example, a nudge at 1 pm if you haven't logged lunch, or a morning weigh-in reminder, each with its own on/off switch.
-- **Weekly check-in** ritual (above).
-- **Small celebrations** when you hit protein, close a day on target, or reach a new milestone weight.
+Every hook rewards logging honestly, and none of them punish a bad day.
+- **Finish the day**: a nightly one-tap ritual that closes the day, extends the streak, and fills the day's ring.
+- **Week rings**: a full row is a perfect week, and it's hard to leave one empty.
+- **Fresh insight each visit**: the dashboard card changes with what you've eaten.
+- **Milestones you can almost touch**: progress shown on badges before they unlock.
+- **Monday recap story** that ends in a one-tap budget update.
+- **A goal date that moves**: good weeks show up as days saved.
+- **Smart reminders** (local notifications, free). Examples: a nudge if lunch isn't logged by 1 pm, a morning weigh-in reminder, "finish your day" at 9 pm. Each has its own switch.
 
 ### 10. Profile & settings
 - Goals, macro split (as % or grams), units (kg/lb, ml/oz), theme, reminders, exercise add-back.
@@ -144,12 +184,12 @@ This is what makes it feel like a paid app rather than a school project:
  ├─ welcome → sign-in / sign-up
  └─ onboarding/ [goal → body → activity → pace → targets reveal]
 
-(tabs)  bottom bar: Dashboard · Food Log · [ + ] · Progress · More
- ├─ Dashboard   ring, macros, card carousel, today's timeline, date strip
+(tabs)  floating pill: Dashboard · Food Log · Progress · Profile   + separate round [ + ] button
+ ├─ Dashboard   week rings, calorie gauge, macros, insight card, 2×2 tiles, food timeline, Finish today
  ├─ Food Log    full day log with meal sections, copy/multi-select, day totals
- ├─ [ + ]       opens Logger bottom sheet (Search · Scan · Quick add · Saved)
- ├─ Progress    weight trend, expenditure, calories, macros, streak heatmap
- └─ More        profile, goals, my foods, saved meals, reminders, export, settings
+ ├─ Progress    goal journey, weight trend, calories, milestones, consistency heatmap
+ └─ Profile     goals, my foods, saved meals, reminders, export, settings
+ [ + ]          opens Logger bottom sheet (search with barcode button · Quick add · Saved)
 
 Sheets / modals
  ├─ logger (tabs)        ├─ food/[id] detail + serving picker
@@ -175,6 +215,7 @@ Every table has `user_id` and a row-level security rule (`user_id = auth.uid()`)
 | `water_logs` | date, amount_ml |
 | `exercise_logs` | date, activity, duration_min, kcal_burned |
 | `checkins` | week_start, avg_intake, trend_change, expenditure, old_target, new_target, accepted |
+| `day_closures` | date, closed_at (powers "Finish today", streaks, week rings and the heatmap) |
 
 - `food_logs` stores a **copy of the nutrients** at the moment you log, so editing a food later never changes your history.
 - A view, `daily_summary`, totals each day for the dashboard and charts.
@@ -189,8 +230,8 @@ health-app/
 ├─ src/
 │  ├─ theme/                 # tokens.ts (colors, macro colors, spacing, radii, type scale), dark/light
 │  ├─ components/
-│  │  ├─ ui/                 # Card, Button, Sheet, Stepper, Chip, Skeleton, AnimatedNumber, EmptyState
-│  │  ├─ CalorieRing, MacroRing, DateStrip, FoodRow, MealSection, ServingPicker, WaterCard, StreakFlame
+│  │  ├─ ui/                 # Card, Button, Sheet, FloatingNav, Chip, Skeleton, AnimatedNumber, Toast, Confetti
+│  │  ├─ CalorieGauge, WeekRings, MacroSummary, InsightCard, MetricTile, FoodTimeline, PortionRuler, ImpactPreview, Badge, StreakFlame
 │  │  └─ charts/             # TrendChart, CalorieBars, Heatmap
 │  ├─ features/              # hooks + queries per area: food/, logs/, weight/, water/, exercise/, profile/, checkin/
 │  ├─ lib/
@@ -213,10 +254,10 @@ health-app/
 ---
 
 ## Build phases
-0. **Design preview**: a clickable visual mockup of the main screens (Dashboard, Logger, Progress, Check-in) in dark and light theme. You approve the look before any app code is written.
+0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2 approved direction).
 1. **Foundation**: Expo + TypeScript, Expo Router, theme tokens, base UI components, Jest, lint. Supabase project, migrations and RLS.
 2. **Auth + onboarding**: wizard, `nutrition.ts` with tests, the animated targets reveal.
-3. **Dashboard**: calorie ring, macro rings, date strip, timeline, animations, haptics.
+3. **Dashboard**: calorie gauge, week rings, macros, insight card, tiles, timeline, Finish today, animations, haptics.
 4. **Logger core**: bottom sheet, quick add, custom foods, food detail + serving picker, edit/delete.
 5. **Food search**: Open Food Facts + USDA Edge Function, smart ranking, recents.
 6. **Barcode scanning.**
@@ -224,7 +265,7 @@ health-app/
 8. **Weight + trend**: `trend.ts` and the trend chart.
 9. **Water + exercise.**
 10. **Adaptive expenditure + weekly check-in**: `expenditure.ts`, check-in screen.
-11. **Progress tab, streaks, heatmap, celebrations.**
+11. **Progress tab**: goal journey + projected date, milestones/badges, streaks, heatmap, celebrations.
 12. **Reminders, settings, CSV export, delete account.**
 13. **Polish + release**: skeletons, empty states, app icon and splash screen, offline cache, EAS build of the APK, install on your phone.
 
