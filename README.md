@@ -54,7 +54,7 @@ You only need to do this once.
    Use the publishable key if you have one; otherwise the `anon` key.
 
    > ⚠️ Never use a key that starts with `sb_secret_` or is labelled `service_role`. Those skip every privacy rule and must never go in the app.
-5. Copy `.env.example` to a new file named `.env` in this folder and paste in your values. It should look like this (with your own values):
+5. Put your values in the `.env` file in this folder (create it if it isn't there). It should look like this, with your own values:
 
    ```
    EXPO_PUBLIC_SUPABASE_URL=https://abcdefghijklmnopqrst.supabase.co
@@ -64,7 +64,7 @@ You only need to do this once.
    Common mistakes:
    - The file must be named exactly `.env`. Windows Notepad sometimes saves it as `.env.txt`.
    - No quotes, and no spaces around the `=`.
-   - No `/` at the end of the URL.
+   - Use the project URL itself. If you pasted the REST address ending in `/rest/v1/`, the app trims that part for you.
 6. Restart the app with `npx expo start --clear`. The welcome screen's **Create account** button should be active. If it says **Connect Supabase first**, the app isn't reading your `.env`; check the common mistakes above.
 
 > Free Supabase projects pause after 7 days without use. Logging every day keeps yours awake. If it does pause, press **Restore** in the Supabase dashboard.
