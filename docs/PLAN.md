@@ -22,7 +22,7 @@ It's your own design and name (placeholder name **"Fuel"**, easy to change). It 
 | Backend, auth, sync | **Supabase free tier** | 500 MB database (years of food logs). A project **pauses after 7 days with no use**. Daily logging keeps it awake, and if it does pause, one click in the dashboard resumes it. |
 | Food database | **Open Food Facts** (no key) + **USDA FoodData Central** (free key) | Free |
 | Reminders | expo-notifications (local, on-device) | Free, no push server |
-| Fonts, icons, charts | Inter, Lucide icons, Victory Native XL | Open source |
+| Fonts, icons, charts | Geist, Lucide icons, Victory Native XL | Open source |
 
 Nothing in the plan needs a credit card.
 
@@ -51,7 +51,7 @@ This is what makes it feel like a paid app rather than a school project:
 
 - **Dark-first theme** (true-black background, slightly raised cards) plus a light theme that follows the system setting.
 - **One accent color** and **fixed macro colors**: protein, carbs and fat each get one hue, used everywhere (rings, bars, charts, chips) so you recognize them at a glance.
-- **Typography**: Inter with **tabular (equal-width) numbers**, so digits don't jitter when they change. Key numbers are big and bold, labels small and muted.
+- **Typography**: Geist with **tabular (equal-width) numbers**, so digits don't jitter when they change. Key numbers are big and bold, labels small and muted.
 - **Cards**: 20 px rounded corners, generous padding, no heavy borders, consistent 4/8/16/24 spacing.
 - **Motion that rewards you**:
   - Calorie ring and macro bars **animate as they fill** when you log something.
