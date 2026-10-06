@@ -254,7 +254,7 @@ health-app/
 ---
 
 ## Build phases
-0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2 approved direction).
+0. **Design preview** ✅: an interactive mockup of Dashboard, Food search, Food detail, Progress and Weekly check-in in dark and light (v2, awaiting feedback).
 1. **Foundation**: Expo + TypeScript, Expo Router, theme tokens, base UI components, Jest, lint. Supabase project, migrations and RLS.
 2. **Auth + onboarding**: wizard, `nutrition.ts` with tests, the animated targets reveal.
 3. **Dashboard**: calorie gauge, week rings, macros, insight card, tiles, timeline, Finish today, animations, haptics.
