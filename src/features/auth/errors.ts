@@ -1,7 +1,19 @@
 type MaybeAuthError = { code?: string; message?: string; status?: number; name?: string } | null | undefined;
 
-const DB_UPDATE_NEEDED =
+export const DB_UPDATE_NEEDED =
   'Your database is missing an update. In Supabase, open SQL Editor and run the newest file in supabase/migrations, then try again.';
+
+/** Postgres / PostgREST errors that mean the database is behind the app (a migration wasn't run). */
+export function isDatabaseBehind(error: unknown): boolean {
+  const e = error as MaybeAuthError;
+  if (e?.code === '22P02' && /enum/i.test(e?.message ?? '')) return true;
+  return e?.code === '42P01' || e?.code === '42703' || e?.code === 'PGRST204' || e?.code === 'PGRST205';
+}
+
+/** What to say when a screen's data didn't load. */
+export function loadErrorMessage(error: unknown): string {
+  return isDatabaseBehind(error) ? DB_UPDATE_NEEDED : 'Couldn’t load this day. Pull down to try again.';
+}
 
 /** Turns Supabase auth and database errors into plain sentences that say what to do next. */
 export function authErrorMessage(error: unknown): string {
@@ -25,9 +37,7 @@ export function authErrorMessage(error: unknown): string {
     case 'signup_disabled':
       return 'New sign-ups are turned off for this Supabase project.';
   }
-  // Postgres / PostgREST errors that mean the database is behind the app.
-  if (e?.code === '22P02' && /enum/i.test(e?.message ?? '')) return DB_UPDATE_NEEDED;
-  if (e?.code === '42P01' || e?.code === '42703' || e?.code === 'PGRST204' || e?.code === 'PGRST205') return DB_UPDATE_NEEDED;
+  if (isDatabaseBehind(error)) return DB_UPDATE_NEEDED;
   if (e?.name === 'AuthRetryableFetchError' || /network|fetch/i.test(e?.message ?? '')) {
     return "Can't reach the server. Check your internet connection and try again.";
   }

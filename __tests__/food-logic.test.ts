@@ -11,6 +11,7 @@ const salmon: FoodRecord = {
   protein_100g: 22.1,
   carbs_100g: 0,
   fat_100g: 12.4,
+  fiber_100g: null,
   default_serving_g: 150,
   default_serving_label: 'fillet',
 };
@@ -28,6 +29,9 @@ describe('portions', () => {
     expect(n.protein_g).toBeCloseTo(33.15);
     expect(n.carbs_g).toBe(0);
     expect(n.fat_g).toBeCloseTo(18.6);
+    // No fibre listed counts as none.
+    expect(n.fiber_g).toBe(0);
+    expect(nutrientsFor({ ...salmon, fiber_100g: 8 }, 50).fiber_g).toBe(4);
   });
 
   it('describes amounts the way people say them', () => {
@@ -42,22 +46,24 @@ describe('portions', () => {
 
 describe('quick add', () => {
   it('needs calories or macros', () => {
-    expect(parseQuickAdd({ name: '', kcal: '', protein: '', carbs: '', fat: '' })).toMatchObject({ ok: false });
+    expect(parseQuickAdd({ name: '', kcal: '', protein: '', carbs: '', fat: '', fiber: '' })).toMatchObject({ ok: false });
+    // Fibre alone has no calories to work out.
+    expect(parseQuickAdd({ name: '', kcal: '', protein: '', carbs: '', fat: '', fiber: '6' })).toMatchObject({ ok: false });
   });
 
   it('works out calories from macros when left blank', () => {
-    const r = parseQuickAdd({ name: '', kcal: '', protein: '30', carbs: '40', fat: '10' });
-    expect(r).toEqual({ ok: true, name: 'Quick add', nutrients: { kcal: 370, protein_g: 30, carbs_g: 40, fat_g: 10 } });
+    const r = parseQuickAdd({ name: '', kcal: '', protein: '30', carbs: '40', fat: '10', fiber: '6' });
+    expect(r).toEqual({ ok: true, name: 'Quick add', nutrients: { kcal: 370, protein_g: 30, carbs_g: 40, fat_g: 10, fiber_g: 6 } });
   });
 
   it('keeps typed calories and a name', () => {
-    const r = parseQuickAdd({ name: ' Office cake ', kcal: '350', protein: '', carbs: '', fat: '' });
-    expect(r).toEqual({ ok: true, name: 'Office cake', nutrients: { kcal: 350, protein_g: 0, carbs_g: 0, fat_g: 0 } });
+    const r = parseQuickAdd({ name: ' Office cake ', kcal: '350', protein: '', carbs: '', fat: '', fiber: '' });
+    expect(r).toEqual({ ok: true, name: 'Office cake', nutrients: { kcal: 350, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 } });
   });
 });
 
 describe('custom foods', () => {
-  const base = { name: 'Protein bar', brand: 'Grenade', servingLabel: 'Bar', servingGrams: '60', kcal: '210', protein: '20', carbs: '22', fat: '7' };
+  const base = { name: 'Protein bar', brand: 'Grenade', servingLabel: 'Bar', servingGrams: '60', kcal: '210', protein: '20', carbs: '22', fat: '7', fiber: '' };
 
   it('converts per-serving label values to per 100 g', () => {
     const r = buildCustomFood(base);
@@ -71,6 +77,7 @@ describe('custom foods', () => {
         protein_100g: 33.33,
         carbs_100g: 36.67,
         fat_100g: 11.67,
+        fiber_100g: null,
         default_serving_g: 60,
         default_serving_label: 'bar',
       },
@@ -81,6 +88,14 @@ describe('custom foods', () => {
     const r = buildCustomFood({ ...base, servingLabel: '', servingGrams: '' });
     expect(r.ok && r.food.kcal_100g).toBe(210);
     expect(r.ok && r.food.default_serving_label).toBeNull();
+  });
+
+  it('stores fibre per 100 g, or leaves it unknown', () => {
+    const r = buildCustomFood({ ...base, fiber: '4.5' });
+    expect(r.ok && r.food.fiber_100g).toBe(7.5);
+    expect(buildCustomFood({ ...base, fiber: '' })).toMatchObject({ ok: true, food: { fiber_100g: null } });
+    expect(buildCustomFood({ ...base, fiber: 'lots' })).toMatchObject({ ok: false, error: expect.stringMatching(/Fibre/) });
+    expect(buildCustomFood({ ...base, fiber: '70' })).toMatchObject({ ok: false, error: expect.stringMatching(/more fibre/) });
   });
 
   it('catches impossible numbers', () => {
@@ -102,6 +117,7 @@ describe('recents', () => {
     protein_g: 6,
     carbs_g: 33,
     fat_g: 3,
+    fiber_g: 5,
     meal: 'breakfast',
     log_date: '2026-10-05',
     ...over,

@@ -25,6 +25,7 @@ export function MealCard({ meal, entries, onAdd, onPressEntry }: MealCardProps) 
   const { colors } = useTheme();
   const kcal = entries.reduce((s, e) => s + e.kcal, 0);
   const protein = entries.reduce((s, e) => s + e.protein_g, 0);
+  const fiber = entries.reduce((s, e) => s + e.fiber_g, 0);
   const label = MEAL_LABEL[meal];
 
   return (
@@ -33,7 +34,9 @@ export function MealCard({ meal, entries, onAdd, onPressEntry }: MealCardProps) 
         <View style={styles.headText}>
           <Text variant="heading">{label}</Text>
           <Text variant="caption" color="textSecondary" tabular>
-            {entries.length === 0 ? 'Nothing yet' : `${formatInt(kcal)} kcal · ${Math.round(protein)} g protein`}
+            {entries.length === 0
+              ? 'Nothing yet'
+              : `${formatInt(kcal)} kcal · ${Math.round(protein)} g protein · ${Math.round(fiber)} g fibre`}
           </Text>
         </View>
         <PressableScale

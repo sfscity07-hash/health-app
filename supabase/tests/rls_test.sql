@@ -27,9 +27,9 @@ values ('10000000-0000-0000-0000-000000000001', 'usda', '175168', 'Salmon, Atlan
 insert into public.food_servings (food_id, label, grams)
 values ('10000000-0000-0000-0000-000000000001', '1 fillet', 150);
 
-insert into public.food_logs (log_date, meal, food_id, name, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g) values
-  ('2026-10-06', 'breakfast', null, 'Greek yogurt, 0%', 200, 'g', 200, 118, 20.6, 7.2, 0.8),
-  ('2026-10-06', 'dinner', '10000000-0000-0000-0000-000000000001', 'Salmon, Atlantic, cooked', 1, 'fillet', 150, 309, 33.2, 0, 18.6);
+insert into public.food_logs (log_date, meal, food_id, name, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g) values
+  ('2026-10-06', 'breakfast', null, 'Greek yogurt with oats', 200, 'g', 200, 118, 20.6, 7.2, 0.8, 2.5),
+  ('2026-10-06', 'dinner', '10000000-0000-0000-0000-000000000001', 'Salmon, Atlantic, cooked', 1, 'fillet', 150, 309, 33.2, 0, 18.6, null);
 
 insert into public.water_logs (log_date, amount_ml) values ('2026-10-06', 250), ('2026-10-06', 500);
 insert into public.exercise_logs (log_date, exercise_id, name, duration_min, kcal_burned)
@@ -46,6 +46,7 @@ begin
   assert s.kcal_in = 427, format('daily kcal_in should be 427, got %s', s.kcal_in);
   assert s.protein_g = 53.8, format('daily protein should be 53.8, got %s', s.protein_g);
   assert s.food_entries = 2, 'two food entries';
+  assert s.fiber_g = 2.5, format('daily fibre should be 2.5 (unknown counts as none), got %s', s.fiber_g);
   assert s.kcal_out = 180, 'exercise kcal';
   assert s.water_ml = 750, 'water total';
   assert s.closed, 'day is closed';

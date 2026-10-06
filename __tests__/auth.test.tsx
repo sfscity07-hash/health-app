@@ -1,7 +1,7 @@
 import { render, screen, userEvent, waitFor } from '@testing-library/react-native';
 
 import { AuthForm } from '@/features/auth/AuthForm';
-import { authErrorMessage, validateCredentials } from '@/features/auth/errors';
+import { authErrorMessage, loadErrorMessage, validateCredentials } from '@/features/auth/errors';
 
 const mockAuth = {
   signUp: jest.fn(),
@@ -34,6 +34,12 @@ describe('credential checks', () => {
     expect(authErrorMessage({ code: '22P02', message: 'invalid input value for enum goal_type: "recomp"' })).toMatch(
       /missing an update/,
     );
+  });
+
+  it('says when a screen fails because the database needs an update', () => {
+    // A column the app expects doesn't exist yet (e.g. fibre before its migration).
+    expect(loadErrorMessage({ code: '42703', message: 'column food_logs.fiber_g does not exist' })).toMatch(/missing an update/);
+    expect(loadErrorMessage({ message: 'Failed to fetch' })).toMatch(/Pull down to try again/);
   });
 });
 

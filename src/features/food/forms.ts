@@ -3,7 +3,7 @@ import { kcalFromMacros, roundTo, type Nutrients } from '@/lib/portion';
 
 const optional = (s: string) => (s.trim() === '' ? 0 : parseNumber(s));
 
-export type QuickAddForm = { name: string; kcal: string; protein: string; carbs: string; fat: string };
+export type QuickAddForm = { name: string; kcal: string; protein: string; carbs: string; fat: string; fiber: string };
 
 export type QuickAddResult = { ok: true; name: string; nutrients: Nutrients } | { ok: false; error: string };
 
@@ -12,7 +12,8 @@ export function parseQuickAdd(f: QuickAddForm): QuickAddResult {
   const protein = optional(f.protein);
   const carbs = optional(f.carbs);
   const fat = optional(f.fat);
-  if (protein === null || carbs === null || fat === null) return { ok: false, error: 'Macros must be plain numbers.' };
+  const fiber = optional(f.fiber);
+  if (protein === null || carbs === null || fat === null || fiber === null) return { ok: false, error: 'Macros and fibre must be plain numbers.' };
   let kcal = f.kcal.trim() === '' ? null : parseNumber(f.kcal);
   if (f.kcal.trim() !== '' && kcal === null) return { ok: false, error: 'Calories must be a plain number.' };
   if (kcal === null) {
@@ -21,7 +22,7 @@ export function parseQuickAdd(f: QuickAddForm): QuickAddResult {
     kcal = Math.round(fromMacros);
   }
   if (kcal > 10000) return { ok: false, error: "That's more than 10,000 kcal. Check the number." };
-  return { ok: true, name: f.name.trim() || 'Quick add', nutrients: { kcal, protein_g: protein, carbs_g: carbs, fat_g: fat } };
+  return { ok: true, name: f.name.trim() || 'Quick add', nutrients: { kcal, protein_g: protein, carbs_g: carbs, fat_g: fat, fiber_g: fiber } };
 }
 
 export type CustomFoodForm = {
@@ -33,6 +34,8 @@ export type CustomFoodForm = {
   protein: string;
   carbs: string;
   fat: string;
+  /** Optional: left empty means the label doesn't list it. */
+  fiber: string;
 };
 
 export type CustomFoodInsert = {
@@ -43,6 +46,7 @@ export type CustomFoodInsert = {
   protein_100g: number;
   carbs_100g: number;
   fat_100g: number;
+  fiber_100g: number | null;
   default_serving_g: number;
   default_serving_label: string | null;
 };
@@ -66,6 +70,10 @@ export function buildCustomFood(f: CustomFoodForm): CustomFoodResult {
   const fat = optional(f.fat);
   if (protein === null || carbs === null || fat === null) return { ok: false, error: 'Macros must be plain numbers.' };
   if (protein + carbs + fat > grams * 1.02) return { ok: false, error: 'The macros add up to more than the serving weighs. Check the numbers.' };
+  // Some labels count fibre inside carbs and some list it separately, so it's only checked on its own.
+  const fiber = f.fiber.trim() === '' ? null : parseNumber(f.fiber);
+  if (f.fiber.trim() !== '' && fiber === null) return { ok: false, error: 'Fibre must be a plain number.' };
+  if (fiber !== null && fiber > grams) return { ok: false, error: 'There’s more fibre than the serving weighs. Check the number.' };
 
   const per100 = (v: number) => roundTo((v / grams) * 100, 0.01);
   const kcal_100g = per100(kcal);
@@ -81,6 +89,7 @@ export function buildCustomFood(f: CustomFoodForm): CustomFoodResult {
       protein_100g: per100(protein),
       carbs_100g: per100(carbs),
       fat_100g: per100(fat),
+      fiber_100g: fiber === null ? null : per100(fiber),
       default_serving_g: grams,
       default_serving_label: perServing ? f.servingLabel.trim().toLowerCase() : null,
     },

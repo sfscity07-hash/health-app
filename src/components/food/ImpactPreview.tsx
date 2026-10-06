@@ -7,21 +7,19 @@ import type { Nutrients } from '@/lib/portion';
 import { useTheme } from '@/theme/theme';
 import { space, type ColorName } from '@/theme/tokens';
 
-type Targets = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
-
 const ROWS: { key: keyof Nutrients; label: string; color: ColorName; unit: string }[] = [
   { key: 'kcal', label: 'Calories', color: 'accent', unit: '' },
   { key: 'protein_g', label: 'Protein', color: 'protein', unit: ' g' },
   { key: 'carbs_g', label: 'Carbs', color: 'carbs', unit: ' g' },
   { key: 'fat_g', label: 'Fat', color: 'fat', unit: ' g' },
+  { key: 'fiber_g', label: 'Fibre', color: 'fiber', unit: ' g' },
 ];
 
 /** "Your day after this": what you've had already, plus (lighter) what this food adds. */
-export function ImpactPreview({ before, adding, targets }: { before: Nutrients; adding: Nutrients; targets: Targets }) {
+export function ImpactPreview({ before, adding, targets }: { before: Nutrients; adding: Nutrients; targets: Nutrients }) {
   const { colors } = useTheme();
   const after = before.kcal + adding.kcal;
   const left = targets.kcal - after;
-  const targetFor = (k: keyof Nutrients) => (k === 'kcal' ? targets.kcal : targets[k]);
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
@@ -31,7 +29,7 @@ export function ImpactPreview({ before, adding, targets }: { before: Nutrients; 
         </Text>
       </View>
       {ROWS.map((r) => {
-        const target = targetFor(r.key) || 1;
+        const target = targets[r.key] || 1;
         const base = Math.min(1, before[r.key] / target);
         const add = Math.max(0, Math.min(1, (before[r.key] + adding[r.key]) / target) - base);
         return (
@@ -45,7 +43,7 @@ export function ImpactPreview({ before, adding, targets }: { before: Nutrients; 
                 <Text variant="caption" color="text" style={styles.bold}>
                   {formatInt(before[r.key] + adding[r.key])}
                 </Text>{' '}
-                / {formatInt(target)}
+                / {formatInt(targets[r.key])}
                 {r.unit}
               </Text>
             </View>

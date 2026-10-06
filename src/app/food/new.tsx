@@ -31,6 +31,7 @@ export default function NewFoodScreen() {
     protein: '',
     carbs: '',
     fat: '',
+    fiber: '',
   });
   const [error, setError] = useState<string | null>(null);
   const set = (key: keyof CustomFoodForm) => (v: string) => {
@@ -108,7 +109,10 @@ export default function NewFoodScreen() {
           <View style={styles.row}>
             <TextField label="Protein" suffix="g" flex value={form.protein} onChangeText={set('protein')} keyboardType="decimal-pad" placeholder="0" />
             <TextField label="Carbs" suffix="g" flex value={form.carbs} onChangeText={set('carbs')} keyboardType="decimal-pad" placeholder="0" />
+          </View>
+          <View style={styles.row}>
             <TextField label="Fat" suffix="g" flex value={form.fat} onChangeText={set('fat')} keyboardType="decimal-pad" placeholder="0" />
+            <TextField label="Fibre" suffix="g" flex value={form.fiber} onChangeText={set('fiber')} keyboardType="decimal-pad" placeholder="0" />
           </View>
         </Card>
       </ScrollView>

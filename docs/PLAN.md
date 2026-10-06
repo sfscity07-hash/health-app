@@ -5,7 +5,7 @@ You want a personal calorie-tracking app. The repo (`sfscity07-hash/health-app`)
 - **Native Android app**
 - **Cloud account + sync**
 - **Food lookup**: database search, barcode scanning, and manual entry/saved foods
-- **Tracking**: macros, body weight, water, and exercise
+- **Tracking**: macros and fibre, body weight, water, and exercise
 - **Costs nothing**: no subscriptions, no paid APIs, no store fees
 - **Premium feel, like MacroFactor**: fast, polished and satisfying, so you want to open it every day
 
@@ -93,7 +93,7 @@ The interactive design preview is the reference for all of this: https://claude.
   - A 270° arc with tick marks, with the remaining kcal in the middle.
   - **Eaten** and **Budget** sit at the two ends of the arc.
   - It turns orange when you're over.
-- **Macros**: protein, carbs and fat as "98 / 160 g" with a bar and "62 g left". The label turns to a ✓ Done when you hit the target.
+- **Macros**: protein, carbs and fat as "98 / 160 g" with a bar and "62 g left". The label turns to a ✓ Done when you hit the target. Fibre runs along the bottom of the card against a target of 14 g per 1,000 kcal.
 - **Insight card** (tap to cycle). It changes as you eat:
   - protein streak
   - next weight milestone
@@ -206,9 +206,9 @@ Every table has `user_id` and a row-level security rule (`user_id = auth.uid()`)
 | Table | Key columns |
 |---|---|
 | `profiles` | sex, birth_date, height_cm, activity_level, goal_type, goal_rate_kg_week, goal_weight_kg, calorie_target, protein_g, carbs_g, fat_g, water_goal_ml, units, theme, exercise_addback, reminder settings |
-| `foods` | source (`custom`/`usda`/`off`), external_id, barcode, name, brand, nutrients per 100 g, default serving |
+| `foods` | source (`custom`/`usda`/`off`), external_id, barcode, name, brand, nutrients per 100 g (kcal, protein, carbs, fat, fibre, sugar, sodium), default serving |
 | `food_servings` | food_id, label ("1 cup"), grams |
-| `food_logs` | date, logged_at, meal, food_id (nullable for quick add), name_snapshot, quantity, unit, grams, kcal, protein, carbs, fat |
+| `food_logs` | date, logged_at, meal, food_id (nullable for quick add), name_snapshot, quantity, unit, grams, kcal, protein, carbs, fat, fiber_g |
 | `saved_meals` + `saved_meal_items` | named group of foods + quantities |
 | `favorites` | food_id |
 | `weight_logs` | date (one per day), weight_kg |
@@ -258,7 +258,7 @@ health-app/
 1. **Foundation** ✅: Expo SDK 57 + TypeScript, Expo Router with the floating tab bar, theme tokens + Geist fonts, base UI components, app icon/splash, Jest, ESLint. Supabase client, schema migrations, RLS, and a local database check (`npm run db:verify`).
 2. **Auth + onboarding** ✅: email + password sign-up / sign-in, route guards (signed out → welcome, not set up → onboarding, otherwise tabs), a 5–6 step wizard (goal, sex + age, height + weight in kg/cm or lb/ft, activity, goal weight + pace), `nutrition.ts` with tests, and the animated budget reveal with ±50 kcal adjustment. Saves the profile and the first weigh-in. Also: native touch ripple + UI-thread press animations, tabs switch on touch-down and are preloaded.
 3. **Dashboard** ✅: calorie gauge with Eaten/Budget ends, week rings (tap to view a day), macro bars, rotating insight card, trend-weight / expenditure / water / exercise tiles, food timeline with the next meal highlighted, Finish today (today or yesterday) with streaks and confetti, pull to refresh. Also adds the **Recomp** goal (−10% of maintenance, 2.2 g/kg protein).
-4. **Logger core** ✅: the logger sheet (meal picker, search your foods, Recent ranked by meal and how often you eat it, one-tap repeat), quick add (calories worked out from macros), custom foods from a nutrition label, food detail with a unit switch, typed amount and a drag ruler with haptic ticks, a "your day after this" preview, favorites, edit/delete, and the Food log tab (day by day, meal cards). Saving updates the screen instantly and syncs in the background.
+4. **Logger core** ✅: the logger sheet (meal picker, search your foods, Recent ranked by meal and how often you eat it, one-tap repeat), quick add (calories worked out from macros), custom foods from a nutrition label, food detail with a unit switch, typed amount and a drag ruler with haptic ticks, a "your day after this" preview, favorites, edit/delete, and the Food log tab (day by day, meal cards). Saving updates the screen instantly and syncs in the background. Fibre is tracked on foods, quick adds, logs and daily totals (migration `20261006150000_fibre.sql`).
 5. **Food search**: Open Food Facts + USDA Edge Function, smart ranking, recents.
 6. **Barcode scanning.**
 7. **Saved meals, multi-add, copy meal/day, favorites.**

@@ -14,6 +14,7 @@ const minus = (a: Nutrients, b: Nutrients): Nutrients => ({
   protein_g: Math.max(0, a.protein_g - b.protein_g),
   carbs_g: Math.max(0, a.carbs_g - b.carbs_g),
   fat_g: Math.max(0, a.fat_g - b.fat_g),
+  fiber_g: Math.max(0, a.fiber_g - b.fiber_g),
 });
 
 /** Change or delete something you've logged. */
@@ -111,7 +112,14 @@ export default function EntryScreen() {
   return (
     <QuickAddForm
       mode="edit"
-      initial={{ name: e.name, kcal: formatQty(e.kcal), protein: field(e.protein_g), carbs: field(e.carbs_g), fat: field(e.fat_g) }}
+      initial={{
+        name: e.name,
+        kcal: formatQty(e.kcal),
+        protein: field(e.protein_g),
+        carbs: field(e.carbs_g),
+        fat: field(e.fat_g),
+        fiber: field(e.fiber_g),
+      }}
       initialMeal={e.meal}
       before={before}
       targets={targets}

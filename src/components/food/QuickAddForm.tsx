@@ -16,8 +16,8 @@ import { kcalFromMacros, type Nutrients } from '@/lib/portion';
 import { useTheme } from '@/theme/theme';
 import { fonts, gutter, space } from '@/theme/tokens';
 
-const NONE: Nutrients = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
-const EMPTY: Form = { name: '', kcal: '', protein: '', carbs: '', fat: '' };
+const NONE: Nutrients = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
+const EMPTY: Form = { name: '', kcal: '', protein: '', carbs: '', fat: '', fiber: '' };
 
 export type QuickAddChoice = { meal: Meal; name: string; nutrients: Nutrients };
 
@@ -26,7 +26,7 @@ type QuickAddFormProps = {
   initial?: Partial<Form>;
   initialMeal: Meal;
   before: Nutrients;
-  targets: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+  targets: Nutrients;
   saving?: boolean;
   onClose: () => void;
   onSubmit: (choice: QuickAddChoice) => void;
@@ -97,10 +97,15 @@ export function QuickAddForm(p: QuickAddFormProps) {
           </Text>
         </Card>
 
-        <View style={styles.macros}>
-          <TextField label="Protein" suffix="g" flex value={form.protein} onChangeText={set('protein')} keyboardType="decimal-pad" placeholder="0" />
-          <TextField label="Carbs" suffix="g" flex value={form.carbs} onChangeText={set('carbs')} keyboardType="decimal-pad" placeholder="0" />
-          <TextField label="Fat" suffix="g" flex value={form.fat} onChangeText={set('fat')} keyboardType="decimal-pad" placeholder="0" />
+        <View style={styles.grid}>
+          <View style={styles.row}>
+            <TextField label="Protein" suffix="g" flex value={form.protein} onChangeText={set('protein')} keyboardType="decimal-pad" placeholder="0" />
+            <TextField label="Carbs" suffix="g" flex value={form.carbs} onChangeText={set('carbs')} keyboardType="decimal-pad" placeholder="0" />
+          </View>
+          <View style={styles.row}>
+            <TextField label="Fat" suffix="g" flex value={form.fat} onChangeText={set('fat')} keyboardType="decimal-pad" placeholder="0" />
+            <TextField label="Fibre" suffix="g" flex value={form.fiber} onChangeText={set('fiber')} keyboardType="decimal-pad" placeholder="0" />
+          </View>
         </View>
 
         <TextField label="Name (optional)" value={form.name} onChangeText={set('name')} placeholder="e.g. Burrito bowl" maxLength={200} />
@@ -144,6 +149,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   noWebOutline: { outlineWidth: 0 },
-  macros: { flexDirection: 'row', gap: space.sm },
+  grid: { gap: space.md },
+  row: { flexDirection: 'row', gap: space.sm },
   group: { gap: space.sm },
 });

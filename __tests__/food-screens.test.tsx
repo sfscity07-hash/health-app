@@ -14,13 +14,14 @@ const bar: FoodWithServings = {
   protein_100g: 33.3,
   carbs_100g: 30,
   fat_100g: 13.3,
+  fiber_100g: 10,
   default_serving_g: 60,
   default_serving_label: 'bar',
   servings: [],
 };
 
-const zero = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
-const targets = { kcal: 2000, protein_g: 150, carbs_g: 200, fat_g: 65 };
+const zero = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
+const targets = { kcal: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 28 };
 
 describe('FoodDetail', () => {
   it('starts on one serving and logs what you picked', async () => {
@@ -31,6 +32,9 @@ describe('FoodDetail', () => {
     // 60 g of a 350 kcal/100 g food.
     expect(screen.getByRole('button', { name: /Add to Lunch/ })).toBeOnTheScreen();
     expect(screen.getAllByText('210 kcal').length).toBeGreaterThan(0);
+    // 6 g of fibre in one bar, against a 28 g day.
+    expect(screen.getByText('6.0 g')).toBeOnTheScreen();
+    expect(screen.getByText('21% of day')).toBeOnTheScreen();
 
     const user = userEvent.setup();
     await user.press(screen.getByRole('button', { name: 'More bar' }));
@@ -88,11 +92,12 @@ describe('QuickAddForm', () => {
     await user.type(screen.getByLabelText('Protein'), '40');
     await user.type(screen.getByLabelText('Carbs'), '50');
     await user.type(screen.getByLabelText('Fat'), '20');
+    await user.type(screen.getByLabelText('Fibre'), '9');
     await user.press(screen.getByRole('button', { name: /Add to Dinner/ }));
     expect(onSubmit).toHaveBeenCalledWith({
       meal: 'dinner',
       name: 'Quick add',
-      nutrients: { kcal: 540, protein_g: 40, carbs_g: 50, fat_g: 20 },
+      nutrients: { kcal: 540, protein_g: 40, carbs_g: 50, fat_g: 20, fiber_g: 9 },
     });
   });
 

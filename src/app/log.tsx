@@ -89,7 +89,7 @@ export default function LogSheet() {
       quantity: l.quantity,
       unit: l.unit,
       grams: l.grams,
-      nutrients: { kcal: l.kcal, protein_g: l.protein_g, carbs_g: l.carbs_g, fat_g: l.fat_g },
+      nutrients: { kcal: l.kcal, protein_g: l.protein_g, carbs_g: l.carbs_g, fat_g: l.fat_g, fiber_g: l.fiber_g },
     });
     showToast(`Added ${r.name} · ${formatInt(l.kcal)} kcal`);
   }
@@ -100,7 +100,7 @@ export default function LogSheet() {
       router.push({ pathname: '/food/[id]', params: { id: r.foodId, date, meal, qty: String(l.quantity), unit: l.unit } });
     } else {
       const g = (v: number) => (v > 0 ? formatQty(v) : '');
-      openQuickAdd({ name: r.name, kcal: formatQty(l.kcal), protein: g(l.protein_g), carbs: g(l.carbs_g), fat: g(l.fat_g) });
+      openQuickAdd({ name: r.name, kcal: formatQty(l.kcal), protein: g(l.protein_g), carbs: g(l.carbs_g), fat: g(l.fat_g), fiber: g(l.fiber_g) });
     }
   }
 

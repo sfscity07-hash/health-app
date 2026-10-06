@@ -2,6 +2,7 @@ import {
   bmr,
   calorieTarget,
   dailyDelta,
+  fiberTarget,
   macroTargets,
   maintenanceCalories,
   projectedGoalDate,
@@ -95,5 +96,13 @@ describe('recomp', () => {
     expect(macroTargets(2480, 80, 'recomp').protein_g).toBe(176);
     expect(macroTargets(1500, 120, 'recomp').protein_g).toBe(150);
     expect(macroTargets(2480, 80, 'lose').protein_g).toBe(144);
+  });
+});
+
+describe('fibre target', () => {
+  it('is 14 g per 1,000 kcal', () => {
+    expect(fiberTarget(2000)).toBe(28);
+    expect(fiberTarget(1950)).toBe(27);
+    expect(fiberTarget(1500)).toBe(21);
   });
 });

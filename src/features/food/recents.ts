@@ -12,6 +12,7 @@ export type LoggedRow = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  fiber_g: number;
   meal: Meal;
   log_date: string;
 };

@@ -11,7 +11,7 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 Updated with every release. **Latest: Phase 4 (logging food).**
 
-**Before running this version:** nothing new in Supabase. Just `git pull`, `npm install`, then `npx expo start --clear`. (If you skipped it last time, run `supabase/migrations/20261006120000_recomp_goal.sql` once.)
+**Before running this version:** in Supabase's SQL Editor, run `supabase/migrations/20261006150000_fibre.sql` once (it adds fibre to your logs and daily totals, and is safe to run again). Then `git pull`, `npm install`, `npx expo start --clear`. Until you run it, the app shows "Your database is missing an update".
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -19,12 +19,13 @@ Updated with every release. **Latest: Phase 4 (logging food).**
 - **Logging food** (the **+** button, or "Add …" on the dashboard and Food log):
   - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap.
   - Search the foods you've created or logged before.
-  - **Quick add**: just calories, or macros and it works the calories out.
-  - **New food**: copy a nutrition label (per serving or per 100 g). It's saved for next time.
+  - **Quick add**: just calories, or macros and it works the calories out. Fibre is optional.
+  - **New food**: copy a nutrition label (per serving or per 100 g), including **fibre**. It's saved for next time.
   - Food screen: switch between servings and grams, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.
   - Tap the meal name at the top of the logger to switch meal.
   - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
-- **Food log tab**: your day meal by meal with calories and macros; step back through earlier days.
+- **Fibre**: tracked on everything you log, with a daily target of 14 g per 1,000 kcal (shown on the dashboard, Food log, food screen and Profile).
+- **Food log tab**: your day meal by meal with calories, macros and fibre; step back through earlier days.
 - Dashboard:
   - calorie gauge
   - protein/carbs/fat bars
@@ -63,6 +64,7 @@ You only need to do this once.
    1. `20261006090000_initial_schema.sql` (tables, privacy rules, daily summary)
    2. `20261006090100_exercise_catalog.sql` (the list of activities)
    3. `20261006120000_recomp_goal.sql` (adds the Recomp goal)
+   4. `20261006150000_fibre.sql` (fibre on logged food and daily totals)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 

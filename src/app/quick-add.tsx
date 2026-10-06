@@ -9,7 +9,7 @@ import { isMeal, mealForTime } from '@/lib/meals';
 import { useViewedDate } from '@/store/day';
 import { useToast } from '@/store/toast';
 
-type Params = { date?: string; meal?: string; name?: string; kcal?: string; protein?: string; carbs?: string; fat?: string };
+type Params = { date?: string; meal?: string; name?: string; kcal?: string; protein?: string; carbs?: string; fat?: string; fiber?: string };
 
 /** Quick add: log calories and macros directly. Opened from the logger (also to repeat an earlier quick add). */
 export default function QuickAddScreen() {
@@ -40,7 +40,7 @@ export default function QuickAddScreen() {
   return (
     <QuickAddForm
       mode="add"
-      initial={{ name: params.name, kcal: params.kcal, protein: params.protein, carbs: params.carbs, fat: params.fat }}
+      initial={{ name: params.name, kcal: params.kcal, protein: params.protein, carbs: params.carbs, fat: params.fat, fiber: params.fiber }}
       initialMeal={isMeal(params.meal) ? params.meal : mealForTime(new Date())}
       before={eaten}
       targets={targets}

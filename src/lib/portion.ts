@@ -13,6 +13,8 @@ export type FoodRecord = {
   protein_100g: number;
   carbs_100g: number;
   fat_100g: number;
+  /** Null when the label or database doesn't list fibre. */
+  fiber_100g: number | null;
   default_serving_g: number | null;
   default_serving_label: string | null;
 };
@@ -34,7 +36,7 @@ export type PortionUnit = {
   major: number;
 };
 
-export type Nutrients = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+export type Nutrients = { kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number };
 
 export const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 
@@ -77,6 +79,7 @@ export function nutrientsFor(food: FoodRecord, grams: number): Nutrients {
     protein_g: food.protein_100g * f,
     carbs_g: food.carbs_100g * f,
     fat_g: food.fat_100g * f,
+    fiber_g: (food.fiber_100g ?? 0) * f,
   };
 }
 
@@ -120,7 +123,7 @@ export function clampQty(q: number, unit: Pick<PortionUnit, 'step' | 'max'>): nu
 /** Rounds stored values the way the database keeps them (one decimal). */
 export function roundNutrients(n: Nutrients): Nutrients {
   const r = (v: number) => Math.round(v * 10) / 10;
-  return { kcal: r(n.kcal), protein_g: r(n.protein_g), carbs_g: r(n.carbs_g), fat_g: r(n.fat_g) };
+  return { kcal: r(n.kcal), protein_g: r(n.protein_g), carbs_g: r(n.carbs_g), fat_g: r(n.fat_g), fiber_g: r(n.fiber_g) };
 }
 
 /** Energy implied by macros, for when quick add has macros but no calories. */

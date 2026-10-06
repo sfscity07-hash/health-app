@@ -15,6 +15,7 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Icon } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { loadErrorMessage } from '@/features/auth/errors';
 import {
   emptyDay,
   useAddWater,
@@ -32,7 +33,7 @@ import { addDays, ageOn, dayName, fromISODate, toISODate, weekOf } from '@/lib/d
 import { formatDayLabel, formatInt, greetingFor } from '@/lib/format';
 import { success } from '@/lib/haptics';
 import { mealForTime, type Meal } from '@/lib/meals';
-import { maintenanceCalories } from '@/lib/nutrition';
+import { fiberTarget, maintenanceCalories } from '@/lib/nutrition';
 import { streaks } from '@/lib/streak';
 import { nextMilestone, trendSeries, weeklyRate } from '@/lib/trend';
 import { displayWeight, kgToLb } from '@/lib/units';
@@ -202,9 +203,9 @@ export default function DashboardScreen() {
           </CalorieGauge>
         </View>
 
-        {summaries.isError ? (
+        {summaries.isError || logs.isError ? (
           <Text variant="small" color="warn">
-            Couldn&apos;t load this day. Pull down to try again.
+            {loadErrorMessage(summaries.error ?? logs.error)}
           </Text>
         ) : null}
 
@@ -214,6 +215,7 @@ export default function DashboardScreen() {
             { label: 'Carbs', eaten: day.carbs_g, target: profile?.carbs_g ?? 0, color: 'carbs' },
             { label: 'Fat', eaten: day.fat_g, target: profile?.fat_g ?? 0, color: 'fat' },
           ]}
+          fiber={{ eaten: day.fiber_g, target: fiberTarget(budget) }}
         />
 
         <InsightCard insights={insights} />

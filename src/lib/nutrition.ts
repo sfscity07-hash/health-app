@@ -106,6 +106,14 @@ export function macroTargets(calories: number, weightKg: number, goal: Goal = 'l
   return { protein_g, carbs_g, fat_g };
 }
 
+/**
+ * Fibre: 14 g for every 1,000 kcal you eat, the amount dietary guidelines
+ * recommend (about 25 g on 1,800 kcal, 35 g on 2,500 kcal).
+ */
+export function fiberTarget(calories: number): number {
+  return Math.round((14 * calories) / 1000);
+}
+
 /** Weeks to reach a goal weight at a steady rate, or null when no change is planned. */
 export function weeksToGoal(currentKg: number, goalKg: number, kgPerWeek: number): number | null {
   if (kgPerWeek <= 0 || currentKg === goalKg) return null;

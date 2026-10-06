@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
 import { formatInt } from '@/lib/format';
+import { fiberTarget } from '@/lib/nutrition';
 import { supabase } from '@/lib/supabase';
 import { usePreferences, type ThemePreference } from '@/store/preferences';
 import { space } from '@/theme/tokens';
@@ -33,6 +34,7 @@ export default function ProfileScreen() {
         { label: 'Protein', value: `${profile.protein_g ?? 0}`, unit: 'g' },
         { label: 'Carbs', value: `${profile.carbs_g ?? 0}`, unit: 'g' },
         { label: 'Fat', value: `${profile.fat_g ?? 0}`, unit: 'g' },
+        { label: 'Fibre', value: `${fiberTarget(profile.calorie_target ?? 2000)}`, unit: 'g' },
       ]
     : [];
 

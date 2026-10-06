@@ -15,6 +15,7 @@ export type DaySummary = {
   kcal_out: number;
   water_ml: number;
   closed: boolean;
+  fiber_g: number;
 };
 
 export type FoodLogEntry = {
@@ -29,6 +30,7 @@ export type FoodLogEntry = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  fiber_g: number;
 };
 
 export const emptyDay = (log_date: string): DaySummary => ({
@@ -41,6 +43,7 @@ export const emptyDay = (log_date: string): DaySummary => ({
   kcal_out: 0,
   water_ml: 0,
   closed: false,
+  fiber_g: 0,
 });
 
 const keys = {
@@ -78,6 +81,7 @@ export function useDaySummaries(from: string, to: string) {
           kcal_out: num(r.kcal_out),
           water_ml: num(r.water_ml),
           closed: Boolean(r.closed),
+          fiber_g: num(r.fiber_g),
         };
       }
       return out;
@@ -93,7 +97,7 @@ export function useFoodLogs(date: string) {
     queryFn: async (): Promise<FoodLogEntry[]> => {
       const { data, error } = await requireSupabase()
         .from('food_logs')
-        .select('id, logged_at, meal, name, brand, quantity, unit, kcal, protein_g, carbs_g, fat_g')
+        .select('id, logged_at, meal, name, brand, quantity, unit, kcal, protein_g, carbs_g, fat_g, fiber_g')
         .eq('log_date', date)
         .order('logged_at');
       if (error) throw error;
@@ -104,6 +108,7 @@ export function useFoodLogs(date: string) {
         protein_g: num(r.protein_g),
         carbs_g: num(r.carbs_g),
         fat_g: num(r.fat_g),
+        fiber_g: num(r.fiber_g),
       })) as FoodLogEntry[];
     },
   });

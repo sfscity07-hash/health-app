@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/AuthProvider';
+import { DB_UPDATE_NEEDED, isDatabaseBehind } from '@/features/auth/errors';
 import { patchSummaries, type DaySummary, type FoodLogEntry } from '@/features/dashboard/api';
 import type { CustomFoodInsert } from '@/features/food/forms';
 import type { LoggedRow } from '@/features/food/recents';
@@ -11,7 +12,10 @@ import { requireSupabase } from '@/lib/supabase';
 import { useToast } from '@/store/toast';
 
 /** Screens close as soon as you save, so failures are reported here rather than on the screen. */
-const reportFailure = (what: string) => useToast.getState().show(`Couldn’t ${what}. Check your connection and try again.`, 'warn');
+const reportFailure = (what: string, error: unknown) =>
+  useToast
+    .getState()
+    .show(isDatabaseBehind(error) ? DB_UPDATE_NEEDED : `Couldn’t ${what}. Check your connection and try again.`, 'warn');
 
 export type FoodWithServings = FoodRecord & { servings: Serving[] };
 
@@ -29,6 +33,7 @@ function toFood(r: Record<string, unknown>): FoodRecord {
     protein_100g: num(r.protein_100g),
     carbs_100g: num(r.carbs_100g),
     fat_100g: num(r.fat_100g),
+    fiber_100g: numOrNull(r.fiber_100g),
     default_serving_g: numOrNull(r.default_serving_g),
     default_serving_label: (r.default_serving_label as string | null) ?? null,
   };
@@ -87,7 +92,7 @@ export function useRecentLogs() {
       const since = toISODate(addDays(new Date(), -60));
       const { data, error } = await requireSupabase()
         .from('food_logs')
-        .select('food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, meal, log_date')
+        .select('food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g, meal, log_date')
         .gte('log_date', since)
         .order('logged_at', { ascending: false })
         .limit(400);
@@ -100,6 +105,7 @@ export function useRecentLogs() {
         protein_g: num(r.protein_g),
         carbs_g: num(r.carbs_g),
         fat_g: num(r.fat_g),
+        fiber_g: num(r.fiber_g),
       })) as LoggedRow[];
     },
   });
@@ -166,6 +172,7 @@ function shiftDay(d: DaySummary, n: Nutrients, sign: 1 | -1, entries: number): D
     protein_g: Math.max(0, d.protein_g + sign * n.protein_g),
     carbs_g: Math.max(0, d.carbs_g + sign * n.carbs_g),
     fat_g: Math.max(0, d.fat_g + sign * n.fat_g),
+    fiber_g: Math.max(0, d.fiber_g + sign * n.fiber_g),
     food_entries: Math.max(0, d.food_entries + entries),
   };
 }
@@ -175,6 +182,7 @@ const pickNutrients = (e: Nutrients): Nutrients => ({
   protein_g: e.protein_g,
   carbs_g: e.carbs_g,
   fat_g: e.fat_g,
+  fiber_g: e.fiber_g,
 });
 
 /**
@@ -201,6 +209,7 @@ export function useLogFood() {
           protein_g: n.protein_g,
           carbs_g: n.carbs_g,
           fat_g: n.fat_g,
+          fiber_g: n.fiber_g,
         });
       if (error) throw error;
     },
@@ -219,7 +228,7 @@ export function useLogFood() {
       queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', e.date], (old) => (old ? [...old, temp] : old));
       patchSummaries(queryClient, e.date, (d) => shiftDay(d, n, 1, 1));
     },
-    onError: (_e, v) => reportFailure(`add ${v.name}`),
+    onError: (e, v) => reportFailure(`add ${v.name}`, e),
     onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),
   });
 }
@@ -242,6 +251,7 @@ export function useEntry(id: string | undefined) {
         protein_g: num(data.protein_g),
         carbs_g: num(data.carbs_g),
         fat_g: num(data.fat_g),
+        fiber_g: num(data.fiber_g),
       } as LogEntry;
     },
   });
@@ -266,6 +276,7 @@ export function useUpdateEntry() {
           protein_g: n.protein_g,
           carbs_g: n.carbs_g,
           fat_g: n.fat_g,
+          fiber_g: n.fiber_g,
         })
         .eq('id', id);
       if (error) throw error;
@@ -278,7 +289,7 @@ export function useUpdateEntry() {
       );
       if (previous) patchSummaries(queryClient, c.date, (d) => shiftDay(shiftDay(d, pickNutrients(previous), -1, 0), n, 1, 0));
     },
-    onError: () => reportFailure('save your changes'),
+    onError: (e) => reportFailure('save your changes', e),
     onSettled: (_d, _e, v) => {
       invalidateLogs(queryClient, v.date);
       queryClient.invalidateQueries({ queryKey: foodKeys.entry(v.id) });
@@ -298,7 +309,7 @@ export function useDeleteEntry() {
       queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', date], (old) => old?.filter((e) => e.id !== id));
       if (previous) patchSummaries(queryClient, date, (d) => shiftDay(d, pickNutrients(previous), -1, -1));
     },
-    onError: () => reportFailure('delete that entry'),
+    onError: (e) => reportFailure('delete that entry', e),
     onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),
   });
 }

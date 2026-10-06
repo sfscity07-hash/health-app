@@ -8,6 +8,7 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { loadErrorMessage } from '@/features/auth/errors';
 import { useFoodLogs, useRefreshDashboard, type FoodLogEntry } from '@/features/dashboard/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { fromISODate, toISODate } from '@/lib/dates';
@@ -17,10 +18,11 @@ import { useDay, useViewedDate } from '@/store/day';
 import { useTheme } from '@/theme/theme';
 import { space, type ColorName } from '@/theme/tokens';
 
-const MACROS: { key: 'protein_g' | 'carbs_g' | 'fat_g'; label: string; color: ColorName }[] = [
+const MACROS: { key: 'protein_g' | 'carbs_g' | 'fat_g' | 'fiber_g'; label: string; color: ColorName }[] = [
   { key: 'protein_g', label: 'Protein', color: 'protein' },
   { key: 'carbs_g', label: 'Carbs', color: 'carbs' },
   { key: 'fat_g', label: 'Fat', color: 'fat' },
+  { key: 'fiber_g', label: 'Fibre', color: 'fiber' },
 ];
 
 /** The whole day, meal by meal. Tap a food to change it; step back through earlier days. */
@@ -69,10 +71,10 @@ export default function FoodLogScreen() {
         <View style={styles.macros}>
           {MACROS.map((m) => (
             <View key={m.key} style={styles.macro}>
+              <Text variant="caption" color={m.color}>
+                {m.label}
+              </Text>
               <Text variant="caption" color="textSecondary" tabular>
-                <Text variant="caption" color={m.color}>
-                  {m.label}
-                </Text>{' '}
                 {Math.round(eaten[m.key])}/{Math.round(targets[m.key])} g
               </Text>
               <AnimatedBar fraction={targets[m.key] ? eaten[m.key] / targets[m.key] : 0} color={colors[m.color]} height={3} />
@@ -85,7 +87,7 @@ export default function FoodLogScreen() {
         <ActivityIndicator color={colors.accent} accessibilityLabel="Loading" style={styles.loading} />
       ) : logs.isError ? (
         <Text variant="small" color="warn">
-          Couldn’t load this day. Pull down to try again.
+          {loadErrorMessage(logs.error)}
         </Text>
       ) : (
         MEALS.map((meal) => (
@@ -107,6 +109,6 @@ const styles = StyleSheet.create({
   kcalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   leftCol: { alignItems: 'flex-end' },
   macros: { flexDirection: 'row', gap: space.md },
-  macro: { flex: 1, gap: 6 },
+  macro: { flex: 1, gap: 3 },
   loading: { marginTop: space.xl },
 });

@@ -32,7 +32,7 @@ type FoodDetailProps = {
   initialMeal: Meal;
   /** The day's totals without this food. */
   before: Nutrients;
-  targets: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+  targets: Nutrients;
   saving: boolean;
   error?: string | null;
   onClose: () => void;
@@ -59,6 +59,7 @@ export function FoodDetail(p: FoodDetailProps) {
   const ck = n.carbs_g * 4;
   const fk = n.fat_g * 9;
   const total = pk + ck + fk || 1;
+  const fiberKnown = p.food.fiber_100g !== null;
 
   function changeUnit(key: string) {
     const next = units.find((u) => u.key === key);
@@ -146,6 +147,20 @@ export function FoodDetail(p: FoodDetailProps) {
                 </Text>
               </View>
             ))}
+            <View style={styles.legendItem}>
+              <View style={styles.legendHead}>
+                <View style={[styles.dot, { backgroundColor: colors.fiber }]} />
+                <Text variant="caption" color="textSecondary">
+                  Fibre
+                </Text>
+              </View>
+              <Text variant="bodyStrong" tabular>
+                {fiberKnown ? `${n.fiber_g > 0 && n.fiber_g < 10 ? n.fiber_g.toFixed(1) : Math.round(n.fiber_g)} g` : '–'}
+              </Text>
+              <Text variant="caption" color="textTertiary" tabular>
+                {fiberKnown ? `${Math.round((n.fiber_g / (p.targets.fiber_g || 1)) * 100)}% of day` : 'Not listed'}
+              </Text>
+            </View>
           </View>
         </View>
 
