@@ -21,12 +21,46 @@ The app opens on the Dashboard. Try the + button, the tabs, and the theme switch
 You only need this once. Sign-in and sync start working in Phase 2.
 
 1. Create a free account at [supabase.com](https://supabase.com) and click **New project**. Pick the region closest to you and save the database password somewhere safe.
-2. Open **SQL Editor**, then paste and run each file in [`supabase/migrations`](supabase/migrations), oldest first:
+2. Open **SQL Editor**, then paste and run each file in [`supabase/migrations`](supabase/migrations) **once**, oldest first:
    1. `20261006090000_initial_schema.sql` (tables, privacy rules, daily summary)
    2. `20261006090100_exercise_catalog.sql` (the list of activities)
-3. Go to **Project Settings → API Keys** and copy the **Project URL** and the **publishable** (or `anon`) key.
-4. Copy `.env.example` to `.env` and paste both values in.
-5. Stop and restart `npx expo start`. The Profile tab should now say **Connected to Supabase**.
+
+   "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
+
+   To check your setup, run this in the SQL Editor:
+
+   ```sql
+   select
+     (select count(*) from information_schema.tables
+       where table_schema = 'public' and table_type = 'BASE TABLE') as tables,
+     (select count(*) from pg_policies where schemaname = 'public') as privacy_rules,
+     (select count(*) from public.exercises) as exercises;
+   ```
+
+   You should see **13** tables, **18** privacy rules and **29** exercises.
+3. Copy your **Project URL** and your **key**:
+
+   | What | Where in Supabase | What it looks like |
+   |---|---|---|
+   | Project URL | Project Settings → **Data API**, or the **Connect** button at the top | `https://abcdefghijklmnopqrst.supabase.co` (20 lowercase letters, then `.supabase.co`) |
+   | Publishable key (newer projects) | Project Settings → **API Keys** | `sb_publishable_9xQ2c7LmTq4ZbR1vN8wKpA_3fYhD0sE` |
+   | `anon` key (older projects) | Project Settings → API Keys → **Legacy API Keys** | A very long token starting with `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.`, split into three parts by dots |
+
+   Use the publishable key if you have one; otherwise the `anon` key.
+
+   > ⚠️ Never use a key that starts with `sb_secret_` or is labelled `service_role`. Those skip every privacy rule and must never go in the app.
+4. Copy `.env.example` to a new file named `.env` in this folder and paste in your values. It should look like this (with your own values):
+
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://abcdefghijklmnopqrst.supabase.co
+   EXPO_PUBLIC_SUPABASE_KEY=sb_publishable_9xQ2c7LmTq4ZbR1vN8wKpA_3fYhD0sE
+   ```
+
+   Common mistakes:
+   - The file must be named exactly `.env`. Windows Notepad sometimes saves it as `.env.txt`.
+   - No quotes, and no spaces around the `=`.
+   - No `/` at the end of the URL.
+5. Restart the app with `npx expo start --clear`. The Profile tab should now say **Connected to Supabase**.
 
 > Free Supabase projects pause after 7 days without use. Logging every day keeps yours awake. If it does pause, press **Restore** in the Supabase dashboard.
 
