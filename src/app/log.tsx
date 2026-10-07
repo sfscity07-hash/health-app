@@ -16,7 +16,7 @@ import { useFavorites, useLogFood, useMyFoods, useRecentLogs } from '@/features/
 import { matches, rankRecents, type RecentFood } from '@/features/food/recents';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { MIN_SEARCH_LENGTH, useFoodSearch, useFoundFoods, type SearchOutcome } from '@/features/search/api';
-import { withoutLocal } from '@/features/search/rank';
+import { MIN_RELEVANCE, relevance, withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
 import { fromISODate, toISODate } from '@/lib/dates';
 import { formatDayLabel, formatInt } from '@/lib/format';
@@ -79,7 +79,10 @@ export default function LogSheet() {
   const dbActive = q.length >= MIN_SEARCH_LENGTH;
   // Skip database results already listed above (logged before, or one of your own foods).
   const loggedKeys = new Set(recents.map((r) => r.last.external_key).filter((k): k is string => Boolean(k)));
-  const dbResults = dbActive ? withoutLocal(db.data?.results ?? [], loggedKeys, myFoods.data ?? []) : [];
+  // While a new search loads, the last one's results stay up (dimmed), minus any that don't fit what you've typed since.
+  const stale = db.typing || db.isPlaceholderData;
+  const fromDb = (db.data?.results ?? []).filter((f) => !stale || relevance(q, f) > MIN_RELEVANCE);
+  const dbResults = dbActive ? withoutLocal(fromDb, loggedKeys, myFoods.data ?? []) : [];
   const dbSettled = dbActive && !db.searching && db.data !== undefined;
   const dbNote = dbSettled && db.data ? sourceNote(db.data) : null;
   const nothingFound = searching && recentMatches.length === 0 && foodMatches.length === 0 && (!dbActive || (dbSettled && dbResults.length === 0));
@@ -311,24 +314,26 @@ export default function LogSheet() {
                 Searching USDA and Open Food Facts…
               </Text>
             ) : null}
-            {dbResults.map((f, i) => {
-              const food = asFood(f);
-              const p = defaultPortion(food);
-              const n = nutrientsFor(food, p.grams);
-              return (
-                <FoodRow
-                  key={f.key}
-                  first={i === 0}
-                  name={f.name}
-                  tag={SOURCE_TAG[f.source]}
-                  detail={[describeLogged(p.qty, p.unit, p.unit === 'g' ? null : p.grams), f.brand].filter(Boolean).join(' · ')}
-                  kcal={n.kcal}
-                  macros={macrosOf(n)}
-                  onPress={() => openFound(f)}
-                  onAdd={() => logFound(f)}
-                />
-              );
-            })}
+            <View style={stale && db.searching ? styles.stale : undefined}>
+              {dbResults.map((f, i) => {
+                const food = asFood(f);
+                const p = defaultPortion(food);
+                const n = nutrientsFor(food, p.grams);
+                return (
+                  <FoodRow
+                    key={f.key}
+                    first={i === 0}
+                    name={f.name}
+                    tag={SOURCE_TAG[f.source]}
+                    detail={[describeLogged(p.qty, p.unit, p.unit === 'g' ? null : p.grams), f.brand].filter(Boolean).join(' · ')}
+                    kcal={n.kcal}
+                    macros={macrosOf(n)}
+                    onPress={() => openFound(f)}
+                    onAdd={() => logFound(f)}
+                  />
+                );
+              })}
+            </View>
             {dbNote && dbResults.length > 0 ? (
               <Text variant="caption" color="textTertiary" style={styles.dbNote}>
                 {dbNote}
@@ -390,4 +395,5 @@ const styles = StyleSheet.create({
   spinner: { transform: [{ scale: 0.7 }], height: 13 },
   searchingText: { paddingVertical: space.md },
   dbNote: { marginTop: space.sm },
+  stale: { opacity: 0.45 },
 });

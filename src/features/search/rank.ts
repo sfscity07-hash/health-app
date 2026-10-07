@@ -1,3 +1,4 @@
+import { standardWord } from '@/features/search/spelling';
 import type { ExternalFood } from '@/features/search/types';
 
 const words = (s: string) =>
@@ -6,7 +7,11 @@ const words = (s: string) =>
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .split(/[^a-z0-9]+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(standardWord);
+
+/** Results scoring below this don't match what you typed. */
+export const MIN_RELEVANCE = -2;
 
 /**
  * How well a result fits the search. Every word you typed should appear
@@ -106,7 +111,7 @@ function absorb(keep: ExternalFood, dup: ExternalFood): ExternalFood {
 export function rankResults(query: string, foods: ExternalFood[], limit = 25): ExternalFood[] {
   const sorted = foods
     .map((f, i) => ({ f, i, score: relevance(query, f) }))
-    .filter((x) => x.score > -2)
+    .filter((x) => x.score > MIN_RELEVANCE)
     .sort((a, b) => b.score - a.score || a.i - b.i);
   const groups: { shown: ExternalFood; members: ExternalFood[] }[] = [];
   for (const { f } of sorted) {

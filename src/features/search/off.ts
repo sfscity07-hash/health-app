@@ -16,6 +16,7 @@ const FIELDS = [
   'serving_quantity',
   'serving_quantity_unit',
   'unique_scans_n',
+  'categories_tags',
 ].join(',');
 
 /** Open Food Facts asks every app to say who it is. */
@@ -32,6 +33,7 @@ export type OffProduct = {
   serving_quantity?: unknown;
   serving_quantity_unit?: unknown;
   unique_scans_n?: unknown;
+  categories_tags?: unknown;
 };
 
 const num = (v: unknown): number | null => {
@@ -71,9 +73,48 @@ export function energyFits(kcal: number, protein: number, carbs: number, fat: nu
   return Math.abs(kcal - fromMacros) <= Math.max(40, 0.35 * Math.max(kcal, fromMacros));
 }
 
+const tokens = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+const hasWords = (s: string) => tokens(s).some((w) => !/^\d+$/.test(w));
+const onlyBrand = (s: string, brands: string) => {
+  const brandWords = new Set(tokens(brands));
+  return tokens(s).every((w) => brandWords.has(w));
+};
+
+/** "en:greek-style-yogurts" → "greek style yogurts": the most specific English category. */
+function categoryText(tags: unknown): string {
+  const list = Array.isArray(tags) ? tags.filter((t): t is string => typeof t === 'string' && t.startsWith('en:')) : [];
+  return list.length ? list[list.length - 1].slice(3).replace(/-/g, ' ') : '';
+}
+
+/** Products this many people have scanned are known by their brand alone (Nutella, Pringles). */
+const WELL_KNOWN_SCANS = 10;
+
+/**
+ * A name that says what the food is. Some entries have only the brand in the
+ * name box ("Great Value"): those get a description from the generic name or
+ * category ("Great Value greek style yogurts"), keep the bare name if it's a
+ * well-known product, or are skipped. Codes and empty names are skipped.
+ */
+export function productName(p: OffProduct, brands: string): string | null {
+  const own = [text(p.product_name_en), text(p.product_name)].find(hasWords) ?? '';
+  const generic = text(p.generic_name);
+  const describe = (base: string, extra: string) => (extra ? `${base} ${extra.charAt(0).toLowerCase()}${extra.slice(1)}` : base);
+  if (own && !onlyBrand(own, brands)) return own;
+  if (!own) return hasWords(generic) && !onlyBrand(generic, brands) ? generic : null;
+  if (hasWords(generic) && !onlyBrand(generic, brands)) return describe(own, generic);
+  const category = categoryText(p.categories_tags);
+  if (category) return describe(own, category);
+  return (num(p.unique_scans_n) ?? 0) >= WELL_KNOWN_SCANS ? own : null;
+}
+
+/** Servings under 5 g (a sweetener packet, a spray) make a confusing default; they stay available as a unit. */
+const TINY_SERVING_G = 5;
+
 export function mapOffProduct(p: OffProduct): ExternalFood | null {
   const code = typeof p.code === 'string' ? p.code.trim() : String(p.code ?? '');
-  const name = text(p.product_name_en) || text(p.product_name) || text(p.generic_name);
+  const brands = Array.isArray(p.brands) ? p.brands.map(text).join(', ') : text(p.brands);
+  const name = productName(p, brands) ?? '';
   const n = p.nutriments ?? {};
   const kj = num(n.energy_100g) ?? num(n['energy-kj_100g']);
   const kcal = num(n['energy-kcal_100g']) ?? (kj === null ? null : kj / 4.184);
@@ -92,7 +133,9 @@ export function mapOffProduct(p: OffProduct): ExternalFood | null {
   // Sodium is stored in grams; fall back to salt (sodium is 40% of salt).
   const sodiumG = num(n.sodium_100g) ?? ((num(n.salt_100g) ?? NaN) * 0.4);
   const servingGrams = num(p.serving_quantity);
-  const serving = measureToServing(text(p.serving_size) || (servingGrams ? `${servingGrams} g` : ''), servingGrams);
+  const listed = measureToServing(text(p.serving_size) || (servingGrams ? `${servingGrams} g` : ''), servingGrams);
+  const tiny = listed !== null && listed.grams < TINY_SERVING_G;
+  const serving = tiny ? null : listed;
 
   return {
     key: `off:${code}`,
@@ -109,7 +152,7 @@ export function mapOffProduct(p: OffProduct): ExternalFood | null {
     sugar_100g: num(n.sugars_100g),
     sodium_mg_100g: Number.isFinite(sodiumG) ? round2(sodiumG * 1000) : null,
     serving,
-    servings: [],
+    servings: tiny && listed ? [listed] : [],
     generic: false,
     popularity: num(p.unique_scans_n) ?? 0,
   };

@@ -1,6 +1,7 @@
 import { measureToServing } from '@/features/search/measures';
 import { energyFits, mapOffProduct, type OffProduct } from '@/features/search/off';
-import { interleave, nameTokens, rankResults, relevance, sameFood, withoutLocal } from '@/features/search/rank';
+import { interleave, MIN_RELEVANCE, nameTokens, rankResults, relevance, sameFood, withoutLocal } from '@/features/search/rank';
+import { usSpelling } from '@/features/search/spelling';
 import { asFood, type ExternalFood } from '@/features/search/types';
 import { mapUsdaFood, type UsdaFood } from '@/features/search/usda';
 import { defaultPortion, nutrientsFor } from '@/lib/portion';
@@ -128,6 +129,7 @@ describe('Open Food Facts results', () => {
       code: '3017620422003',
       product_name: { en: 'Nutella', fr: 'Nutella' },
       brands: ['Ferrero', 'Nutella'],
+      unique_scans_n: 25000,
       serving_size: '15 g',
       serving_quantity: '15',
       nutriments: { energy_100g: 2252, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 },
@@ -147,6 +149,35 @@ describe('Open Food Facts results', () => {
     // Beer: most of its energy is alcohol.
     expect(energyFits(43, 0.5, 3.6, 0, 3.9)).toBe(true);
     expect(mapOffProduct({ ...offBar, nutriments: { ...offBar.nutriments, 'energy-kcal_100g': 35.7 } })).toBeNull();
+  });
+
+  it('never shows a bare brand as a food name', () => {
+    const greatValue = { code: '0078742', brands: 'Great Value', nutriments: { 'energy-kcal_100g': 59, proteins_100g: 10, carbohydrates_100g: 3.5, fat_100g: 0.4 } };
+    // Only the brand, nothing else to go on: skipped.
+    expect(mapOffProduct({ ...greatValue, product_name: 'Great Value' })).toBeNull();
+    // The category says what it is.
+    expect(
+      mapOffProduct({ ...greatValue, product_name: 'Great Value', categories_tags: ['en:dairies', 'en:yogurts', 'en:greek-style-yogurts'] })?.name,
+    ).toBe('Great Value greek style yogurts');
+    // So does a generic name.
+    expect(mapOffProduct({ ...greatValue, product_name: 'Great Value', generic_name: 'Nonfat Greek yogurt' })?.name).toBe('Great Value nonfat Greek yogurt');
+    // Products people know by the brand keep it.
+    expect(mapOffProduct({ ...greatValue, code: '505', product_name: 'Pringles', brands: 'Pringles', unique_scans_n: 900, nutriments: { 'energy-kcal_100g': 536, proteins_100g: 4, carbohydrates_100g: 52, fat_100g: 34 } })?.name).toBe('Pringles');
+    // Codes aren't names.
+    expect(mapOffProduct({ ...greatValue, product_name: '0078742012345' })).toBeNull();
+  });
+
+  it('doesn’t open on a serving of a gram or two', () => {
+    const sweetener = mapOffProduct({
+      code: '0078742011',
+      product_name: 'Sweetener packets',
+      brands: 'Great Value',
+      serving_size: '1 packet (1 g)',
+      serving_quantity: 1,
+      nutriments: { 'energy-kcal_100g': 364, proteins_100g: 0, carbohydrates_100g: 91, fat_100g: 0 },
+    })!;
+    expect(sweetener.serving).toBeNull();
+    expect(sweetener.servings).toEqual([{ label: 'packet', grams: 1 }]);
   });
 
   it('skips products without a name or energy', () => {
@@ -280,6 +311,19 @@ describe('ranking', () => {
     const results = rankResults('banana', bananas);
     const shown = withoutLocal(results, new Set(['Banana chips']), [{ name: 'Banana bread', kcal_100g: 330, protein_100g: 7, carbs_100g: 59, fat_100g: 5 }]);
     expect(shown.map((f) => f.name)).toEqual(['Bananas, raw']);
+  });
+
+  it('treats British and American spellings as the same word', () => {
+    expect(usSpelling('Great Value greek Yoghurt')).toBe('Great Value greek yogurt');
+    const wanted = food('Greek Nonfat Yogurt', { brand: 'Great Value', kcal_100g: 59, protein_100g: 10, carbs_100g: 3.6, fat_100g: 0.4 });
+    expect(relevance('great value greek yoghurt', wanted)).toBeGreaterThan(MIN_RELEVANCE + 6);
+    // Same yogurt, two spellings: one result.
+    expect(rankResults('greek yoghurt', [wanted, food('Greek Yoghurt, nonfat', { brand: 'Great Value', kcal_100g: 59, protein_100g: 10, carbs_100g: 3.6, fat_100g: 0.4 })])).toHaveLength(1);
+  });
+
+  it('drops a result that only matched the start of what you were typing', () => {
+    // "Great Value" matched "great value", but not "great value greek yoghurt".
+    expect(relevance('great value greek yoghurt', food('Great Value Sweetener', { brand: 'Great Value' }))).toBeLessThanOrEqual(MIN_RELEVANCE);
   });
 
   it('alternates sources before ranking', () => {

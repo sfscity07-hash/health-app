@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import { searchOff } from '@/features/search/off';
 import { interleave, rankResults } from '@/features/search/rank';
+import { usSpelling } from '@/features/search/spelling';
 import type { ExternalFood } from '@/features/search/types';
 import { SearchLimitError, searchUsda } from '@/features/search/usda';
 import { useDebounced } from '@/hooks/useDebounced';
@@ -22,7 +23,8 @@ const status = (r: PromiseSettledResult<unknown>): SourceStatus =>
 
 /** Searches both databases at once. One failing doesn't hide the other's results. */
 export async function searchFoodDatabases(query: string, signal?: AbortSignal): Promise<SearchOutcome> {
-  const [usda, off] = await Promise.allSettled([searchUsda(query, usdaApiKey, signal), searchOff(query, signal)]);
+  // USDA spells the American way; Open Food Facts has products from everywhere, so it gets what you typed.
+  const [usda, off] = await Promise.allSettled([searchUsda(usSpelling(query), usdaApiKey, signal), searchOff(query, signal)]);
   const usdaFoods = usda.status === 'fulfilled' ? usda.value : [];
   const offFoods = off.status === 'fulfilled' ? off.value : [];
   return { results: rankResults(query, interleave(usdaFoods, offFoods)), usda: status(usda), off: status(off) };
