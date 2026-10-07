@@ -25,6 +25,8 @@ export type ExternalFood = {
   servings: Serving[];
   /** USDA's whole and generic foods (as opposed to a branded product). */
   generic: boolean;
+  /** How many people have scanned it on Open Food Facts; well-known products rank higher. */
+  popularity?: number;
 };
 
 export const SOURCE_TAG: Record<FoodSource, string> = { usda: 'USDA', off: 'OFF' };

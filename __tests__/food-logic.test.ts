@@ -118,6 +118,7 @@ describe('recents', () => {
     carbs_g: 33,
     fat_g: 3,
     fiber_g: 5,
+    external_key: null,
     meal: 'breakfast',
     log_date: '2026-10-05',
     ...over,

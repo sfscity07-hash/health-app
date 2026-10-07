@@ -15,6 +15,7 @@ const FIELDS = [
   'serving_size',
   'serving_quantity',
   'serving_quantity_unit',
+  'unique_scans_n',
 ].join(',');
 
 /** Open Food Facts asks every app to say who it is. */
@@ -30,6 +31,7 @@ export type OffProduct = {
   serving_size?: unknown;
   serving_quantity?: unknown;
   serving_quantity_unit?: unknown;
+  unique_scans_n?: unknown;
 };
 
 const num = (v: unknown): number | null => {
@@ -56,6 +58,19 @@ function firstBrand(v: unknown): string | null {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/**
+ * Open Food Facts is filled in by volunteers, and a typo (kJ in the kcal box,
+ * a missing decimal point) shows up as a near-copy with impossible numbers.
+ * Calories should roughly match 4/4/9 per gram of protein/carbs/fat; the
+ * margin allows for fibre, sugar alcohols and rounding. Drinks with alcohol
+ * are let through.
+ */
+export function energyFits(kcal: number, protein: number, carbs: number, fat: number, alcohol = 0): boolean {
+  if (alcohol > 0) return true;
+  const fromMacros = protein * 4 + carbs * 4 + fat * 9;
+  return Math.abs(kcal - fromMacros) <= Math.max(40, 0.35 * Math.max(kcal, fromMacros));
+}
+
 export function mapOffProduct(p: OffProduct): ExternalFood | null {
   const code = typeof p.code === 'string' ? p.code.trim() : String(p.code ?? '');
   const name = text(p.product_name_en) || text(p.product_name) || text(p.generic_name);
@@ -63,10 +78,16 @@ export function mapOffProduct(p: OffProduct): ExternalFood | null {
   const kj = num(n.energy_100g) ?? num(n['energy-kj_100g']);
   const kcal = num(n['energy-kcal_100g']) ?? (kj === null ? null : kj / 4.184);
   if (!code || !name || kcal === null) return null;
-  const protein = num(n.proteins_100g) ?? 0;
-  const carbs = num(n.carbohydrates_100g) ?? 0;
-  const fat = num(n.fat_100g) ?? 0;
+  const rawProtein = num(n.proteins_100g);
+  const rawCarbs = num(n.carbohydrates_100g);
+  const rawFat = num(n.fat_100g);
+  // Half-filled entries are mostly duplicates of better ones; skip them.
+  if (rawProtein === null && rawCarbs === null && rawFat === null) return null;
+  const protein = rawProtein ?? 0;
+  const carbs = rawCarbs ?? 0;
+  const fat = rawFat ?? 0;
   if (kcal < 0 || kcal > 900 || protein < 0 || carbs < 0 || fat < 0 || protein + carbs + fat > 105) return null;
+  if (!energyFits(kcal, protein, carbs, fat, num(n.alcohol_100g) ?? 0)) return null;
 
   // Sodium is stored in grams; fall back to salt (sodium is 40% of salt).
   const sodiumG = num(n.sodium_100g) ?? ((num(n.salt_100g) ?? NaN) * 0.4);
@@ -90,6 +111,7 @@ export function mapOffProduct(p: OffProduct): ExternalFood | null {
     serving,
     servings: [],
     generic: false,
+    popularity: num(p.unique_scans_n) ?? 0,
   };
 }
 

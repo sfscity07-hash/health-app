@@ -18,7 +18,7 @@ Updated with every release. **Latest: Phase 5 (food database search), plus fibre
 - Setup: goal (lose weight, **recomp**, maintain, build muscle), body stats in kg/cm or lb/ft, activity, goal weight and pace, then your animated daily budget.
 - **Logging food** (the **+** button, or "Add …" on the dashboard and Food log):
   - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap.
-  - **Search**: type a food and you get your own foods first, then results from **USDA** (whole foods like "bananas, raw") and **Open Food Facts** (packaged products, worldwide). Tap a result to pick the amount (servings like "1 medium" or "1 slice", or grams), or tap **+** to log one serving straight away.
+  - **Search**: type a food and you get your own foods first, then results from **USDA** (whole foods like "bananas, raw") and **Open Food Facts** (packaged products, worldwide). Tap a result to pick the amount (servings like "1 medium" or "1 slice", or grams), or tap **+** to log one serving straight away. Each food shows once: the same food from several databases or shops is merged, entries with impossible numbers are dropped, and anything already in Recent or Your foods isn't repeated.
   - **Quick add**: just calories, or macros and it works the calories out. Fibre is optional.
   - **New food**: copy a nutrition label (per serving or per 100 g), including **fibre**. It's saved for next time.
   - Food screen: switch between servings and grams, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.

@@ -1,6 +1,6 @@
 import { measureToServing } from '@/features/search/measures';
-import { mapOffProduct, type OffProduct } from '@/features/search/off';
-import { interleave, rankResults, relevance } from '@/features/search/rank';
+import { energyFits, mapOffProduct, type OffProduct } from '@/features/search/off';
+import { interleave, nameTokens, rankResults, relevance, sameFood, withoutLocal } from '@/features/search/rank';
 import { asFood, type ExternalFood } from '@/features/search/types';
 import { mapUsdaFood, type UsdaFood } from '@/features/search/usda';
 import { defaultPortion, nutrientsFor } from '@/lib/portion';
@@ -138,6 +138,17 @@ describe('Open Food Facts results', () => {
     expect(f.serving).toEqual({ label: 'serving', grams: 15 });
   });
 
+  it('skips half-filled entries and ones whose calories don’t fit their macros', () => {
+    expect(mapOffProduct({ code: '3', product_name: 'Bananas', nutriments: { 'energy-kcal_100g': 95 } })).toBeNull();
+    expect(mapOffProduct({ ...offBar, unique_scans_n: 812 })?.popularity).toBe(812);
+    // 45 kcal can't hold 20 g protein, 50 g carbs and 20 g fat: a typo.
+    expect(energyFits(45, 20, 50, 20)).toBe(false);
+    expect(energyFits(460, 20, 50, 20)).toBe(true);
+    // Beer: most of its energy is alcohol.
+    expect(energyFits(43, 0.5, 3.6, 0, 3.9)).toBe(true);
+    expect(mapOffProduct({ ...offBar, nutriments: { ...offBar.nutriments, 'energy-kcal_100g': 35.7 } })).toBeNull();
+  });
+
   it('skips products without a name or energy', () => {
     expect(mapOffProduct({ code: '1', product_name: '', nutriments: { 'energy-kcal_100g': 100 } })).toBeNull();
     expect(mapOffProduct({ code: '2', product_name: 'Water', nutriments: {} })).toBeNull();
@@ -198,9 +209,77 @@ describe('ranking', () => {
     expect(ranked.map((f) => f.name)).toEqual(['Protein bar']);
   });
 
-  it('drops duplicates across sources', () => {
-    const ranked = rankResults('nutella', [food('Nutella', { brand: 'Ferrero', kcal_100g: 539 }), food('NUTELLA', { brand: 'Ferrero', kcal_100g: 539.2 })]);
+  // What a search for "banana" really returns: the same fruit from three USDA
+  // datasets and several supermarkets, plus foods that only share the word.
+  const bananas = [
+    food('Bananas, raw', { source: 'usda', generic: true, kcal_100g: 89, protein_100g: 1.09, carbs_100g: 22.84, fat_100g: 0.33, fiber_100g: 2.6, serving: { label: 'medium', grams: 118 } }),
+    food('Banana, raw', { source: 'usda', generic: true, kcal_100g: 89, protein_100g: 1.09, carbs_100g: 22.84, fat_100g: 0.33 }),
+    food('Bananas, ripe and slightly ripe, raw', { source: 'usda', generic: true, kcal_100g: 97, protein_100g: 0.74, carbs_100g: 23, fat_100g: 0.29 }),
+    food('Bananas, overripe, raw', { source: 'usda', generic: true, kcal_100g: 85, protein_100g: 0.73, carbs_100g: 20.1, fat_100g: 0.22 }),
+    food('Bananas', { brand: 'Tesco', kcal_100g: 95, protein_100g: 1.2, carbs_100g: 20.3, fat_100g: 0.1 }),
+    food('Fairtrade Bananas', { brand: "Sainsbury's", kcal_100g: 95, protein_100g: 1.2, carbs_100g: 20.3, fat_100g: 0.1 }),
+    food('Banana chips', { source: 'usda', generic: true, kcal_100g: 519, protein_100g: 2.3, carbs_100g: 58.4, fat_100g: 33.6 }),
+    food('Banana Bread', { brand: 'Soreen', kcal_100g: 326, protein_100g: 6.9, carbs_100g: 60, fat_100g: 4.7 }),
+  ];
+
+  it('shows each food once, however many databases and shops list it', () => {
+    const ranked = rankResults('banana', bananas);
+    expect(ranked.map((f) => f.name)).toEqual(['Bananas, raw', 'Banana chips', 'Banana Bread']);
+  });
+
+  it('merges the same product sold in different sizes and countries', () => {
+    const ranked = rankResults('nutella', [
+      food('Nutella', { brand: 'Ferrero', kcal_100g: 539, protein_100g: 6.3, carbs_100g: 57.5, fat_100g: 30.9 }),
+      food('NUTELLA 750g', { brand: 'Ferrero', kcal_100g: 539.2, protein_100g: 6.3, carbs_100g: 57.5, fat_100g: 30.9 }),
+      food('Pâte à tartiner Nutella', { brand: 'Ferrero', kcal_100g: 546, protein_100g: 6, carbs_100g: 57, fat_100g: 31 }),
+      food('Nutella Biscuits', { brand: 'Ferrero', kcal_100g: 511, protein_100g: 7.1, carbs_100g: 64.1, fat_100g: 22.9 }),
+    ]);
+    expect(ranked.map((f) => f.name)).toEqual(['Nutella', 'Nutella Biscuits']);
+  });
+
+  it('keeps foods with the same name but different numbers apart', () => {
+    const yogurt = rankResults('greek yogurt', [
+      food('Greek yogurt, plain, nonfat', { kcal_100g: 59, protein_100g: 10.2, carbs_100g: 3.6, fat_100g: 0.4 }),
+      food('Greek yogurt, plain, whole milk', { kcal_100g: 97, protein_100g: 9, carbs_100g: 3.98, fat_100g: 5 }),
+    ]);
+    expect(yogurt).toHaveLength(2);
+    const chicken = rankResults('chicken breast', [
+      food('Chicken breast, raw', { kcal_100g: 120, protein_100g: 22.5, carbs_100g: 0, fat_100g: 2.6 }),
+      food('Chicken breast, roasted', { kcal_100g: 165, protein_100g: 31, carbs_100g: 0, fat_100g: 3.6 }),
+    ]);
+    expect(chicken).toHaveLength(2);
+  });
+
+  it('borrows a serving and fibre from a duplicate when the kept result has none', () => {
+    const [only] = rankResults('banana', [
+      food('Banana, raw', { source: 'usda', generic: true, kcal_100g: 89, protein_100g: 1.09, carbs_100g: 22.84, fat_100g: 0.33 }),
+      food('Bananas', { kcal_100g: 92, protein_100g: 1.1, carbs_100g: 21, fat_100g: 0.3, fiber_100g: 2.4, serving: { label: 'banana', grams: 120 } }),
+    ]);
+    expect(only.name).toBe('Banana, raw');
+    expect(only.serving).toEqual({ label: 'banana', grams: 120 });
+    expect(only.fiber_100g).toBe(2.4);
+  });
+
+  it('treats one brand’s product listed twice under the same name as one, keeping the well-known copy', () => {
+    const ranked = rankResults('weetabix', [
+      food('Weetabix', { brand: 'Weetabix', kcal_100g: 136, protein_100g: 4.5, carbs_100g: 27.6, fat_100g: 0.8, popularity: 3 }),
+      food('Weetabix', { brand: 'Weetabix', kcal_100g: 362, protein_100g: 12, carbs_100g: 69, fat_100g: 2, popularity: 4200 }),
+    ]);
     expect(ranked).toHaveLength(1);
+    expect(ranked[0].kcal_100g).toBe(362);
+  });
+
+  it('reads names the way people mean them', () => {
+    expect(nameTokens('Bananas, raw')).toEqual(['banana', 'raw']);
+    expect(nameTokens('NUTELLA 750g x2')).toEqual(['nutella']);
+    expect(nameTokens('Tomatoes and berries')).toEqual(['tomato', 'berry']);
+    expect(sameFood(bananas[0], bananas[6])).toBe(false);
+  });
+
+  it('hides results already in Recent or Your foods', () => {
+    const results = rankResults('banana', bananas);
+    const shown = withoutLocal(results, new Set(['Banana chips']), [{ name: 'Banana bread', kcal_100g: 330, protein_100g: 7, carbs_100g: 59, fat_100g: 5 }]);
+    expect(shown.map((f) => f.name)).toEqual(['Bananas, raw']);
   });
 
   it('alternates sources before ranking', () => {

@@ -94,21 +94,26 @@ export function useRecentLogs() {
       const since = toISODate(addDays(new Date(), -60));
       const { data, error } = await requireSupabase()
         .from('food_logs')
-        .select('food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g, meal, log_date')
+        .select('food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g, meal, log_date, foods(source, external_id)')
         .gte('log_date', since)
         .order('logged_at', { ascending: false })
         .limit(400);
       if (error) throw error;
-      return (data ?? []).map((r) => ({
-        ...r,
-        quantity: num(r.quantity),
-        grams: numOrNull(r.grams),
-        kcal: num(r.kcal),
-        protein_g: num(r.protein_g),
-        carbs_g: num(r.carbs_g),
-        fat_g: num(r.fat_g),
-        fiber_g: num(r.fiber_g),
-      })) as LoggedRow[];
+      return (data ?? []).map(({ foods, ...r }) => {
+        // Which USDA / Open Food Facts entry it came from, so search can skip it.
+        const food = (Array.isArray(foods) ? foods[0] : foods) as { source?: string; external_id?: string | null } | null;
+        return {
+          ...r,
+          quantity: num(r.quantity),
+          grams: numOrNull(r.grams),
+          kcal: num(r.kcal),
+          protein_g: num(r.protein_g),
+          carbs_g: num(r.carbs_g),
+          fat_g: num(r.fat_g),
+          fiber_g: num(r.fiber_g),
+          external_key: food?.external_id ? `${food.source}:${food.external_id}` : null,
+        };
+      }) as LoggedRow[];
     },
   });
 }

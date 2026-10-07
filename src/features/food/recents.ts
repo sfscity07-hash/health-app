@@ -13,6 +13,8 @@ export type LoggedRow = {
   carbs_g: number;
   fat_g: number;
   fiber_g: number;
+  /** "usda:173944" when it was logged from a database result. */
+  external_key?: string | null;
   meal: Meal;
   log_date: string;
 };

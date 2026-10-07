@@ -16,6 +16,7 @@ import { useFavorites, useLogFood, useMyFoods, useRecentLogs } from '@/features/
 import { matches, rankRecents, type RecentFood } from '@/features/food/recents';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { MIN_SEARCH_LENGTH, useFoodSearch, useFoundFoods, type SearchOutcome } from '@/features/search/api';
+import { withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
 import { fromISODate, toISODate } from '@/lib/dates';
 import { formatDayLabel, formatInt } from '@/lib/format';
@@ -76,7 +77,9 @@ export default function LogSheet() {
     .sort((a, b) => Number(favs.has(b.id)) - Number(favs.has(a.id)));
   const loading = recentLogs.isPending || myFoods.isPending;
   const dbActive = q.length >= MIN_SEARCH_LENGTH;
-  const dbResults = dbActive ? (db.data?.results ?? []) : [];
+  // Skip database results already listed above (logged before, or one of your own foods).
+  const loggedKeys = new Set(recents.map((r) => r.last.external_key).filter((k): k is string => Boolean(k)));
+  const dbResults = dbActive ? withoutLocal(db.data?.results ?? [], loggedKeys, myFoods.data ?? []) : [];
   const dbSettled = dbActive && !db.searching && db.data !== undefined;
   const dbNote = dbSettled && db.data ? sourceNote(db.data) : null;
   const nothingFound = searching && recentMatches.length === 0 && foodMatches.length === 0 && (!dbActive || (dbSettled && dbResults.length === 0));
