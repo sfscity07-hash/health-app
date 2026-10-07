@@ -324,17 +324,38 @@ export function useDeleteEntry() {
   });
 }
 
-/** Saves a food you created; returns it so it can be logged straight away. */
+/** Saves a food you created, with its extra units; returns it so it can be logged straight away. */
 export function useCreateFood() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (food: CustomFoodInsert): Promise<FoodRecord> => {
-      const { data, error } = await requireSupabase().from('foods').insert(food).select('*').single();
+    mutationFn: async ({ food, servings }: { food: CustomFoodInsert; servings: Serving[] }): Promise<FoodWithServings> => {
+      const sb = requireSupabase();
+      const { data, error } = await sb.from('foods').insert(food).select('*').single();
       if (error) throw error;
-      return toFood(data);
+      const saved = toFood(data);
+      if (servings.length > 0) {
+        const extra = await sb.from('food_servings').insert(servings.map((s) => ({ food_id: saved.id, label: s.label, grams: s.grams })));
+        if (extra.error) throw extra.error;
+      }
+      return { ...saved, servings };
     },
     // The new food opens straight away, so seed its cache instead of waiting for a fetch.
-    onSuccess: (food) => queryClient.setQueryData<FoodWithServings>(foodKeys.food(food.id), { ...food, servings: [] }),
+    onSuccess: (food) => queryClient.setQueryData<FoodWithServings>(foodKeys.food(food.id), food),
     onSettled: () => queryClient.invalidateQueries({ queryKey: foodKeys.myFoods }),
+  });
+}
+
+/** Adds a unit to a saved food ("1 scoop = 30 g"). It shows up at once; the save happens in the background. */
+export function useAddUnit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ foodId, serving }: { foodId: string; serving: Serving }) => {
+      const { error } = await requireSupabase().from('food_servings').insert({ food_id: foodId, label: serving.label, grams: serving.grams });
+      if (error) throw error;
+    },
+    onMutate: ({ foodId, serving }) =>
+      queryClient.setQueryData<FoodWithServings>(foodKeys.food(foodId), (old) => (old ? { ...old, servings: [...old.servings, serving] } : old)),
+    onError: (e) => reportFailure('save that unit', e),
+    onSettled: (_d, _e, v) => queryClient.invalidateQueries({ queryKey: foodKeys.food(v.foodId) }),
   });
 }

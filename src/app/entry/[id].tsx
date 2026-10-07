@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
 import { QuickAddForm, type QuickAddChoice } from '@/components/food/QuickAddForm';
-import { useDeleteEntry, useEntry, useFavorites, useFood, useToggleFavorite, useUpdateEntry } from '@/features/food/api';
+import { useAddUnit, useDeleteEntry, useEntry, useFavorites, useFood, useToggleFavorite, useUpdateEntry } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { formatQty, type Nutrients } from '@/lib/portion';
 import { tap } from '@/lib/haptics';
@@ -27,6 +27,7 @@ export default function EntryScreen() {
   const toggleFavorite = useToggleFavorite();
   const update = useUpdateEntry();
   const remove = useDeleteEntry();
+  const addUnit = useAddUnit();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(entry.data?.log_date ?? '');
   const close = () => router.back();
@@ -90,6 +91,7 @@ export default function EntryScreen() {
         onDelete={del}
         favorite={favorite}
         onToggleFavorite={() => toggleFavorite.mutate({ foodId: f.id, on: !favorite })}
+        onAddUnit={(serving) => addUnit.mutate({ foodId: f.id, serving })}
       />
     );
   }

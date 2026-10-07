@@ -20,8 +20,8 @@ Updated with every release. **Latest: Phase 5 (food database search), plus fibre
   - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap.
   - **Search**: type a food and you get your own foods first, then results from **USDA** (whole foods like "bananas, raw") and **Open Food Facts** (packaged products, worldwide). Tap a result to pick the amount (servings like "1 medium" or "1 slice", or grams), or tap **+** to log one serving straight away. Each food shows once: the same food from several databases or shops is merged, entries with impossible numbers are dropped, and anything already in Recent or Your foods isn't repeated.
   - **Quick add**: just calories, or macros and it works the calories out. Fibre is optional.
-  - **New food**: copy a nutrition label (per serving or per 100 g), including **fibre**. It's saved for next time.
-  - Food screen: switch between servings and grams, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.
+  - **New food**: copy a nutrition label, including **fibre**. Choose how you measure it (grams, scoop, cup, tbsp, tsp, slice, piece, bar, ml, or your own word) and whether the label's numbers are per scoop or per 100 g, then add more units if you like (1 scoop = 30 g, 1 tbsp = 10 g). It's saved for next time.
+  - Food screen: switch units (the food's own, plus grams and ounces for everything), tap **+ Unit** to add a scoop, cup or anything else to a food, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.
   - Tap the meal name at the top of the logger to switch meal.
   - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
 - **Fibre**: tracked on everything you log, with a daily target of 14 g per 1,000 kcal (shown on the dashboard, Food log, food screen and Profile).

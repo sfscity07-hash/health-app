@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { AddUnitPanel } from '@/components/food/AddUnitPanel';
 import { EditorFooter } from '@/components/food/EditorFooter';
 import { ImpactPreview } from '@/components/food/ImpactPreview';
 import { ModalHeader } from '@/components/food/ModalHeader';
 import { PortionRuler } from '@/components/food/PortionRuler';
 import { Card } from '@/components/ui/Card';
+import { Chip, ChipGroup } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { PressableScale } from '@/components/ui/PressableScale';
@@ -15,7 +17,7 @@ import type { FoodWithServings } from '@/features/food/api';
 import { parseNumber } from '@/features/onboarding/draft';
 import { formatInt } from '@/lib/format';
 import { MEAL_LABEL, MEAL_OPTIONS, type Meal } from '@/lib/meals';
-import { clampQty, formatQty, nutrientsFor, pluralize, unitsFor, type Nutrients, type PortionUnit } from '@/lib/portion';
+import { clampQty, formatQty, isMillilitres, nutrientsFor, pluralize, unitsFor, type Nutrients, type PortionUnit, type Serving } from '@/lib/portion';
 import { useTheme } from '@/theme/theme';
 import { fonts, gutter, radius, space } from '@/theme/tokens';
 
@@ -41,11 +43,16 @@ type FoodDetailProps = {
   deleting?: boolean;
   favorite?: boolean;
   onToggleFavorite?: () => void;
+  /** Lets you add a unit (scoop, cup…) to the food. It's used straight away and saved with the food. */
+  onAddUnit?: (serving: Serving) => void;
 };
 
 export function FoodDetail(p: FoodDetailProps) {
   const { colors } = useTheme();
-  const units = useMemo(() => unitsFor(p.food, p.food.servings), [p.food]);
+  // Units added here show at once, before the saved food comes back with them.
+  const [addedUnits, setAddedUnits] = useState<Serving[]>([]);
+  const [addingUnit, setAddingUnit] = useState(false);
+  const units = useMemo(() => unitsFor(p.food, [...p.food.servings, ...addedUnits]), [p.food, addedUnits]);
   const startUnit = units.find((u) => u.label === p.initialUnit) ?? units[0];
   const [unitKey, setUnitKey] = useState(startUnit.key);
   const unit = units.find((u) => u.key === unitKey) ?? units[0];
@@ -61,9 +68,18 @@ export function FoodDetail(p: FoodDetailProps) {
   const total = pk + ck + fk || 1;
   const fiberKnown = p.food.fiber_100g !== null;
 
+  function addUnit(serving: Serving) {
+    setAddedUnits((a) => [...a, serving]);
+    setAddingUnit(false);
+    setUnitKey(`serving:${serving.label}`);
+    setQty(isMillilitres(serving.label) ? 250 : 1);
+    p.onAddUnit?.(serving);
+  }
+
   function changeUnit(key: string) {
+    setAddingUnit(false);
     const next = units.find((u) => u.key === key);
-    if (!next) return;
+    if (!next || key === unit.key) return;
     setUnitKey(key);
     // Keep roughly the same amount of food when switching units.
     const converted = Math.round((grams / next.grams) / next.step) * next.step;
@@ -165,50 +181,56 @@ export function FoodDetail(p: FoodDetailProps) {
         </View>
 
         <Card style={styles.portion}>
-          {units.length > 1 ? (
-            <SegmentedControl
-              label="Unit"
-              options={units.map((u) => ({ value: u.key, label: u.label }))}
-              value={unit.key}
-              onChange={changeUnit}
-            />
-          ) : null}
-          <View style={styles.qtyRow}>
-            <IconButton icon="minus" label={`Less ${unit.label}`} onPress={() => setQty((q) => clampQty(Math.round((q - unit.step) * 100) / 100, unit))} />
-            {typing !== null ? (
-              <TextInput
-                autoFocus
-                value={typing}
-                onChangeText={setTyping}
-                onBlur={commitTyping}
-                onSubmitEditing={commitTyping}
-                keyboardType="decimal-pad"
-                selectTextOnFocus
-                accessibilityLabel="Amount"
-                style={[styles.qtyInput, { color: colors.text, borderColor: colors.accent }]}
-              />
-            ) : (
-              <PressableScale
-                accessibilityRole="button"
-                accessibilityLabel={`${formatQty(qty)} ${unit.label}. Tap to type an amount.`}
-                ripple={null}
-                pressedScale={0.96}
-                onPress={() => setTyping(formatQty(qty))}
-                style={styles.qtyButton}>
-                <Text variant="hero" tabular>
-                  {formatQty(qty)}
-                </Text>
-                <Text variant="body" color="textSecondary">
-                  {pluralize(unit.label, qty)}
-                </Text>
-              </PressableScale>
-            )}
-            <IconButton icon="plus" label={`More ${unit.label}`} onPress={() => setQty((q) => clampQty(Math.round((q + unit.step) * 100) / 100, unit))} />
-          </View>
-          <Text variant="label" align="center">
-            {unit.label === 'g' ? 'Tap the number to type it' : `≈ ${Math.round(grams)} g · tap the number to type it`}
-          </Text>
-          <PortionRuler key={unit.key} unit={unit} value={qty} onChange={setQty} background={colors.surface1} />
+          <ChipGroup scroll label="Unit">
+            {units.map((u) => (
+              <Chip key={u.key} label={u.label} selected={!addingUnit && u.key === unit.key} onPress={() => changeUnit(u.key)} />
+            ))}
+            {p.onAddUnit ? (
+              <Chip label="Unit" icon="plus" accessibilityLabel="Add a unit" selected={addingUnit} onPress={() => setAddingUnit(true)} />
+            ) : null}
+          </ChipGroup>
+          {addingUnit ? (
+            <AddUnitPanel existing={units.map((u) => u.label)} onSave={addUnit} onCancel={() => setAddingUnit(false)} />
+          ) : (
+            <>
+              <View style={styles.qtyRow}>
+                <IconButton icon="minus" label={`Less ${unit.label}`} onPress={() => setQty((q) => clampQty(Math.round((q - unit.step) * 100) / 100, unit))} />
+                {typing !== null ? (
+                  <TextInput
+                    autoFocus
+                    value={typing}
+                    onChangeText={setTyping}
+                    onBlur={commitTyping}
+                    onSubmitEditing={commitTyping}
+                    keyboardType="decimal-pad"
+                    selectTextOnFocus
+                    accessibilityLabel="Amount"
+                    style={[styles.qtyInput, { color: colors.text, borderColor: colors.accent }]}
+                  />
+                ) : (
+                  <PressableScale
+                    accessibilityRole="button"
+                    accessibilityLabel={`${formatQty(qty)} ${unit.label}. Tap to type an amount.`}
+                    ripple={null}
+                    pressedScale={0.96}
+                    onPress={() => setTyping(formatQty(qty))}
+                    style={styles.qtyButton}>
+                    <Text variant="hero" tabular>
+                      {formatQty(qty)}
+                    </Text>
+                    <Text variant="body" color="textSecondary">
+                      {pluralize(unit.label, qty)}
+                    </Text>
+                  </PressableScale>
+                )}
+                <IconButton icon="plus" label={`More ${unit.label}`} onPress={() => setQty((q) => clampQty(Math.round((q + unit.step) * 100) / 100, unit))} />
+              </View>
+              <Text variant="label" align="center">
+                {unit.label === 'g' ? 'Tap the number to type it' : `≈ ${Math.round(grams)} g · tap the number to type it`}
+              </Text>
+              <PortionRuler key={unit.key} unit={unit} value={qty} onChange={setQty} background={colors.surface1} />
+            </>
+          )}
         </Card>
 
         <View style={styles.group}>

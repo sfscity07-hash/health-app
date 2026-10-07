@@ -40,35 +40,42 @@ export type Nutrients = { kcal: number; protein_g: number; carbs_g: number; fat_
 
 export const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 
-/** Serving units first (the way you usually think of the food), then grams. */
+export const OUNCE_G = 28.3495;
+
+type RulerShape = Pick<PortionUnit, 'step' | 'max' | 'spacing' | 'major'>;
+/** Things you count: scoops, cups, slices, bars. Quarter steps. */
+const COUNTED: RulerShape = { step: 0.25, max: 20, spacing: 22, major: 4 };
+const GRAMS: RulerShape = { step: 5, max: 1500, spacing: 8, major: 10 };
+const MILLILITRES: RulerShape = { step: 10, max: 2000, spacing: 8, major: 10 };
+const OUNCES: RulerShape = { step: 0.25, max: 50, spacing: 14, major: 4 };
+
+/** Units every food has, because they're plain weights. */
+export const BUILT_IN_UNITS = ['g', 'oz'];
+
+export const isMillilitres = (label: string) => /^(ml|millilit(re|er)s?)$/i.test(label.trim());
+
+/**
+ * Your food's own units first (scoop, cup, slice…, the way you usually think
+ * of it), then grams and ounces, which work for anything.
+ */
 export function unitsFor(food: FoodRecord, servings: Serving[] = []): PortionUnit[] {
   const named: Serving[] = [];
-  if (food.default_serving_label && food.default_serving_g) {
-    named.push({ label: food.default_serving_label, grams: food.default_serving_g });
-  }
-  for (const s of servings) {
-    if (s.grams > 0 && !named.some((n) => n.label.toLowerCase() === s.label.toLowerCase())) named.push(s);
-  }
-  const units: PortionUnit[] = named.map((s) => ({
-    key: `serving:${s.label}`,
-    label: s.label,
-    grams: s.grams,
-    step: 0.25,
-    defaultQty: 1,
-    max: 10,
-    spacing: 22,
-    major: 4,
-  }));
-  units.push({
-    key: 'g',
-    label: 'g',
-    grams: 1,
-    step: 5,
-    defaultQty: Math.max(5, roundTo(food.default_serving_g ?? 100, 5)),
-    max: 1500,
-    spacing: 8,
-    major: 10,
-  });
+  const add = (s: Serving) => {
+    const taken = named.some((n) => n.label.toLowerCase() === s.label.toLowerCase());
+    if (s.grams > 0 && !taken && !BUILT_IN_UNITS.includes(s.label.toLowerCase())) named.push(s);
+  };
+  if (food.default_serving_label && food.default_serving_g) add({ label: food.default_serving_label, grams: food.default_serving_g });
+  for (const s of servings) add(s);
+
+  const units: PortionUnit[] = named.map((s) =>
+    isMillilitres(s.label)
+      ? { key: `serving:${s.label}`, label: 'ml', grams: s.grams, defaultQty: 250, ...MILLILITRES }
+      : { key: `serving:${s.label}`, label: s.label, grams: s.grams, defaultQty: 1, ...COUNTED },
+  );
+  // How much you usually have, so switching to g or oz starts somewhere sensible.
+  const usual = units[0] ? units[0].defaultQty * units[0].grams : (food.default_serving_g ?? 100);
+  units.push({ key: 'g', label: 'g', grams: 1, defaultQty: Math.max(5, roundTo(usual, 5)), ...GRAMS });
+  units.push({ key: 'oz', label: 'oz', grams: OUNCE_G, defaultQty: Math.max(0.25, roundTo(usual / OUNCE_G, 0.25)), ...OUNCES });
   return units;
 }
 
@@ -89,31 +96,30 @@ export function formatQty(q: number): string {
 }
 
 /** "bar" → "bars" for amounts other than 1; leaves units like "g", "oz" or "cup (240 ml)" alone. */
+const NEVER_PLURAL = new Set(['g', 'kg', 'mg', 'ml', 'l', 'oz', 'lb', 'lbs', 'tbsp', 'tsp', 'cl', 'dl']);
+
 export function pluralize(label: string, qty: number): string {
-  if (qty === 1 || label.length <= 2 || !/^[a-z]+$/i.test(label) || /s$/i.test(label)) return label;
+  if (qty === 1 || NEVER_PLURAL.has(label.toLowerCase()) || !/^[a-z]+$/i.test(label) || /s$/i.test(label)) return label;
   return `${label}s`;
 }
 
-/** "150 g" or "1.5 bars · 90 g". */
+/** "150 g", "250 ml" or "1.5 bars · 90 g". */
 export function describePortion(qty: number, unit: Pick<PortionUnit, 'label' | 'grams'>): string {
-  if (unit.label === 'g') return `${formatQty(qty)} g`;
+  if (unit.label === 'g' || unit.label === 'ml') return `${formatQty(qty)} ${unit.label}`;
   return `${formatQty(qty)} ${pluralize(unit.label, qty)} · ${Math.round(qty * unit.grams)} g`;
 }
 
-/** How a logged amount reads in lists: "150 g", "2 bars · 120 g", "1 serving". */
+/** How a logged amount reads in lists: "150 g", "250 ml", "2 scoops · 60 g", "1 serving". */
 export function describeLogged(qty: number, unit: string, grams: number | null): string {
-  if (unit === 'g') return `${formatQty(qty)} g`;
+  if (unit === 'g' || unit === 'ml') return `${formatQty(qty)} ${unit}`;
   const base = `${formatQty(qty)} ${pluralize(unit, qty)}`;
   return grams ? `${base} · ${Math.round(grams)} g` : base;
 }
 
-/** The amount one tap logs for a food: one named serving, or its usual weight in grams. */
+/** The amount one tap logs for a food: one of its main unit (1 scoop, 250 ml), or its usual weight in grams. */
 export function defaultPortion(food: FoodRecord): { qty: number; unit: string; grams: number } {
-  if (food.default_serving_label && food.default_serving_g) {
-    return { qty: 1, unit: food.default_serving_label, grams: food.default_serving_g };
-  }
-  const grams = food.default_serving_g ?? 100;
-  return { qty: grams, unit: 'g', grams };
+  const u = unitsFor(food)[0];
+  return { qty: u.defaultQty, unit: u.label, grams: u.defaultQty * u.grams };
 }
 
 export function clampQty(q: number, unit: Pick<PortionUnit, 'step' | 'max'>): number {

@@ -23,6 +23,7 @@ export default function FoundFoodScreen() {
   const viewedDay = useViewedDate();
   const date = params.date || viewedDay;
   const found = useFoundFoods((s) => s.foods[params.key]);
+  const keepFound = useFoundFoods((s) => s.keep);
   const logFood = useLogFood();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(date);
@@ -66,6 +67,8 @@ export default function FoundFoodScreen() {
       saving={false}
       onClose={close}
       onSubmit={add}
+      // Saved along with the food when you add it.
+      onAddUnit={(serving) => keepFound({ ...found, servings: [...found.servings, serving] })}
     />
   );
 }

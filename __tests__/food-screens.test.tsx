@@ -71,6 +71,45 @@ describe('FoodDetail', () => {
     expect(onSubmit.mock.calls[0][0]).toMatchObject({ qty: 120, grams: 120 });
   });
 
+  it('offers grams and ounces for every food', async () => {
+    await render(
+      <FoodDetail food={bar} mode="add" initialMeal="lunch" before={zero} targets={targets} saving={false} onClose={jest.fn()} onSubmit={jest.fn()} />,
+    );
+    expect(screen.getByRole('radio', { name: 'bar' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'g' })).toBeOnTheScreen();
+    expect(screen.getByRole('radio', { name: 'oz' })).toBeOnTheScreen();
+  });
+
+  it('adds a scoop to a food and logs by the scoop', async () => {
+    const onAddUnit = jest.fn();
+    const onSubmit = jest.fn();
+    const powder = { ...bar, name: 'Whey', default_serving_label: null, default_serving_g: 100, kcal_100g: 400 };
+    await render(
+      <FoodDetail
+        food={powder}
+        mode="add"
+        initialMeal="breakfast"
+        before={zero}
+        targets={targets}
+        saving={false}
+        onClose={jest.fn()}
+        onSubmit={onSubmit}
+        onAddUnit={onAddUnit}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('button', { name: 'Add a unit' }));
+    await user.press(screen.getByRole('radio', { name: 'scoop' }));
+    await user.type(screen.getByLabelText('1 scoop weighs'), '30');
+    await user.press(screen.getByRole('button', { name: 'Add unit' }));
+
+    expect(onAddUnit).toHaveBeenCalledWith({ label: 'scoop', grams: 30 });
+    expect(screen.getByRole('radio', { name: 'scoop' })).toBeChecked();
+    await user.press(screen.getByRole('button', { name: /Add to Breakfast/ }));
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ qty: 1, grams: 30, unit: { label: 'scoop' } });
+    expect(onSubmit.mock.calls[0][0].nutrients.kcal).toBe(120);
+  });
+
   it('asks for a second tap before deleting', async () => {
     const onDelete = jest.fn();
     await render(
