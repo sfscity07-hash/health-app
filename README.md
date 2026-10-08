@@ -5,11 +5,11 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–9 are done (10, the weekly check-in and adaptive budget, is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–10 are done (11, the rest of the Progress tab, is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 9 (water and exercise).**
+Updated with every release. **Latest: Phase 10 (weekly check-in and adaptive budget).**
 
 **Before running this version:** `git pull`, then `npx expo start --clear`. No new packages and no new SQL. (Coming from a version before barcode scanning? Run `npm ci` after pulling. If you skipped Phase 7's `supabase/migrations/20261008090000_saved_meal_quick_adds.sql`, run it once now; without it, saved meals show "Your database is missing an update".)
 
@@ -39,7 +39,7 @@ Updated with every release. **Latest: Phase 9 (water and exercise).**
   - protein/carbs/fat bars
   - week rings (tap a day this week to look back at it; the logger then adds to that day)
   - insight card (tap for the next one)
-  - trend weight and expenditure estimate
+  - trend weight, and your expenditure (marked ADAPTIVE once it's learning from your logs)
   - pull down to refresh
 - **Water**: the **+** on the dashboard's Water tile adds a glass in one tap. Tap the tile for the Water screen: add a glass, bottle or large bottle (or type any amount), see each drink with its time and remove one you added by mistake, and change your daily goal. Hitting the goal gets a little celebration. Shown in L, or fl oz if you chose imperial units.
 - **Exercise** (tap the Exercise tile on the dashboard, or **+** on the Exercise card at the bottom of the Food log):
@@ -48,12 +48,17 @@ Updated with every release. **Latest: Phase 9 (water and exercise).**
   - **Recent** workouts log again in one tap with **+**. Tap a logged workout to change or delete it.
   - Calories are *active* calories (on top of what you'd burn resting anyway), the same number watches show.
   - **Add exercise to my budget** (on the Exercise screen, or in Profile) is off by default: your budget already includes your usual activity, and watch numbers often run high. Turn it on and the day's burn is added to that day's budget ("Budget + ex." on the gauge).
+- **Weekly check-in and adaptive budget**:
+  - **Expenditure** (the dashboard tile) is what you burn in a day. It starts from a formula (your stats and activity level), then learns from the last 3 weeks: what you ate on the days you logged and how your trend weight moved. It needs 7 logged days and 3 weigh-ins before it starts learning, moves at most 300 kcal a week so one odd week can't throw it, and ignores half-logged days (finished days always count).
+  - Every Monday a **check-in** card appears on the dashboard. Four short cards: how many days you logged, what your trend did against your plan, your expenditure (with a bar chart of past weeks), and **next week's budget**. Adjust it with − / + and see the protein, carbs and fat and your goal date move, then **Start next week**, or keep your current budget.
+  - Old days stay judged against the budget you had then, so lowering it doesn't turn last week orange.
+  - You can open the check-in any time from the Expenditure tile or Profile → **Open weekly check-in**. Doing it again in the same week replaces that week's.
 - **Finish today** (or yesterday, if you forgot): closes the day's ring, extends your streak, celebrates.
 - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- The weekly check-in and adaptive budget (Phase 10). Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
-- The rest of the Progress tab (milestones, badges, the streak heatmap: Phase 11), editing goals, reminders.
+- The rest of the Progress tab: goal journey, milestones and badges, the streak heatmap, calories by week (Phase 11).
+- Editing goals by hand, reminders, CSV export, smarter exercise calories (Phase 12). Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
 
 ## Run it on your Android phone (free)
 

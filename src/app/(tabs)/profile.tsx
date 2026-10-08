@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -55,7 +56,8 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-        <Text variant="caption">Editing goals arrives in Phase 12. Your weekly check-in will tune these automatically.</Text>
+        <Text variant="caption">Your weekly check-in tunes these every Monday from what you eat and how your trend moves. Editing goals by hand arrives in Phase 12.</Text>
+        <Button label="Open weekly check-in" variant="secondary" icon="pulse" onPress={() => router.push('/checkin')} />
       </Card>
 
       <Card style={styles.section}>

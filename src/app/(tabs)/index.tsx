@@ -10,6 +10,7 @@ import { FoodTimeline } from '@/components/dashboard/FoodTimeline';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { MacroSummary } from '@/components/dashboard/MacroSummary';
 import { Sparkline, Tile, WaterTile } from '@/components/dashboard/MetricTiles';
+import { CheckinBanner } from '@/components/dashboard/CheckinBanner';
 import { WeekRings, type WeekDay } from '@/components/dashboard/WeekRings';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Icon } from '@/components/ui/Icon';
@@ -17,6 +18,8 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { emptyDay, useClosures, useCloseDay, useDaySummaries, useFoodLogs, useRefreshDashboard, useWeighIns } from '@/features/dashboard/api';
+import { useExpenditure } from '@/features/checkin/api';
+import { budgetOn, isCheckinDue } from '@/features/checkin/logic';
 import { buildInsights } from '@/features/dashboard/insights';
 import { useWorkouts } from '@/features/exercise/api';
 import { workoutSummary } from '@/features/exercise/logic';
@@ -24,11 +27,12 @@ import { goodDirection } from '@/features/weight/logic';
 import { useProfile } from '@/features/profile/api';
 import { useAddWater } from '@/features/water/api';
 import { formatDrink, formatVolume, reachesGoal, totalValue, waterPresets } from '@/features/water/logic';
-import { addDays, ageOn, dayName, fromISODate, toISODate, weekOf } from '@/lib/dates';
+import { addDays, dayName, fromISODate, toISODate, weekOf } from '@/lib/dates';
 import { formatDayLabel, formatInt, greetingFor } from '@/lib/format';
 import { success } from '@/lib/haptics';
 import { mealForTime, type Meal } from '@/lib/meals';
-import { fiberTarget, maintenanceCalories } from '@/lib/nutrition';
+import { confidenceText } from '@/lib/expenditure';
+import { fiberTarget } from '@/lib/nutrition';
 import { streaks } from '@/lib/streak';
 import { nextMilestone, trendSeries, weeklyRate } from '@/lib/trend';
 import { displayWeight, kgToLb } from '@/lib/units';
@@ -95,7 +99,11 @@ export default function DashboardScreen() {
   const [burst, setBurst] = useState<Burst | null>(null);
 
   const units = profile?.units ?? 'metric';
-  const budget = profile?.calorie_target ?? 2000;
+  const current = profile?.calorie_target ?? 2000;
+  const expenditure = useExpenditure();
+  // Each day is judged against the budget it had; budgets change at check-ins.
+  const budgetFor = (date: string) => budgetOn(date, expenditure.checkins, current);
+  const budget = budgetFor(selected);
   const day = (inWeek ? summaries.data : otherDay.data)?.[selected] ?? emptyDay(selected);
   const addback = profile?.exercise_addback ? day.kcal_out : 0;
   const dayBudget = budget + addback;
@@ -113,16 +121,8 @@ export default function DashboardScreen() {
   const goalWeight = profile?.goal_weight_kg ?? null;
   const milestone = latest && goalWeight !== null ? nextMilestone(latest.trend, goalWeight) : null;
 
-  const maintenance =
-    profile?.sex && profile.birth_date && profile.height_cm && profile.activity_level && latest
-      ? maintenanceCalories({
-          sex: profile.sex,
-          age: ageOn(fromISODate(profile.birth_date), now),
-          heightCm: profile.height_cm,
-          weightKg: latest.trend,
-          activity: profile.activity_level,
-        })
-      : null;
+  const checkinDue = expenditure.ready && isCheckinDue({ today: now, onboardedAt: profile?.onboarded_at ?? null, checkins: expenditure.checkins });
+  const pastExpenditure = expenditure.checkins.map((c) => c.expenditure_kcal).filter((k): k is number => k !== null);
 
   const entries = logs.data ?? [];
   const filled = new Set(entries.map((e) => e.meal));
@@ -138,9 +138,9 @@ export default function DashboardScreen() {
       date,
       letter: LETTERS[i],
       dayOfMonth: fromISODate(date).getDate(),
-      fraction: s ? s.kcal_in / budget : 0,
+      fraction: s ? s.kcal_in / budgetFor(date) : 0,
       closed: closedDays.includes(date),
-      over: s ? s.kcal_in > budget * 1.05 : false,
+      over: s ? s.kcal_in > budgetFor(date) * 1.05 : false,
       future: date > today,
       isToday: date === today,
     };
@@ -204,6 +204,8 @@ export default function DashboardScreen() {
         onRefresh={refresh}>
         <WeekRings days={weekDays} selected={selected} onSelect={setSelected} />
 
+        {checkinDue ? <CheckinBanner onPress={() => router.push('/checkin')} /> : null}
+
         <View style={styles.gauge}>
           <CalorieGauge
             fraction={dayBudget > 0 ? day.kcal_in / dayBudget : 0}
@@ -259,10 +261,13 @@ export default function DashboardScreen() {
           />
           <Tile
             label="Expenditure"
-            meta="EST"
-            value={maintenance ? formatInt(maintenance) : '–'}
-            unit={maintenance ? 'kcal' : undefined}
-            sub="Formula estimate · learns from check-ins"
+            meta={expenditure.result.dataWeight > 0 ? 'ADAPTIVE' : 'EST'}
+            value={expenditure.ready ? formatInt(expenditure.result.kcal) : '–'}
+            unit={expenditure.ready ? 'kcal' : undefined}
+            sub={expenditure.ready ? confidenceText(expenditure.result) : undefined}
+            onPress={() => router.push('/checkin')}
+            accessibilityLabel={`Expenditure about ${formatInt(expenditure.result.kcal)} calories a day. ${confidenceText(expenditure.result)}. Opens your weekly check-in.`}
+            footer={pastExpenditure.length > 1 ? <Sparkline values={[...pastExpenditure.slice(-7), expenditure.result.kcal]} color="textSecondary" /> : undefined}
           />
         </View>
         <View style={styles.tiles}>
