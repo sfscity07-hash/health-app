@@ -22,10 +22,13 @@ export type FoodLogEntry = {
   id: string;
   logged_at: string;
   meal: Meal;
+  /** The saved food it came from; null for quick adds. */
+  food_id: string | null;
   name: string;
   brand: string | null;
   quantity: number;
   unit: string;
+  grams: number | null;
   kcal: number;
   protein_g: number;
   carbs_g: number;
@@ -97,13 +100,14 @@ export function useFoodLogs(date: string) {
     queryFn: async (): Promise<FoodLogEntry[]> => {
       const { data, error } = await requireSupabase()
         .from('food_logs')
-        .select('id, logged_at, meal, name, brand, quantity, unit, kcal, protein_g, carbs_g, fat_g, fiber_g')
+        .select('id, logged_at, meal, food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g')
         .eq('log_date', date)
         .order('logged_at');
       if (error) throw error;
       return (data ?? []).map((r) => ({
         ...r,
         quantity: num(r.quantity),
+        grams: r.grams === null || r.grams === undefined ? null : num(r.grams),
         kcal: num(r.kcal),
         protein_g: num(r.protein_g),
         carbs_g: num(r.carbs_g),

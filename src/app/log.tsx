@@ -12,9 +12,11 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { useFoodLogs } from '@/features/dashboard/api';
-import { useFavorites, useLogFood, useMyFoods, useRecentLogs } from '@/features/food/api';
+import { useFavorites, useLogEntries, useLogFood, useMyFoods, useRecentLogs } from '@/features/food/api';
 import { matches, rankRecents, type RecentFood } from '@/features/food/recents';
 import { useDayBudget } from '@/features/food/useDayBudget';
+import { useSavedMeals } from '@/features/meals/api';
+import { entriesFromMeal } from '@/features/meals/logic';
 import { MIN_SEARCH_LENGTH, useFoodSearch, useFoundFoods, type SearchOutcome } from '@/features/search/api';
 import { MIN_RELEVANCE, relevance, withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
@@ -58,6 +60,8 @@ export default function LogSheet() {
   const favorites = useFavorites();
   const dayLogs = useFoodLogs(date);
   const logFood = useLogFood();
+  const logEntries = useLogEntries();
+  const savedMeals = useSavedMeals();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(date);
   const db = useFoodSearch(query);
@@ -71,6 +75,8 @@ export default function LogSheet() {
     [recentLogs.data, meal, today, searching],
   );
   const recentMatches = recents.filter((r) => matches(q, r.name, r.brand));
+  // Saved meals show when you search for them by name.
+  const mealMatches = searching ? (savedMeals.data ?? []).filter((m) => matches(q, m.name)) : [];
   const shownIds = new Set(recentMatches.map((r) => r.foodId));
   const foodMatches = (myFoods.data ?? [])
     .filter((f) => !shownIds.has(f.id) && matches(q, f.name, f.brand))
@@ -85,7 +91,7 @@ export default function LogSheet() {
   const dbResults = dbActive ? withoutLocal(fromDb, loggedKeys, myFoods.data ?? []) : [];
   const dbSettled = dbActive && !db.searching && db.data !== undefined;
   const dbNote = dbSettled && db.data ? sourceNote(db.data) : null;
-  const nothingFound = searching && recentMatches.length === 0 && foodMatches.length === 0 && (!dbActive || (dbSettled && dbResults.length === 0));
+  const nothingFound = searching && mealMatches.length === 0 && recentMatches.length === 0 && foodMatches.length === 0 && (!dbActive || (dbSettled && dbResults.length === 0));
   const nothingYet = !loading && !searching && recents.length === 0 && foodMatches.length === 0;
 
   const mealKcal = (dayLogs.data ?? []).filter((e) => e.meal === meal).reduce((s, e) => s + e.kcal, 0);
@@ -100,7 +106,7 @@ export default function LogSheet() {
     { icon: 'bolt', label: 'Quick add', onPress: () => openQuickAdd() },
     { icon: 'plus', label: 'New food', onPress: () => openNewFood() },
     { icon: 'scan', label: 'Scan', onPress: () => openScanner() },
-    { icon: 'bookmark', label: 'Saved', soon: true, onPress: () => showToast('Saved meals arrive in Phase 7', 'info') },
+    { icon: 'bookmark', label: 'Saved', onPress: () => router.push({ pathname: '/meals', params: { date, meal } }) },
   ];
 
   function nextMeal() {
@@ -250,6 +256,33 @@ export default function LogSheet() {
               Log something with Quick add or New food. Next time it’s one tap away, and the foods you eat most rise to the top.
             </Text>
           </Card>
+        ) : null}
+
+        {mealMatches.length > 0 ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">Your meals</Text>
+              <Text variant="label">kcal</Text>
+            </View>
+            {mealMatches.map((m, i) => (
+              <FoodRow
+                key={m.id}
+                first={i === 0}
+                name={m.name}
+                detail={m.items
+                  .slice(0, 3)
+                  .map((x) => x.name)
+                  .join(', ')}
+                kcal={m.totals.kcal}
+                macros={macrosOf(m.totals)}
+                onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id, date, meal } })}
+                onAdd={() => {
+                  logEntries.mutate(entriesFromMeal(m, date, meal));
+                  showToast(`Added ${m.name} · ${formatInt(m.totals.kcal)} kcal`);
+                }}
+              />
+            ))}
+          </View>
         ) : null}
 
         {recentMatches.length > 0 ? (

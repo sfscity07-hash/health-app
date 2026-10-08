@@ -16,10 +16,12 @@ type EditorFooterProps = {
   /** Shows "Delete entry", which asks for a second tap before it deletes. */
   onDelete?: () => void;
   deleting?: boolean;
+  /** What the delete button says, e.g. "Delete saved meal". */
+  deleteLabel?: string;
 };
 
 /** The pinned action bar at the bottom of the food editors. */
-export function EditorFooter({ label, trailing, onPress, loading, error, onDelete, deleting }: EditorFooterProps) {
+export function EditorFooter({ label, trailing, onPress, loading, error, onDelete, deleting, deleteLabel = 'Delete entry' }: EditorFooterProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -40,7 +42,7 @@ export function EditorFooter({ label, trailing, onPress, loading, error, onDelet
       <Button label={label} trailing={trailing} loading={loading} onPress={onPress} />
       {onDelete ? (
         <Button
-          label={confirmDelete ? 'Tap again to delete' : 'Delete entry'}
+          label={confirmDelete ? 'Tap again to delete' : deleteLabel}
           variant="danger"
           loading={deleting}
           onPress={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}

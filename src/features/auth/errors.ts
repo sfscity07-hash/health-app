@@ -11,8 +11,8 @@ export function isDatabaseBehind(error: unknown): boolean {
 }
 
 /** What to say when a screen's data didn't load. */
-export function loadErrorMessage(error: unknown): string {
-  return isDatabaseBehind(error) ? DB_UPDATE_NEEDED : 'Couldn’t load this day. Pull down to try again.';
+export function loadErrorMessage(error: unknown, otherwise = 'Couldn’t load this day. Pull down to try again.'): string {
+  return isDatabaseBehind(error) ? DB_UPDATE_NEEDED : otherwise;
 }
 
 /** Turns Supabase auth and database errors into plain sentences that say what to do next. */

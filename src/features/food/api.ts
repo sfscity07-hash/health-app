@@ -14,10 +14,10 @@ import { requireSupabase } from '@/lib/supabase';
 
 export type FoodWithServings = FoodRecord & { servings: Serving[] };
 
-const num = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
-const numOrNull = (v: unknown) => (v === null || v === undefined ? null : num(v));
+export const num = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
+export const numOrNull = (v: unknown) => (v === null || v === undefined ? null : num(v));
 
-function toFood(r: Record<string, unknown>): FoodRecord {
+export function toFood(r: Record<string, unknown>): FoodRecord {
   return {
     id: r.id as string,
     source: r.source as FoodRecord['source'],
@@ -187,6 +187,55 @@ const pickNutrients = (e: Nutrients): Nutrients => ({
   fiber_g: e.fiber_g,
 });
 
+const logRow = (e: NewEntry, foodId: string | null) => {
+  const n = roundNutrients(e.nutrients);
+  return {
+    log_date: e.date,
+    meal: e.meal,
+    food_id: foodId,
+    name: e.name,
+    brand: e.brand,
+    quantity: Math.round(e.quantity * 100) / 100,
+    unit: e.unit,
+    grams: e.grams === null ? null : Math.round(e.grams * 100) / 100,
+    kcal: n.kcal,
+    protein_g: n.protein_g,
+    carbs_g: n.carbs_g,
+    fat_g: n.fat_g,
+    fiber_g: n.fiber_g,
+  };
+};
+
+/** Saves log entries in one request (search results are saved as foods first). */
+async function insertEntries(entries: NewEntry[]) {
+  const rows = [];
+  for (const e of entries) rows.push(logRow(e, e.external ? await ensureFood(e.external) : e.foodId));
+  const { error } = await requireSupabase().from('food_logs').insert(rows);
+  if (error) throw error;
+}
+
+/** Shows new entries on the dashboard and Food log straight away, before the server answers. */
+function showEntries(queryClient: ReturnType<typeof useQueryClient>, entries: NewEntry[]) {
+  const now = Date.now();
+  entries.forEach((e, i) => {
+    const n = roundNutrients(e.nutrients);
+    const temp: FoodLogEntry = {
+      id: `temp-${now}-${i}`,
+      logged_at: new Date(now + i).toISOString(),
+      meal: e.meal,
+      food_id: e.foodId,
+      name: e.name,
+      brand: e.brand,
+      quantity: e.quantity,
+      unit: e.unit,
+      grams: e.grams,
+      ...n,
+    };
+    queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', e.date], (old) => (old ? [...old, temp] : old));
+    patchSummaries(queryClient, e.date, (d) => shiftDay(d, n, 1, 1));
+  });
+}
+
 /**
  * Logs a food. The dashboard and Food log update before the server answers,
  * so the screen can close the moment you tap Add.
@@ -194,49 +243,27 @@ const pickNutrients = (e: Nutrients): Nutrients => ({
 export function useLogFood() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (e: NewEntry) => {
-      const n = roundNutrients(e.nutrients);
-      const foodId = e.external ? await ensureFood(e.external) : e.foodId;
-      const { error } = await requireSupabase()
-        .from('food_logs')
-        .insert({
-          log_date: e.date,
-          meal: e.meal,
-          food_id: foodId,
-          name: e.name,
-          brand: e.brand,
-          quantity: Math.round(e.quantity * 100) / 100,
-          unit: e.unit,
-          grams: e.grams === null ? null : Math.round(e.grams * 100) / 100,
-          kcal: n.kcal,
-          protein_g: n.protein_g,
-          carbs_g: n.carbs_g,
-          fat_g: n.fat_g,
-          fiber_g: n.fiber_g,
-        });
-      if (error) throw error;
-    },
-    onMutate: (e) => {
-      const n = roundNutrients(e.nutrients);
-      const temp: FoodLogEntry = {
-        id: `temp-${Date.now()}`,
-        logged_at: new Date().toISOString(),
-        meal: e.meal,
-        name: e.name,
-        brand: e.brand,
-        quantity: e.quantity,
-        unit: e.unit,
-        ...n,
-      };
-      queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', e.date], (old) => (old ? [...old, temp] : old));
-      patchSummaries(queryClient, e.date, (d) => shiftDay(d, n, 1, 1));
-    },
+    mutationFn: (e: NewEntry) => insertEntries([e]),
+    onMutate: (e) => showEntries(queryClient, [e]),
     onError: (e, v) => reportFailure(`add ${v.name}`, e),
     onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),
   });
 }
 
-export type LogEntry = FoodLogEntry & { food_id: string | null; grams: number | null; log_date: string };
+/** Logs several entries at once: a saved meal, or a meal or day you're copying. */
+export function useLogEntries() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (entries: NewEntry[]) => insertEntries(entries),
+    onMutate: (entries) => showEntries(queryClient, entries),
+    onError: (e) => reportFailure('add those foods', e),
+    onSettled: (_d, _e, entries) => {
+      for (const date of new Set(entries.map((e) => e.date))) invalidateLogs(queryClient, date);
+    },
+  });
+}
+
+export type LogEntry = FoodLogEntry & { log_date: string };
 
 export function useEntry(id: string | undefined) {
   const { session } = useAuth();

@@ -18,10 +18,12 @@ type MealCardProps = {
   entries: FoodLogEntry[];
   onAdd: () => void;
   onPressEntry: (entry: FoodLogEntry) => void;
+  /** Opens the meal's menu (copy, save as a meal). Shown when the meal has food. */
+  onMore?: () => void;
 };
 
 /** One meal on the Food log: its foods with calories and macros, and a way to add more. */
-export function MealCard({ meal, entries, onAdd, onPressEntry }: MealCardProps) {
+export function MealCard({ meal, entries, onAdd, onPressEntry, onMore }: MealCardProps) {
   const { colors } = useTheme();
   const kcal = entries.reduce((s, e) => s + e.kcal, 0);
   const protein = entries.reduce((s, e) => s + e.protein_g, 0);
@@ -39,6 +41,18 @@ export function MealCard({ meal, entries, onAdd, onPressEntry }: MealCardProps) 
               : `${formatInt(kcal)} kcal · ${Math.round(protein)} g protein · ${Math.round(fiber)} g fibre`}
           </Text>
         </View>
+        {onMore && entries.length > 0 ? (
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={`More for ${label.toLowerCase()}: copy or save as a meal`}
+            haptic="tick"
+            pressedScale={0.9}
+            hitSlop={6}
+            onPress={onMore}
+            style={[styles.add, { backgroundColor: colors.surface2 }]}>
+            <Icon name="more" size={17} color="textSecondary" strokeWidth={2.6} />
+          </PressableScale>
+        ) : null}
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={`Add to ${label.toLowerCase()}`}

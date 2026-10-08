@@ -119,6 +119,20 @@ function RootStack() {
           <Stack.Screen name="quick-add" options={EDITOR} />
           <Stack.Screen name="food/new" options={EDITOR} />
           <Stack.Screen name="food/preview" options={EDITOR} />
+          <Stack.Screen name="meals" options={EDITOR} />
+          <Stack.Screen name="meal/new" options={EDITOR} />
+          <Stack.Screen name="meal/[id]" options={EDITOR} />
+          <Stack.Screen
+            name="copy"
+            options={{
+              presentation: 'formSheet',
+              animation: 'default',
+              sheetAllowedDetents: [0.82],
+              sheetCornerRadius: radius.sheet,
+              sheetGrabberVisible: true,
+              contentStyle: { backgroundColor: colors.surface1 },
+            }}
+          />
           <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
           <Stack.Screen
             name="weigh-in"

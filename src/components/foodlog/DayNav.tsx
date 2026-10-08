@@ -12,6 +12,7 @@ export function relativeDay(date: string, today: string): string {
   const d = fromISODate(date);
   const t = fromISODate(today);
   if (date === toISODate(addDays(t, -1))) return 'Yesterday';
+  if (date === toISODate(addDays(t, 1))) return 'Tomorrow';
   if (date > toISODate(addDays(t, -7)) && date < today) return dayName(d);
   return formatShortDate(d, t);
 }
@@ -34,11 +35,11 @@ function Arrow({ icon, label, disabled, onPress }: { icon: IconName; label: stri
   );
 }
 
-/** Step a day back or forward. You can't go past today. */
-export function DayNav({ date, today, onChange }: { date: string; today: string; onChange: (date: string) => void }) {
+/** Step a day back or forward, up to `max` (today unless you're copying ahead). */
+export function DayNav({ date, today, onChange, max = today }: { date: string; today: string; onChange: (date: string) => void; max?: string }) {
   const { colors } = useTheme();
   const step = (n: number) => onChange(toISODate(addDays(fromISODate(date), n)));
-  const atToday = date >= today;
+  const atToday = date >= max;
   return (
     <View style={[styles.wrap, { backgroundColor: colors.surface1, borderColor: colors.hairline }]}>
       <Arrow icon="chevronLeft" label="Previous day" onPress={() => step(-1)} />

@@ -5,13 +5,15 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–6 and 8 are done (7 is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–8 are done (9, water and exercise, is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 8 (weight and trend).**
+Updated with every release. **Latest: Phase 7 (saved meals and copying).**
 
-**Before running this version:** `git pull`, then `npx expo start --clear`. No new packages and no new SQL. (Coming from a version before barcode scanning? Run `npm ci` after pulling.) (If you haven't yet, run `supabase/migrations/20261006150000_fibre.sql` once; until you do, the app shows "Your database is missing an update".)
+**Before running this version:**
+1. `git pull`, then `npx expo start --clear`. No new packages. (Coming from a version before barcode scanning? Run `npm ci` after pulling.)
+2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261008090000_saved_meal_quick_adds.sql` once. It lets saved meals hold quick adds. Until you run it, saving a meal or opening **Saved** shows "Your database is missing an update". Everything else works without it. (If you haven't yet, run `20261006150000_fibre.sql` too.)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -29,6 +31,11 @@ Updated with every release. **Latest: Phase 8 (weight and trend).**
 - **Weight** (tap the Trend weight tile on the dashboard, or **Weigh in** on Progress): drag the ruler or tap the number to type, in kg or lb; step back to log a day you missed; open an old weigh-in to change or delete it. Mornings without a weigh-in get a gentle nudge on the dashboard.
 - **Progress tab**: your trend weight chart (scale weigh-ins as dots, the smoothed trend as the line, your goal when it's in view) for 2 weeks up to all time. Press and drag on the chart to read any day. Below it: weekly rate, distance to goal, a projected goal date (at your real pace, or your planned pace until there's a week of data) and every weigh-in.
 - **Food log tab**: your day meal by meal with calories, macros and fibre; step back through earlier days.
+- **Saved meals and copying** (the **⋯** button on any meal in the Food log):
+  - **Save as a meal**: name it ("Usual breakfast" is suggested), untick anything you don't want, save. Quick adds are kept with their numbers.
+  - **Saved** in the logger lists your meals; tap **+** to add a whole meal in one tap, or tap the meal to rename it, take foods out, pick which meal to add it to, or delete it. Searching in the logger finds saved meals by name too.
+  - **Copy to today** (on past days), or **Copy to another day**: any day up to a week ahead, into any meal ("copy yesterday's snacks to tomorrow's lunch").
+  - Under the meals: **Copy this day to today** (on past days) and **Copy … to another day**, which copy every food into its own meal.
 - Dashboard:
   - calorie gauge
   - protein/carbs/fat bars
@@ -41,8 +48,7 @@ Updated with every release. **Latest: Phase 8 (weight and trend).**
 - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Saved meals and copying a meal or day (Phase 7). The Saved button says "Soon".
-- Exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
+- Water amounts other than a 250 ml glass, and exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
 - The rest of the Progress tab (milestones, badges, the streak heatmap: Phase 11), editing goals, reminders.
 
 ## Run it on your Android phone (free)
@@ -76,6 +82,7 @@ You only need to do this once.
    2. `20261006090100_exercise_catalog.sql` (the list of activities)
    3. `20261006120000_recomp_goal.sql` (adds the Recomp goal)
    4. `20261006150000_fibre.sql` (fibre on logged food and daily totals)
+   5. `20261008090000_saved_meal_quick_adds.sql` (quick adds in saved meals)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 

@@ -38,6 +38,22 @@ insert into public.weight_logs (log_date, weight_kg) values ('2026-10-06', 82.9)
 insert into public.day_closures (log_date) values ('2026-10-06');
 insert into public.favorites (food_id) values ('10000000-0000-0000-0000-000000000001');
 
+-- A saved meal mixing a food and a quick add.
+insert into public.saved_meals (id, name) values ('20000000-0000-0000-0000-000000000001', 'Usual dinner');
+insert into public.saved_meal_items (saved_meal_id, food_id, quantity, unit, grams, position)
+values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 1, 'fillet', 150, 0);
+insert into public.saved_meal_items (saved_meal_id, name, quantity, unit, kcal, protein_g, carbs_g, fat_g, position)
+values ('20000000-0000-0000-0000-000000000001', 'Side salad', 1, 'serving', 120, 3, 8, 9, 1);
+
+do $$
+begin
+  begin
+    insert into public.saved_meal_items (saved_meal_id, quantity, unit) values ('20000000-0000-0000-0000-000000000001', 1, 'serving');
+    raise exception 'saved an item with neither a food nor numbers';
+  exception when check_violation then null;
+  end;
+end $$;
+
 do $$
 declare
   s record;
@@ -85,6 +101,8 @@ begin
   assert (select count(*) from public.water_logs) = 0, 'B cannot see A''s water';
   assert (select count(*) from public.weight_logs) = 0, 'B cannot see A''s weight';
   assert (select count(*) from public.favorites) = 0, 'B cannot see A''s favorites';
+  assert (select count(*) from public.saved_meals) = 0, 'B cannot see A''s saved meals';
+  assert (select count(*) from public.saved_meal_items) = 0, 'B cannot see A''s saved meal items';
   assert (select count(*) from public.day_closures) = 0, 'B cannot see A''s closed days';
   assert (select count(*) from public.daily_summary) = 0, 'B cannot see A''s daily summary';
   assert (select count(*) from public.exercises) >= 25, 'B can read the exercise catalog';
@@ -101,6 +119,13 @@ begin
     insert into public.food_logs (log_date, meal, food_id, name, quantity, unit, kcal)
     values ('2026-10-06', 'dinner', '10000000-0000-0000-0000-000000000001', 'Salmon', 1, 'fillet', 309);
     raise exception 'logged a food owned by another user';
+  exception when insufficient_privilege then null;
+  end;
+  -- Nor add a quick add to A's saved meal.
+  begin
+    insert into public.saved_meal_items (saved_meal_id, name, quantity, unit, kcal)
+    values ('20000000-0000-0000-0000-000000000001', 'Sneaky', 1, 'serving', 100);
+    raise exception 'added an item to another user''s saved meal';
   exception when insufficient_privilege then null;
   end;
 end $$;
@@ -124,6 +149,7 @@ do $$
 begin
   assert (select sum(kcal) from public.food_logs) = 427, 'A''s food logs are untouched';
   assert (select count(*) from public.weight_logs) = 1, 'A''s weight log is untouched';
+  assert (select count(*) from public.saved_meal_items) = 2, 'A''s saved meal is untouched';
 end $$;
 
 -- Deleting an account removes all of its data.
