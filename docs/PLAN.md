@@ -143,8 +143,14 @@ The interactive design preview is the reference for all of this: https://claude.
 - Dashboard card with tap-to-add (+250 ml / +500 ml). A fill animation and a progress bar toward your goal.
 
 ### 7. Exercise
-- Built-in activity list with MET values. Calories burned = `MET × kg × hours`. Or type in calories from your watch.
+- Built-in activity list with MET values. Calories burned are *active* calories, `(MET − 1) × trend kg × hours`. Or type in calories from your watch.
 - A setting controls whether exercise adds to your budget (off by default, because the adaptive budget already accounts for your activity).
+- **Later (Phase 12): calories that fit you, not an average person.** Today only your weight changes the number. The upgrade:
+  - **Your own resting burn.** Standard METs assume an average resting rate (3.5 ml O₂/kg/min). Correct each MET with your resting rate from sex, age, height and weight (Mifflin-St Jeor), so the number fits your body, not just your weight.
+  - **How hard you went.** Pick pace, speed or incline for walking, running and cycling (ACSM walking and running equations, including hills), or an effort level (easy / moderate / hard) for everything else.
+  - **Heart rate.** Optionally type your average heart rate from a watch. Calories then come from heart rate, age, weight and sex (the Keytel equation), which tracks real effort better than any table.
+  - **Learns from you.** Once the adaptive expenditure has a few weeks of data, check how logged workouts line up with what your weight actually did, and gently scale exercise numbers that are consistently too high or too low.
+  - Show what went into the number ("for 82.8 kg, 34 y, running at 10 km/h") so it never feels like a black box.
 
 ### 8. Progress / insights
 - **Goal journey** and **weight trend** (above).
@@ -265,7 +271,7 @@ health-app/
 9. **Water + exercise** ✅: Water tile with a one-tap **+** (a glass: 250 ml, or 8 fl oz for imperial) and a goal-hit burst; the Water sheet adds a glass, bottle or large bottle or any typed amount, lists each drink with its time (remove one), and steps the daily goal by a glass (saved to `profiles.water_goal_ml`). Exercise sheet: the day's workouts, Recent (one-tap repeat), the activity list by category with search (prefix match, plurals, everyday synonyms) and calories per 30 min for your weight, and "Type calories from my watch". Workout editor: duration ruler (5-min steps, typed for anything) and **active** calories, (MET − 1) × trend kg × hours, so the number matches what watches report and doesn't double-count resting burn; or typed calories. Edit/delete from the Food log's Exercise card. The add-back switch (exercise sheet and Profile) adds the day's burn to that day's budget. No new tables: `water_logs`, `exercise_logs` and `exercises` were in the first migration. Steps (Health Connect) need a development build and are left for later.
 10. **Adaptive expenditure + weekly check-in**: `expenditure.ts`, check-in screen.
 11. **Progress tab**: goal journey + projected date, milestones/badges, streaks, heatmap, celebrations.
-12. **Reminders, settings, CSV export, delete account.**
+12. **Reminders, settings, CSV export, delete account, smarter exercise calories** (personal resting rate, pace/incline or effort, optional heart rate, learning from your data; see Exercise above).
 13. **Polish + release**: skeletons, empty states, app icon and splash screen, offline cache, EAS build of the APK, install on your phone.
 
 Each phase ends in a working app you can try in Expo Go, committed to `claude/quirky-carson-ybf2zv`.
