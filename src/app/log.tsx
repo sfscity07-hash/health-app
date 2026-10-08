@@ -93,12 +93,13 @@ export default function LogSheet() {
 
   const openQuickAdd = (extra: Record<string, string> = {}) =>
     router.push({ pathname: '/quick-add', params: { date, meal, ...extra } });
+  const openScanner = () => router.push({ pathname: '/scan', params: { date, meal } });
   const openNewFood = (name?: string) => router.push({ pathname: '/food/new', params: { date, meal, name: name ?? '' } });
 
   const actions: Action[] = [
     { icon: 'bolt', label: 'Quick add', onPress: () => openQuickAdd() },
     { icon: 'plus', label: 'New food', onPress: () => openNewFood() },
-    { icon: 'scan', label: 'Scan', soon: true, onPress: () => showToast('Barcode scanning arrives in Phase 6', 'info') },
+    { icon: 'scan', label: 'Scan', onPress: () => openScanner() },
     { icon: 'bookmark', label: 'Saved', soon: true, onPress: () => showToast('Saved meals arrive in Phase 7', 'info') },
   ];
 
@@ -205,7 +206,7 @@ export default function LogSheet() {
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel="Scan a barcode"
-            onPress={() => showToast('Barcode scanning arrives in Phase 6', 'info')}
+            onPress={() => openScanner()}
             style={[styles.scan, { backgroundColor: colors.surface3 }]}>
             <Icon name="scan" size={17} />
           </PressableScale>

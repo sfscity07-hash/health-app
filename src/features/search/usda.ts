@@ -143,3 +143,21 @@ export async function searchUsda(query: string, apiKey: string, signal?: AbortSi
   const body = (await res.json()) as { foods?: UsdaFood[] };
   return (body.foods ?? []).map(mapUsdaFood).filter((f): f is ExternalFood => f !== null);
 }
+
+const withoutLeadingZeros = (s: string) => s.replace(/^0+/, '');
+
+/** US packaged foods by their UPC, from USDA's branded data. Null when USDA doesn't have it. */
+export async function findUsdaByBarcode(codes: string[], apiKey: string, signal?: AbortSignal): Promise<ExternalFood | null> {
+  const res = await fetch(`${USDA_SEARCH_URL}?api_key=${encodeURIComponent(apiKey)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query: codes[0], dataType: ['Branded'], pageSize: 5 }),
+    signal,
+  });
+  if (res.status === 429) throw new SearchLimitError();
+  if (!res.ok) throw new Error(`USDA lookup failed (${res.status})`);
+  const body = (await res.json()) as { foods?: UsdaFood[] };
+  const wanted = new Set(codes.map(withoutLeadingZeros));
+  const hit = (body.foods ?? []).find((f) => f.gtinUpc && wanted.has(withoutLeadingZeros(f.gtinUpc)));
+  return hit ? mapUsdaFood(hit) : null;
+}

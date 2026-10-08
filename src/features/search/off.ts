@@ -180,3 +180,25 @@ export async function searchOff(query: string, signal?: AbortSignal): Promise<Ex
   }
   return products.map(mapOffProduct).filter((f): f is ExternalFood => f !== null);
 }
+
+export const OFF_PRODUCT_URL = 'https://world.openfoodfacts.org/api/v2/product';
+
+export type OffLookup = { kind: 'found'; food: ExternalFood } | { kind: 'incomplete'; name: string | null; brand: string | null } | { kind: 'missing' };
+
+/** Looks up one product by its barcode. "incomplete" means it's listed but without usable nutrition. */
+export async function fetchOffProduct(code: string, signal?: AbortSignal): Promise<OffLookup> {
+  const res = await fetch(`${OFF_PRODUCT_URL}/${encodeURIComponent(code)}.json?fields=${FIELDS}`, { headers: HEADERS, signal });
+  if (res.status === 404) return { kind: 'missing' };
+  if (!res.ok) throw new Error(`Open Food Facts lookup failed (${res.status})`);
+  const body = (await res.json()) as { status?: number; product?: OffProduct };
+  if (body.status !== 1 || !body.product) return { kind: 'missing' };
+  const product = { ...body.product, code: body.product.code ?? code };
+  const food = mapOffProduct(product);
+  if (food) return { kind: 'found', food };
+  const brands = Array.isArray(product.brands) ? product.brands.map(text).join(', ') : text(product.brands);
+  return {
+    kind: 'incomplete',
+    name: [text(product.product_name_en), text(product.product_name), text(product.generic_name)].find(Boolean) || null,
+    brand: firstBrand(brands),
+  };
+}

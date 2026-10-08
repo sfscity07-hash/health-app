@@ -5,13 +5,13 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–5 are done. See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–6 are done. See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 5 (food database search), plus fibre tracking.**
+Updated with every release. **Latest: Phase 6 (barcode scanning).**
 
-**Before running this version:** in Supabase's SQL Editor, run `supabase/migrations/20261006150000_fibre.sql` once (it adds fibre to your logs and daily totals, and is safe to run again). Then `git pull`, `npm install`, `npx expo start --clear`. Until you run it, the app shows "Your database is missing an update".
+**Before running this version:** `git pull`, then **`npm install`** (this version adds the camera package), then `npx expo start --clear`. It runs in Expo Go; the first scan asks for camera permission. No new SQL. (If you haven't yet, run `supabase/migrations/20261006150000_fibre.sql` once; until you do, the app shows "Your database is missing an update".)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -22,6 +22,7 @@ Updated with every release. **Latest: Phase 5 (food database search), plus fibre
   - **Quick add**: just calories, or macros and it works the calories out. Fibre is optional.
   - **New food**: copy a nutrition label, including **fibre**. Choose how you measure it (grams, scoop, cup, tbsp, tsp, slice, piece, bar, ml, or your own word) and whether the label's numbers are per scoop or per 100 g, then add more units if you like (1 scoop = 30 g, 1 tbsp = 10 g). It's saved for next time.
   - Food screen: switch units (the food's own, plus grams and ounces for everything), tap **+ Unit** to add a scoop, cup or anything else to a food, tap the number to type it, or drag the ruler. See what it does to your day before you add it. Star it as a favorite.
+  - **Scan a barcode** (the Scan button, or the barcode icon in the search bar): your own foods come up instantly, then Open Food Facts, then USDA's US products. If nobody knows the barcode, **Create this food** opens with the barcode filled in, so the next scan finds it. A torch button helps in dim light, and **Type the number instead** works for crumpled barcodes (typos are caught by the check digit).
   - Tap the meal name at the top of the logger to switch meal.
   - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
 - **Fibre**: tracked on everything you log, with a daily target of 14 g per 1,000 kcal (shown on the dashboard, Food log, food screen and Profile).
@@ -38,7 +39,7 @@ Updated with every release. **Latest: Phase 5 (food database search), plus fibre
 - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Barcode scanning (Phase 6) and saved meals / copying a meal (Phase 7). The Scan and Saved buttons say "Soon".
+- Saved meals and copying a meal or day (Phase 7). The Saved button says "Soon".
 - Logging your weight after setup (Phase 8). The trend tile shows your setup weigh-in only.
 - Exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
 - Progress tab, editing goals, reminders.

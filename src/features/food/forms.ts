@@ -47,6 +47,8 @@ export type CustomFoodForm = {
   fiber: string;
   /** Other ways to measure it, e.g. 1 tbsp = 10 g. */
   extraUnits: UnitDraft[];
+  /** From a scan that found nothing, so the next scan finds this food. */
+  barcode?: string;
 };
 
 export type CustomFoodInsert = {
@@ -60,6 +62,7 @@ export type CustomFoodInsert = {
   fiber_100g: number | null;
   default_serving_g: number;
   default_serving_label: string | null;
+  barcode: string | null;
 };
 
 export type CustomFoodResult = { ok: true; food: CustomFoodInsert; servings: Serving[] } | { ok: false; error: string };
@@ -138,6 +141,7 @@ export function buildCustomFood(f: CustomFoodForm): CustomFoodResult {
       fiber_100g: fiber === null ? null : per100(fiber),
       default_serving_g: main?.grams ?? 100,
       default_serving_label: main?.label ?? null,
+      barcode: f.barcode && /^\d{6,14}$/.test(f.barcode) ? f.barcode : null,
     },
     servings,
   };

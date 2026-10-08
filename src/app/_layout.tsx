@@ -119,6 +119,7 @@ function RootStack() {
           <Stack.Screen name="quick-add" options={EDITOR} />
           <Stack.Screen name="food/new" options={EDITOR} />
           <Stack.Screen name="food/preview" options={EDITOR} />
+          <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="food/[id]" options={EDITOR} />
           <Stack.Screen name="entry/[id]" options={EDITOR} />
         </Stack.Protected>

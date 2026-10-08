@@ -97,9 +97,15 @@ describe('custom foods', () => {
         fiber_100g: null,
         default_serving_g: 60,
         default_serving_label: 'bar',
+        barcode: null,
       },
       servings: [],
     });
+  });
+
+  it('keeps the barcode from a scan, so the next scan finds the food', () => {
+    expect(buildCustomFood({ ...base, barcode: '5060221205026' })).toMatchObject({ ok: true, food: { barcode: '5060221205026' } });
+    expect(buildCustomFood({ ...base, barcode: 'not-a-code' })).toMatchObject({ ok: true, food: { barcode: null } });
   });
 
   it('treats values as per 100 g when measured in grams', () => {

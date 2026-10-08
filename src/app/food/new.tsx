@@ -7,6 +7,7 @@ import { ModalHeader } from '@/components/food/ModalHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip, ChipGroup } from '@/components/ui/Chip';
+import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Text } from '@/components/ui/Text';
@@ -17,9 +18,9 @@ import { buildCustomFood, UNIT_SUGGESTIONS, type CustomFoodForm, type UnitDraft 
 import { isMillilitres } from '@/lib/portion';
 import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
-import { gutter, space } from '@/theme/tokens';
+import { gutter, radius, space } from '@/theme/tokens';
 
-type Params = { date?: string; meal?: string; name?: string };
+type Params = { date?: string; meal?: string; name?: string; barcode?: string };
 
 type Numbers = Pick<CustomFoodForm, 'kcal' | 'protein' | 'carbs' | 'fat' | 'fiber'>;
 
@@ -70,7 +71,7 @@ export default function NewFoodScreen() {
   };
 
   async function save() {
-    const built = buildCustomFood({ name, brand, unit, unitGrams, basis, extraUnits, ...numbers });
+    const built = buildCustomFood({ name, brand, unit, unitGrams, basis, extraUnits, barcode: params.barcode, ...numbers });
     if (!built.ok) {
       setError(built.error);
       return;
@@ -95,6 +96,14 @@ export default function NewFoodScreen() {
           <Text variant="small" color="textSecondary">
             Enter the numbers the way the package shows them. It’s saved to your foods for next time.
           </Text>
+          {params.barcode ? (
+            <View style={[styles.barcode, { backgroundColor: colors.accentSoft }]}>
+              <Icon name="scan" size={15} color="accent" />
+              <Text variant="caption" color="text" style={styles.barcodeText}>
+                Barcode {params.barcode} is saved with it, so scanning this package finds it straight away next time.
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.group}>
@@ -227,4 +236,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: space.sm },
   extraRow: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-end' },
   remove: { paddingBottom: 9 },
+  barcode: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, borderRadius: radius.md, marginTop: space.xs },
+  barcodeText: { flex: 1 },
 });
