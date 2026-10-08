@@ -46,7 +46,7 @@ export const emptyDay = (log_date: string): DaySummary => ({
   fiber_g: 0,
 });
 
-const keys = {
+export const keys = {
   summaries: (from: string, to: string) => ['summaries', from, to] as const,
   foodLogs: (date: string) => ['foodLogs', date] as const,
   weighIns: ['weighIns'] as const,
@@ -114,7 +114,7 @@ export function useFoodLogs(date: string) {
   });
 }
 
-/** The last 120 days of weigh-ins, oldest first. */
+/** Your weigh-ins, oldest first (up to about three years of daily ones). Shared by the dashboard and Progress. */
 export function useWeighIns() {
   const { session } = useAuth();
   return useQuery({
@@ -125,7 +125,7 @@ export function useWeighIns() {
         .from('weight_logs')
         .select('log_date, weight_kg')
         .order('log_date', { ascending: false })
-        .limit(120);
+        .limit(1100);
       if (error) throw error;
       return (data ?? []).map((r) => ({ date: r.log_date, kg: num(r.weight_kg) })).reverse();
     },

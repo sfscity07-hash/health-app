@@ -21,12 +21,24 @@ export type InsightInput = {
   milestoneKg: number | null;
   /** Formats a kg value in the user's units, e.g. "82.5 kg" or "181.9 lb". */
   weight: (kg: number) => string;
+  /** False when there's no weigh-in for today yet (undefined when not known). */
+  weighedToday?: boolean;
 };
 
 /** Up to four short, honest observations for the dashboard card. None of them scold. */
 export function buildInsights(i: InsightInput): Insight[] {
   const out: Insight[] = [];
   const left = Math.round(i.budget - i.eatenKcal);
+
+  // Mornings are when weigh-ins are most comparable, so that's when to ask.
+  if (i.isToday && i.weighedToday === false && i.hour < 12) {
+    out.push({
+      key: 'weigh',
+      title: 'Weigh-in',
+      icon: 'scale',
+      body: [{ text: 'Step on the scale', bold: true }, { text: ' before breakfast, then tap the trend tile to log it. Every weigh-in sharpens your trend.' }],
+    });
+  }
 
   if (i.isToday && i.foodEntries === 0) {
     out.push({

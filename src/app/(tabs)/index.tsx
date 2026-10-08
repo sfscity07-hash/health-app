@@ -28,6 +28,7 @@ import {
   useWeighIns,
 } from '@/features/dashboard/api';
 import { buildInsights } from '@/features/dashboard/insights';
+import { goodDirection } from '@/features/weight/logic';
 import { useProfile } from '@/features/profile/api';
 import { addDays, ageOn, dayName, fromISODate, toISODate, weekOf } from '@/lib/dates';
 import { formatDayLabel, formatInt, greetingFor } from '@/lib/format';
@@ -110,6 +111,7 @@ export default function DashboardScreen() {
 
   const trend = useMemo(() => trendSeries(weighIns.data ?? []), [weighIns.data]);
   const latest = trend[trend.length - 1];
+  const weighedToday = latest?.date === today;
   const rate = weeklyRate(trend);
   const goalWeight = profile?.goal_weight_kg ?? null;
   const milestone = latest && goalWeight !== null ? nextMilestone(latest.trend, goalWeight) : null;
@@ -162,6 +164,7 @@ export default function DashboardScreen() {
     goalWeightKg: goalWeight,
     milestoneKg: milestone,
     weight,
+    weighedToday,
   });
 
   const canFinish = !closed && (isToday || selected === yesterday);
@@ -223,12 +226,16 @@ export default function DashboardScreen() {
         <View style={styles.tiles}>
           <Tile
             label="Trend weight"
-            meta={trend.length > 1 ? `${Math.min(trend.length, 21)}D` : undefined}
+            meta={!weighedToday && isToday ? 'Weigh in' : trend.length > 1 ? `${Math.min(trend.length, 21)}D` : undefined}
+            onPress={() => router.push('/weigh-in')}
+            accessibilityLabel={`Trend weight ${trendValue === null ? 'not set yet' : `${trendValue.toFixed(1)} ${unit}`}. Tap to weigh in.`}
             value={trendValue === null ? '–' : trendValue.toFixed(1)}
             unit={trendValue === null ? undefined : unit}
             sub={
               rateValue !== null ? (
-                <Text variant="caption" color={rateValue <= 0 ? 'good' : 'textSecondary'}>
+                <Text
+                  variant="caption"
+                  color={goodDirection(profile?.goal ?? null) === (rateValue <= 0 ? 'down' : 'up') ? 'good' : 'textSecondary'}>
                   {rateValue <= 0 ? '▼' : '▲'} {Math.abs(rateValue).toFixed(2)} {unit} / wk
                 </Text>
               ) : latest ? (

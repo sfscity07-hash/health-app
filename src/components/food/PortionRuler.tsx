@@ -13,8 +13,14 @@ import { useTheme } from '@/theme/theme';
 const SPRING = { damping: 22, stiffness: 240, mass: 0.7 };
 const FADE = 64;
 
+/** What the ruler measures: a portion unit, or any scale such as body weight. */
+export type RulerScale = Pick<PortionUnit, 'label' | 'step' | 'max' | 'spacing' | 'major'> & {
+  /** Where the ruler starts (0 for portions; e.g. 62 for a weight ruler). */
+  min?: number;
+};
+
 type PortionRulerProps = {
-  unit: PortionUnit;
+  unit: RulerScale;
   value: number;
   onChange: (value: number) => void;
   /** Color behind the ruler, used for the fade at its edges. */
@@ -28,6 +34,9 @@ type PortionRulerProps = {
 export function PortionRuler({ unit, value, onChange, background }: PortionRulerProps) {
   const { colors } = useTheme();
   const { step, spacing, max, major } = unit;
+  const min = unit.min ?? 0;
+  // Portions can't be zero, so a ruler starting at 0 stops at one step.
+  const floor = min === 0 ? step : min;
   const width = useSharedValue(0);
   const offset = useSharedValue(0);
   const start = useSharedValue(0);
@@ -38,14 +47,14 @@ export function PortionRuler({ unit, value, onChange, background }: PortionRuler
   useEffect(() => {
     current.set(value);
     if (!dragging.get() && width.get() > 0) {
-      offset.set(withSpring(width.get() / 2 - (value / step) * spacing, SPRING));
+      offset.set(withSpring(width.get() / 2 - ((value - min) / step) * spacing, SPRING));
     }
-  }, [value, step, spacing, current, dragging, width, offset]);
+  }, [value, step, spacing, min, current, dragging, width, offset]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
     width.set(w);
-    offset.set(w / 2 - (current.get() / step) * spacing);
+    offset.set(w / 2 - ((current.get() - min) / step) * spacing);
   };
 
   const emit = (v: number) => {
@@ -62,11 +71,11 @@ export function PortionRuler({ unit, value, onChange, background }: PortionRuler
     })
     .onUpdate((e) => {
       const center = width.get() / 2;
-      const highest = center - spacing; // position of the smallest amount (one step)
-      const lowest = center - (max / step) * spacing;
+      const highest = center - ((floor - min) / step) * spacing; // position of the smallest allowed value
+      const lowest = center - ((max - min) / step) * spacing;
       const next = Math.min(highest, Math.max(lowest, start.get() + e.translationX));
       offset.set(next);
-      const snapped = Math.round(Math.round((center - next) / spacing) * step * 100) / 100;
+      const snapped = Math.round((min + Math.round((center - next) / spacing) * step) * 100) / 100;
       if (snapped !== current.get()) {
         current.set(snapped);
         scheduleOnRN(emit, snapped);
@@ -74,13 +83,13 @@ export function PortionRuler({ unit, value, onChange, background }: PortionRuler
     })
     .onFinalize(() => {
       dragging.set(false);
-      offset.set(withSpring(width.get() / 2 - (current.get() / step) * spacing, SPRING));
+      offset.set(withSpring(width.get() / 2 - ((current.get() - min) / step) * spacing, SPRING));
     });
 
   const slide = useAnimatedStyle(() => ({ transform: [{ translateX: offset.get() }] }));
 
   const ticks = useMemo(() => {
-    const count = Math.round(max / step);
+    const count = Math.round((max - min) / step);
     return Array.from({ length: count + 1 }, (_, i) => {
       const isMajor = i % major === 0;
       return (
@@ -88,13 +97,13 @@ export function PortionRuler({ unit, value, onChange, background }: PortionRuler
           <View style={[styles.line, { height: isMajor ? 22 : 12, backgroundColor: isMajor ? colors.textSecondary : colors.textTertiary }]} />
           {isMajor ? (
             <Text variant="label" style={styles.tickLabel}>
-              {formatQty(i * step)}
+              {formatQty(min + i * step)}
             </Text>
           ) : null}
         </View>
       );
     });
-  }, [max, step, major, spacing, colors]);
+  }, [max, min, step, major, spacing, colors]);
 
   return (
     <GestureDetector gesture={pan}>
@@ -108,7 +117,7 @@ export function PortionRuler({ unit, value, onChange, background }: PortionRuler
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(e) => {
           const next = e.nativeEvent.actionName === 'increment' ? value + step : value - step;
-          onChange(Math.min(max, Math.max(step, Math.round(next * 100) / 100)));
+          onChange(Math.min(max, Math.max(floor, Math.round(next * 100) / 100)));
         }}>
         <Animated.View style={[styles.ticks, slide]}>{ticks}</Animated.View>
         <Svg pointerEvents="none" width={FADE} height="100%" style={styles.fadeLeft}>

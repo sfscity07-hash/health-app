@@ -120,6 +120,17 @@ function RootStack() {
           <Stack.Screen name="food/new" options={EDITOR} />
           <Stack.Screen name="food/preview" options={EDITOR} />
           <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+          <Stack.Screen
+            name="weigh-in"
+            options={{
+              presentation: 'formSheet',
+              animation: 'default',
+              sheetAllowedDetents: [0.82],
+              sheetCornerRadius: radius.sheet,
+              sheetGrabberVisible: true,
+              contentStyle: { backgroundColor: colors.surface1 },
+            }}
+          />
           <Stack.Screen name="food/[id]" options={EDITOR} />
           <Stack.Screen name="entry/[id]" options={EDITOR} />
         </Stack.Protected>

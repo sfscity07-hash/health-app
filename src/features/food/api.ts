@@ -1,23 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/AuthProvider';
-import { DB_UPDATE_NEEDED, isDatabaseBehind } from '@/features/auth/errors';
 import { patchSummaries, type DaySummary, type FoodLogEntry } from '@/features/dashboard/api';
 import type { CustomFoodInsert } from '@/features/food/forms';
 import type { LoggedRow } from '@/features/food/recents';
 import { ensureFood } from '@/features/search/api';
 import type { ExternalFood } from '@/features/search/types';
 import { addDays, toISODate } from '@/lib/dates';
+import { reportFailure } from '@/lib/failure';
 import type { Meal } from '@/lib/meals';
 import { roundNutrients, type FoodRecord, type Nutrients, type Serving } from '@/lib/portion';
 import { requireSupabase } from '@/lib/supabase';
-import { useToast } from '@/store/toast';
-
-/** Screens close as soon as you save, so failures are reported here rather than on the screen. */
-const reportFailure = (what: string, error: unknown) =>
-  useToast
-    .getState()
-    .show(isDatabaseBehind(error) ? DB_UPDATE_NEEDED : `Couldn’t ${what}. Check your connection and try again.`, 'warn');
 
 export type FoodWithServings = FoodRecord & { servings: Serving[] };
 

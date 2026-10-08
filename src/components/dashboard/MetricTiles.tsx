@@ -16,6 +16,9 @@ type TileProps = {
   unit?: string;
   sub?: ReactNode;
   footer?: ReactNode;
+  /** Makes the whole tile a button, e.g. the weight tile opens the weigh-in. */
+  onPress?: () => void;
+  accessibilityLabel?: string;
 };
 
 function TileBody({ label, meta, value, unit, sub, footer }: TileProps) {
@@ -43,6 +46,20 @@ function TileBody({ label, meta, value, unit, sub, footer }: TileProps) {
 }
 
 export function Tile(props: TileProps) {
+  const { colors } = useTheme();
+  if (props.onPress) {
+    return (
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={props.accessibilityLabel}
+        haptic="tap"
+        pressedScale={0.97}
+        onPress={props.onPress}
+        style={[styles.tile, styles.pressTile, { backgroundColor: colors.surface1, borderColor: colors.hairline }]}>
+        <TileBody {...props} />
+      </PressableScale>
+    );
+  }
   return (
     <Card style={styles.tile}>
       <TileBody {...props} />

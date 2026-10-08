@@ -5,13 +5,13 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–6 are done. See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–6 and 8 are done (7 is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 6 (barcode scanning).**
+Updated with every release. **Latest: Phase 8 (weight and trend).**
 
-**Before running this version:** `git pull`, then **`npm ci`** (this version adds the camera package), then `npx expo start --clear`. It runs in Expo Go; the first scan asks for camera permission. No new SQL. (If you haven't yet, run `supabase/migrations/20261006150000_fibre.sql` once; until you do, the app shows "Your database is missing an update".)
+**Before running this version:** `git pull`, then `npx expo start --clear`. No new packages and no new SQL. (Coming from a version before barcode scanning? Run `npm ci` after pulling.) (If you haven't yet, run `supabase/migrations/20261006150000_fibre.sql` once; until you do, the app shows "Your database is missing an update".)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -26,6 +26,8 @@ Updated with every release. **Latest: Phase 6 (barcode scanning).**
   - Tap the meal name at the top of the logger to switch meal.
   - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
 - **Fibre**: tracked on everything you log, with a daily target of 14 g per 1,000 kcal (shown on the dashboard, Food log, food screen and Profile).
+- **Weight** (tap the Trend weight tile on the dashboard, or **Weigh in** on Progress): drag the ruler or tap the number to type, in kg or lb; step back to log a day you missed; open an old weigh-in to change or delete it. Mornings without a weigh-in get a gentle nudge on the dashboard.
+- **Progress tab**: your trend weight chart (scale weigh-ins as dots, the smoothed trend as the line, your goal when it's in view) for 2 weeks up to all time. Press and drag on the chart to read any day. Below it: weekly rate, distance to goal, a projected goal date (at your real pace, or your planned pace until there's a week of data) and every weigh-in.
 - **Food log tab**: your day meal by meal with calories, macros and fibre; step back through earlier days.
 - Dashboard:
   - calorie gauge
@@ -40,9 +42,8 @@ Updated with every release. **Latest: Phase 6 (barcode scanning).**
 
 🚧 **Not yet** (shows a placeholder or "Soon")
 - Saved meals and copying a meal or day (Phase 7). The Saved button says "Soon".
-- Logging your weight after setup (Phase 8). The trend tile shows your setup weigh-in only.
 - Exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
-- Progress tab, editing goals, reminders.
+- The rest of the Progress tab (milestones, badges, the streak heatmap: Phase 11), editing goals, reminders.
 
 ## Run it on your Android phone (free)
 
