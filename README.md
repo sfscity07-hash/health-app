@@ -11,7 +11,7 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 Updated with every release. **Latest: Phase 6 (barcode scanning).**
 
-**Before running this version:** `git pull`, then **`npm install`** (this version adds the camera package), then `npx expo start --clear`. It runs in Expo Go; the first scan asks for camera permission. No new SQL. (If you haven't yet, run `supabase/migrations/20261006150000_fibre.sql` once; until you do, the app shows "Your database is missing an update".)
+**Before running this version:** `git pull`, then **`npm ci`** (this version adds the camera package), then `npx expo start --clear`. It runs in Expo Go; the first scan asks for camera permission. No new SQL. (If you haven't yet, run `supabase/migrations/20261006150000_fibre.sql` once; until you do, the app shows "Your database is missing an update".)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -54,6 +54,16 @@ Updated with every release. **Latest: Phase 6 (barcode scanning).**
 The app opens on the welcome screen. Create an account, answer the setup questions, and you'll land on the dashboard with your daily budget.
 
 > **Feels slow?** `npx expo start` runs a development build with debugging switched on, which makes every tap and animation slower. To try the app at real speed, use `npx expo start --no-dev --minify` instead. The installable app built in Phase 13 runs at full speed.
+
+### Getting a new version
+
+```
+git pull
+npm ci
+npx expo start --clear
+```
+
+Use `npm ci` rather than `npm install` for updates: it installs exactly what's in `package-lock.json` and never rewrites it. If `git pull` says *"Your local changes to package-lock.json would be overwritten"*, an earlier `npm install` rewrote that file; run `git checkout -- package-lock.json`, then pull again. If `npm ci` fails with "EPERM" on Windows, stop `npx expo start` (Ctrl+C) or close your editor and run it again.
 
 ## Connect your free Supabase backend
 
