@@ -5,11 +5,11 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–10 are done (11, the rest of the Progress tab, is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–11 are done (12, settings, reminders and export, is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 10 (weekly check-in and adaptive budget).**
+Updated with every release. **Latest: Phase 11 (the full Progress tab).**
 
 **Before running this version:** `git pull`, then `npx expo start --clear`. No new packages and no new SQL. (Coming from a version before barcode scanning? Run `npm ci` after pulling. If you skipped Phase 7's `supabase/migrations/20261008090000_saved_meal_quick_adds.sql`, run it once now; without it, saved meals show "Your database is missing an update".)
 
@@ -27,7 +27,14 @@ Updated with every release. **Latest: Phase 10 (weekly check-in and adaptive bud
   - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
 - **Fibre**: tracked on everything you log, with a daily target of 14 g per 1,000 kcal (shown on the dashboard, Food log, food screen and Profile).
 - **Weight** (tap the Trend weight tile on the dashboard, or **Weigh in** on Progress): drag the ruler or tap the number to type, in kg or lb; step back to log a day you missed; open an old weigh-in to change or delete it. Mornings without a weigh-in get a gentle nudge on the dashboard.
-- **Progress tab**: your trend weight chart (scale weigh-ins as dots, the smoothed trend as the line, your goal when it's in view) for 2 weeks up to all time. Press and drag on the chart to read any day. Below it: weekly rate, distance to goal, a projected goal date (at your real pace, or your planned pace until there's a week of data) and every weigh-in.
+- **Progress tab**, top to bottom:
+  - **Goal journey**: your trend weight on a track from where you started to your goal, with a notch every 2.5 kg, how much you've lost (or gained) and the percentage, the next milestone with how many days away it is at your pace, and when you'll reach your goal.
+  - **Weight chart**: scale weigh-ins as dots, the smoothed trend as the line, your goal when it's in view, for 2 weeks up to all time. Press and drag to read any day. Weekly rate and number of weigh-ins underneath.
+  - **Calories**: the last 7 days as bars against your budget (the dashed line, which steps if a check-in changed it). Today is highlighted and days more than 5% over are orange. Tap a bar to read it.
+  - **Macros**: where your calories came from on average this past week (protein / carbs / fat split, grams against your targets) and how many days you hit your protein target.
+  - **Milestones**: badges that fill up before you earn them: perfect week, 7- and 30-day streaks, protein week, first 5 kg (10 lb), halfway, goal weight, 4 check-ins. The ones you're close to glow; tap one to see how to earn it. Earning a badge, or passing a 2.5 kg mark, gets a small celebration the next time you open Progress (once each).
+  - **Consistency**: your streak and best streak, and 13 weeks of days on one grid (not logged, logged, finished).
+  - Every weigh-in, tap to change.
 - **Food log tab**: your day meal by meal with calories, macros and fibre; step back through earlier days.
 - **Saved meals and copying** (the **⋯** button on any meal in the Food log):
   - **Save as a meal**: name it ("Usual breakfast" is suggested), untick anything you don't want, save. Quick adds are kept with their numbers.
@@ -57,7 +64,6 @@ Updated with every release. **Latest: Phase 10 (weekly check-in and adaptive bud
 - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- The rest of the Progress tab: goal journey, milestones and badges, the streak heatmap, calories by week (Phase 11).
 - Editing goals by hand, reminders, CSV export, smarter exercise calories (Phase 12). Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
 
 ## Run it on your Android phone (free)
