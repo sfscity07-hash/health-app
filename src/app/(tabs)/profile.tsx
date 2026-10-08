@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { SwitchRow } from '@/components/ui/SwitchRow';
 import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { ADDBACK } from '@/features/exercise/logic';
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
 import { formatInt } from '@/lib/format';
 import { fiberTarget } from '@/lib/nutrition';
@@ -57,6 +59,16 @@ export default function ProfileScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text variant="label">Exercise</Text>
+        <SwitchRow
+          label={ADDBACK.label}
+          description={profile?.exercise_addback ? ADDBACK.on : ADDBACK.off}
+          value={profile?.exercise_addback ?? false}
+          onChange={(v) => updateProfile.mutate({ exercise_addback: v })}
+        />
+      </Card>
+
+      <Card style={styles.section}>
         <Text variant="label">Appearance</Text>
         <SegmentedControl
           label="Theme"
@@ -72,7 +84,7 @@ export default function ProfileScreen() {
       <Button label="Sign out" variant="secondary" onPress={() => supabase?.auth.signOut()} />
 
       <Text variant="label" align="center">
-        Fuel {version} · Phase 2
+        Fuel {version}
       </Text>
     </Screen>
   );

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/AuthProvider';
 import type { OnboardingPlan } from '@/features/onboarding/draft';
 import { birthDateForAge, toISODate } from '@/lib/dates';
+import { reportFailure } from '@/lib/failure';
 import { requireSupabase } from '@/lib/supabase';
 import type { Profile, UnitSystem } from '@/types/profile';
 
@@ -78,18 +79,22 @@ export function useSaveOnboarding() {
   });
 }
 
-/** Small profile edits (theme now; goals and units in Phase 12). Updates the cache optimistically. */
+/** Small profile edits: theme, water goal, exercise add-back (goals and units in Phase 12). Updates the cache optimistically. */
 export function useUpdateProfile() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
   return useMutation({
-    mutationFn: async (patch: Partial<Pick<Profile, 'theme' | 'units'>>) => {
+    mutationFn: async (patch: Partial<Pick<Profile, 'theme' | 'units' | 'water_goal_ml' | 'exercise_addback'>>) => {
       const { error } = await requireSupabase().from('profiles').update(patch).eq('id', userId as string);
       if (error) throw error;
     },
     onMutate: (patch) => {
       queryClient.setQueryData<Profile | null>(profileKey(userId), (old) => (old ? { ...old, ...patch } : old));
+    },
+    onError: (e) => {
+      reportFailure('save that setting', e);
+      queryClient.invalidateQueries({ queryKey: profileKey(userId) });
     },
   });
 }

@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
+import { glassCount } from '@/features/water/logic';
 import { useTheme } from '@/theme/theme';
 import { radius, space, type ColorName } from '@/theme/tokens';
 
@@ -67,56 +69,78 @@ export function Tile(props: TileProps) {
   );
 }
 
-/** Water: tap to add a glass, long-press to undo the last one. */
+/** Water: the + adds a glass in one tap; the rest of the tile opens the water sheet. */
 export function WaterTile({
   ml,
   goalMl,
+  glassMl,
+  value,
+  unit,
+  glassLabel,
   onAdd,
-  onUndo,
+  onOpen,
+  ref,
 }: {
   ml: number;
   goalMl: number;
+  glassMl: number;
+  /** The day's total and the goal, formatted in your units ("1.25", "/ 2.5 L"). */
+  value: string;
+  unit: string;
+  /** "250 ml" or "8 fl oz", for screen readers. */
+  glassLabel: string;
   onAdd: () => void;
-  onUndo: () => void;
+  onOpen: () => void;
+  ref?: Ref<View>;
 }) {
   const { colors } = useTheme();
-  const glasses = Math.round(goalMl / 250);
-  const filled = Math.floor(ml / 250);
-  const left = Math.max(0, Math.ceil((goalMl - ml) / 250));
+  const glasses = glassCount(goalMl, glassMl);
+  const filled = Math.min(glasses, Math.floor(ml / glassMl + 0.001));
+  const left = Math.max(0, Math.ceil((goalMl - ml) / glassMl - 0.001));
   return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={`Water, ${(ml / 1000).toFixed(2)} of ${(goalMl / 1000).toFixed(1)} litres`}
-      accessibilityHint="Adds a 250 ml glass. Long-press to remove the last one."
-      haptic="tick"
-      hapticOn="pressIn"
-      pressedScale={0.97}
-      onPress={onAdd}
-      onLongPress={onUndo}
-      style={[styles.tile, styles.pressTile, { backgroundColor: colors.surface1, borderColor: colors.hairline }]}>
-      <TileBody
-        label="Water"
-        meta="+250"
-        value={(ml / 1000).toFixed(2)}
-        unit={`/ ${(goalMl / 1000).toFixed(1)} L`}
-        sub={
-          left === 0 ? (
-            <Text variant="caption" color="good">
-              Goal hit
-            </Text>
-          ) : (
-            `${left} glass${left === 1 ? '' : 'es'} to go`
-          )
-        }
-        footer={
-          <View style={styles.glasses}>
-            {Array.from({ length: glasses }, (_, i) => (
-              <View key={i} style={[styles.glass, { backgroundColor: i < filled ? colors.water : colors.surface3 }]} />
-            ))}
-          </View>
-        }
-      />
-    </PressableScale>
+    <View ref={ref} style={styles.waterWrap}>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={`Water, ${value} ${unit}${left === 0 ? ', goal hit' : `, ${left} glass${left === 1 ? '' : 'es'} to go`}. Opens water.`}
+        haptic="tap"
+        pressedScale={0.97}
+        onPress={onOpen}
+        style={[styles.tile, styles.pressTile, { backgroundColor: colors.surface1, borderColor: colors.hairline }]}>
+        <TileBody
+          label="Water"
+          value={value}
+          unit={unit}
+          sub={
+            left === 0 ? (
+              <Text variant="caption" color="good">
+                Goal hit
+              </Text>
+            ) : (
+              `${left} glass${left === 1 ? '' : 'es'} to go`
+            )
+          }
+          footer={
+            <View style={styles.glasses}>
+              {Array.from({ length: glasses }, (_, i) => (
+                <View key={i} style={[styles.glass, { backgroundColor: i < filled ? colors.water : colors.surface3 }]} />
+              ))}
+            </View>
+          }
+        />
+      </PressableScale>
+      {/* A sibling on top of the tile rather than inside it, so its tap never also opens the sheet. */}
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={`Add a glass of water, ${glassLabel}`}
+        haptic="tick"
+        hapticOn="pressIn"
+        pressedScale={0.85}
+        hitSlop={8}
+        onPress={onAdd}
+        style={[styles.waterAdd, { backgroundColor: colors.surface2 }]}>
+        <Icon name="plus" size={16} color="water" strokeWidth={2.6} />
+      </PressableScale>
+    </View>
   );
 }
 
@@ -155,6 +179,8 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   value: { marginTop: space.sm },
   footer: { marginTop: 'auto', paddingTop: space.sm },
+  waterWrap: { flex: 1 },
+  waterAdd: { position: 'absolute', top: 9, right: 9, width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   glasses: { flexDirection: 'row', gap: 3, height: 20 },
   glass: { flex: 1, borderRadius: 3 },
   mini: { height: 4, borderRadius: 2, overflow: 'hidden' },

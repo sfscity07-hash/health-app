@@ -9,27 +9,21 @@ import { FinishDayButton } from '@/components/dashboard/FinishDayButton';
 import { FoodTimeline } from '@/components/dashboard/FoodTimeline';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { MacroSummary } from '@/components/dashboard/MacroSummary';
-import { MiniBar, Sparkline, Tile, WaterTile } from '@/components/dashboard/MetricTiles';
+import { Sparkline, Tile, WaterTile } from '@/components/dashboard/MetricTiles';
 import { WeekRings, type WeekDay } from '@/components/dashboard/WeekRings';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Icon } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
-import {
-  emptyDay,
-  useAddWater,
-  useClosures,
-  useCloseDay,
-  useDaySummaries,
-  useFoodLogs,
-  useRefreshDashboard,
-  useRemoveWater,
-  useWeighIns,
-} from '@/features/dashboard/api';
+import { emptyDay, useClosures, useCloseDay, useDaySummaries, useFoodLogs, useRefreshDashboard, useWeighIns } from '@/features/dashboard/api';
 import { buildInsights } from '@/features/dashboard/insights';
+import { useWorkouts } from '@/features/exercise/api';
+import { workoutSummary } from '@/features/exercise/logic';
 import { goodDirection } from '@/features/weight/logic';
 import { useProfile } from '@/features/profile/api';
+import { useAddWater } from '@/features/water/api';
+import { formatDrink, formatVolume, reachesGoal, totalValue, waterPresets } from '@/features/water/logic';
 import { addDays, ageOn, dayName, fromISODate, toISODate, weekOf } from '@/lib/dates';
 import { formatDayLabel, formatInt, greetingFor } from '@/lib/format';
 import { success } from '@/lib/haptics';
@@ -39,6 +33,7 @@ import { streaks } from '@/lib/streak';
 import { nextMilestone, trendSeries, weeklyRate } from '@/lib/trend';
 import { displayWeight, kgToLb } from '@/lib/units';
 import { useDay, useViewedDate } from '@/store/day';
+import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
 import { space } from '@/theme/tokens';
 
@@ -89,12 +84,14 @@ export default function DashboardScreen() {
   const logs = useFoodLogs(selected);
   const weighIns = useWeighIns();
   const closures = useClosures();
+  const workouts = useWorkouts(selected);
   const addWater = useAddWater();
-  const removeWater = useRemoveWater();
   const closeDay = useCloseDay();
   const refresh = useRefreshDashboard();
+  const showToast = useToast((s) => s.show);
 
   const finishRef = useRef<View>(null);
+  const waterRef = useRef<View>(null);
   const [burst, setBurst] = useState<Burst | null>(null);
 
   const units = profile?.units ?? 'metric';
@@ -180,6 +177,20 @@ export default function DashboardScreen() {
     finishRef.current?.measureInWindow((x, y, w, h) => setBurst({ id: Date.now(), x: x + w - 36, y: y + h / 2 }));
   }
 
+  const waterGoal = profile?.water_goal_ml ?? 2500;
+  const glass = waterPresets(units)[0];
+
+  function addGlass() {
+    addWater.mutate({ date: selected, ml: glass.ml });
+    if (reachesGoal(day.water_ml, glass.ml, waterGoal)) {
+      success();
+      showToast(`Water goal hit · ${formatVolume(day.water_ml + glass.ml, units)}`);
+      waterRef.current?.measureInWindow((x, y, w) => setBurst({ id: Date.now(), x: x + w - 24, y: y + 24 }));
+    }
+  }
+
+  const loggedWorkouts = workouts.data ?? [];
+
   const trendValue = latest ? (units === 'imperial' ? kgToLb(latest.trend) : latest.trend) : null;
   const rateValue = rate === null ? null : units === 'imperial' ? kgToLb(rate) : rate;
   const unit = units === 'imperial' ? 'lb' : 'kg';
@@ -256,17 +267,31 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.tiles}>
           <WaterTile
+            ref={waterRef}
             ml={day.water_ml}
-            goalMl={profile?.water_goal_ml ?? 2500}
-            onAdd={() => addWater.mutate({ date: selected, ml: 250 })}
-            onUndo={() => removeWater.mutate({ date: selected })}
+            goalMl={waterGoal}
+            glassMl={glass.ml}
+            glassLabel={formatDrink(glass.ml, units)}
+            value={totalValue(day.water_ml, units)}
+            unit={`/ ${formatVolume(waterGoal, units)}`}
+            onAdd={addGlass}
+            onOpen={() => router.push({ pathname: '/water', params: { date: selected } })}
           />
           <Tile
             label="Exercise"
             value={formatInt(day.kcal_out)}
             unit="kcal"
-            sub="Workout logging arrives in Phase 9"
-            footer={<MiniBar fraction={0} color="textSecondary" />}
+            onPress={() => router.push({ pathname: '/exercise', params: { date: selected } })}
+            accessibilityLabel={`Exercise, ${formatInt(day.kcal_out)} calories burned. Tap to log a workout.`}
+            sub={loggedWorkouts.length > 0 ? workoutSummary(loggedWorkouts) : 'Tap to log a workout'}
+            footer={
+              <View style={styles.burnRow}>
+                <Icon name="bolt" size={13} color={day.kcal_out > 0 ? 'accent' : 'textTertiary'} />
+                <Text variant="caption" color="textTertiary" numberOfLines={1}>
+                  {profile?.exercise_addback ? 'Added to your budget' : 'Not added to budget'}
+                </Text>
+              </View>
+            }
           />
         </View>
 
@@ -316,4 +341,5 @@ const styles = StyleSheet.create({
   gauge: { alignItems: 'center', marginTop: -space.xs },
   tiles: { flexDirection: 'row', gap: 10 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: space.xs },
+  burnRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
 });

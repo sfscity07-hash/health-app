@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { DayNav, relativeDay } from '@/components/foodlog/DayNav';
+import { ExerciseCard } from '@/components/foodlog/ExerciseCard';
 import { MealCard } from '@/components/foodlog/MealCard';
 import { ActionSheet, type SheetAction } from '@/components/ui/ActionSheet';
 import { AnimatedBar } from '@/components/ui/AnimatedBar';
@@ -13,9 +14,11 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { useFoodLogs, useRefreshDashboard, type FoodLogEntry } from '@/features/dashboard/api';
+import { useWorkouts } from '@/features/exercise/api';
 import { useLogEntries } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { copyEntries } from '@/features/meals/logic';
+import { useProfile } from '@/features/profile/api';
 import { fromISODate, toISODate } from '@/lib/dates';
 import { formatDayLabel, formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
@@ -39,6 +42,8 @@ export default function FoodLogScreen() {
   const date = useViewedDate();
   const setDate = useDay((s) => s.setDate);
   const logs = useFoodLogs(date);
+  const workouts = useWorkouts(date);
+  const { data: profile } = useProfile();
   const { eaten, targets } = useDayBudget(date);
   const refresh = useRefreshDashboard();
   const entries = logs.data ?? [];
@@ -140,6 +145,17 @@ export default function FoodLogScreen() {
           />
         ))
       )}
+
+      {!logs.isPending && !logs.isError ? (
+        <ExerciseCard
+          workouts={workouts.data ?? []}
+          addback={profile?.exercise_addback ?? false}
+          onAdd={() => router.push({ pathname: '/exercise', params: { date } })}
+          onPressWorkout={(w) => {
+            if (!w.id.startsWith('temp-')) router.push({ pathname: '/exercise/[id]', params: { id: w.id, date } });
+          }}
+        />
+      ) : null}
 
       {saved.length > 0 ? (
         <View style={styles.dayActions}>

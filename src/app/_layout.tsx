@@ -147,6 +147,30 @@ function RootStack() {
           />
           <Stack.Screen name="food/[id]" options={EDITOR} />
           <Stack.Screen name="entry/[id]" options={EDITOR} />
+          <Stack.Screen
+            name="water"
+            options={{
+              presentation: 'formSheet',
+              animation: 'default',
+              sheetAllowedDetents: [0.86],
+              sheetCornerRadius: radius.sheet,
+              sheetGrabberVisible: true,
+              contentStyle: { backgroundColor: colors.surface1 },
+            }}
+          />
+          <Stack.Screen
+            name="exercise/index"
+            options={{
+              presentation: 'formSheet',
+              animation: 'default',
+              sheetAllowedDetents: [0.92],
+              sheetCornerRadius: radius.sheet,
+              sheetGrabberVisible: true,
+              contentStyle: { backgroundColor: colors.surface1 },
+            }}
+          />
+          <Stack.Screen name="exercise/new" options={EDITOR} />
+          <Stack.Screen name="exercise/[id]" options={EDITOR} />
         </Stack.Protected>
       </Stack>
     </NavigationThemeProvider>

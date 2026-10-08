@@ -5,15 +5,13 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–8 are done (9, water and exercise, is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–9 are done (10, the weekly check-in and adaptive budget, is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 7 (saved meals and copying).**
+Updated with every release. **Latest: Phase 9 (water and exercise).**
 
-**Before running this version:**
-1. `git pull`, then `npx expo start --clear`. No new packages. (Coming from a version before barcode scanning? Run `npm ci` after pulling.)
-2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261008090000_saved_meal_quick_adds.sql` once. It lets saved meals hold quick adds. Until you run it, saving a meal or opening **Saved** shows "Your database is missing an update". Everything else works without it. (If you haven't yet, run `20261006150000_fibre.sql` too.)
+**Before running this version:** `git pull`, then `npx expo start --clear`. No new packages and no new SQL. (Coming from a version before barcode scanning? Run `npm ci` after pulling. If you skipped Phase 7's `supabase/migrations/20261008090000_saved_meal_quick_adds.sql`, run it once now; without it, saved meals show "Your database is missing an update".)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -43,12 +41,18 @@ Updated with every release. **Latest: Phase 7 (saved meals and copying).**
   - insight card (tap for the next one)
   - trend weight and expenditure estimate
   - pull down to refresh
-- Water: tap the tile to add a 250 ml glass, long-press to remove the last one.
+- **Water**: the **+** on the dashboard's Water tile adds a glass in one tap. Tap the tile for the Water screen: add a glass, bottle or large bottle (or type any amount), see each drink with its time and remove one you added by mistake, and change your daily goal. Hitting the goal gets a little celebration. Shown in L, or fl oz if you chose imperial units.
+- **Exercise** (tap the Exercise tile on the dashboard, or **+** on the Exercise card at the bottom of the Food log):
+  - Pick from the activity list (search works with everyday words: "jog", "weights", "gym", "spin"), drag the ruler or tap to type the minutes, and see the calories for your weight.
+  - Or **Type calories from my watch**: a name, the calories, and minutes if you like.
+  - **Recent** workouts log again in one tap with **+**. Tap a logged workout to change or delete it.
+  - Calories are *active* calories (on top of what you'd burn resting anyway), the same number watches show.
+  - **Add exercise to my budget** (on the Exercise screen, or in Profile) is off by default: your budget already includes your usual activity, and watch numbers often run high. Turn it on and the day's burn is added to that day's budget ("Budget + ex." on the gauge).
 - **Finish today** (or yesterday, if you forgot): closes the day's ring, extends your streak, celebrates.
 - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Water amounts other than a 250 ml glass, and exercise logging (Phase 9), the weekly check-in and adaptive budget (Phase 10).
+- The weekly check-in and adaptive budget (Phase 10). Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
 - The rest of the Progress tab (milestones, badges, the streak heatmap: Phase 11), editing goals, reminders.
 
 ## Run it on your Android phone (free)

@@ -162,42 +162,6 @@ export function patchSummaries(
   });
 }
 
-export function useAddWater() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ date, ml }: { date: string; ml: number }) => {
-      const { error } = await requireSupabase().from('water_logs').insert({ log_date: date, amount_ml: ml });
-      if (error) throw error;
-    },
-    onMutate: ({ date, ml }) => patchSummaries(queryClient, date, (d) => ({ ...d, water_ml: d.water_ml + ml })),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['summaries'] }),
-  });
-}
-
-/** Undoes the most recent glass of water on a day. */
-export function useRemoveWater() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ date }: { date: string }) => {
-      const sb = requireSupabase();
-      const { data, error } = await sb
-        .from('water_logs')
-        .select('id')
-        .eq('log_date', date)
-        .order('logged_at', { ascending: false })
-        .limit(1);
-      if (error) throw error;
-      const id = data?.[0]?.id;
-      if (!id) return;
-      const del = await sb.from('water_logs').delete().eq('id', id);
-      if (del.error) throw del.error;
-    },
-    onMutate: ({ date }) =>
-      patchSummaries(queryClient, date, (d) => ({ ...d, water_ml: Math.max(0, d.water_ml - 250) })),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['summaries'] }),
-  });
-}
-
 export function useCloseDay() {
   const queryClient = useQueryClient();
   return useMutation({

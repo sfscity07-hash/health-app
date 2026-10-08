@@ -25,10 +25,12 @@ type FoodRowProps = {
   /** Logs it straight away with the amount shown. */
   onAdd: () => void;
   first?: boolean;
+  /** Read out after the row; it's a food unless you say otherwise. */
+  pressHint?: string;
 };
 
 /** One food in the logger: tap the row to adjust, tap + to log it as shown. */
-export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, onAdd, first }: FoodRowProps) {
+export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, onAdd, first, pressHint = 'Opens the food.' }: FoodRowProps) {
   const { colors } = useTheme();
   const [added, setAdded] = useState(0);
 
@@ -42,7 +44,7 @@ export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, on
     <View style={[styles.row, !first && { borderTopColor: colors.hairline, borderTopWidth: StyleSheet.hairlineWidth * 2 }]}>
       <PressableScale
         accessibilityRole="button"
-        accessibilityLabel={`${name}, ${detail}, ${formatInt(kcal)} calories. Opens the food.`}
+        accessibilityLabel={`${name}, ${detail}, ${formatInt(kcal)} calories. ${pressHint}`}
         pressedScale={0.985}
         onPress={onPress}
         style={styles.main}>
