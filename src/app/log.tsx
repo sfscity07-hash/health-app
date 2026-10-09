@@ -28,9 +28,9 @@ import { defaultPortion, describeLogged, formatQty, nutrientsFor, type FoodRecor
 import { useViewedDate } from '@/store/day';
 import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
-import { fonts, gutter, radius, space } from '@/theme/tokens';
+import { fonts, gutter, radius, space, type ColorName } from '@/theme/tokens';
 
-type Action = { icon: IconName; label: string; onPress: () => void; soon?: boolean };
+type Action = { icon: IconName; label: string; onPress: () => void; soon?: boolean; tint?: ColorName };
 
 const macrosOf = (n: { protein_g: number; carbs_g: number; fat_g: number }) => ({ p: n.protein_g, c: n.carbs_g, f: n.fat_g });
 
@@ -109,7 +109,7 @@ export default function LogSheet() {
     { icon: 'plus', label: 'New food', onPress: () => openNewFood() },
     { icon: 'scan', label: 'Scan', onPress: () => openScanner() },
     { icon: 'bookmark', label: 'Saved', onPress: () => router.push({ pathname: '/meals', params: { date, meal } }) },
-    { icon: 'fork', label: 'Recipes', onPress: () => router.push({ pathname: '/recipes', params: { date, meal } }) },
+    { icon: 'pot', label: 'Recipes', tint: 'recipe', onPress: () => router.push({ pathname: '/recipes', params: { date, meal } }) },
   ];
 
   function nextMeal() {
@@ -238,7 +238,7 @@ export default function LogSheet() {
                 haptic="tap"
                 onPress={a.onPress}
                 style={[styles.action, { backgroundColor: colors.surface2 }]}>
-                <Icon name={a.icon} size={20} color={a.soon ? 'textTertiary' : 'accent'} />
+                <Icon name={a.icon} size={20} color={a.soon ? 'textTertiary' : (a.tint ?? 'accent')} />
                 <Text variant="caption" color={a.soon ? 'textTertiary' : 'text'}>
                   {a.label}
                 </Text>
@@ -303,7 +303,7 @@ export default function LogSheet() {
                 kcal={r.last.kcal}
                 macros={macrosOf(r.last)}
                 favorite={r.foodId ? favs.has(r.foodId) : false}
-                tag={r.foodId && recipeIds.has(r.foodId) ? 'RECIPE' : undefined}
+                recipe={Boolean(r.foodId && recipeIds.has(r.foodId))}
                 onPress={() => openRecent(r)}
                 onAdd={() => logRecent(r)}
               />
@@ -329,7 +329,7 @@ export default function LogSheet() {
                   kcal={n.kcal}
                   macros={macrosOf(n)}
                   favorite={favs.has(f.id)}
-                  tag={recipeIds.has(f.id) ? 'RECIPE' : undefined}
+                  recipe={recipeIds.has(f.id)}
                   onPress={() => openFood(f)}
                   onAdd={() => logFoodRecord(f)}
                 />

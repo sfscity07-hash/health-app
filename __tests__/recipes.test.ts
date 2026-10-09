@@ -1,6 +1,7 @@
 import type { FoodWithServings } from '@/features/food/api';
 import { useRecipeDraft } from '@/features/recipes/draft';
 import {
+  composition,
   copyName,
   describeItem,
   emptyDraft,
@@ -230,5 +231,36 @@ describe('recipe draft', () => {
   it('patches the name and weights', () => {
     useRecipeDraft.getState().patch({ finalWeight: 520, servings: 3 });
     expect(useRecipeDraft.getState().draft).toMatchObject({ name: 'Paneer marinade', finalWeight: 520, servings: 3 });
+  });
+});
+
+describe('what a portion is made of', () => {
+  it('ranks ingredients by their share of the calories and scales their grams to the portion', () => {
+    const d = marinade({ finalWeight: 500 });
+    const parts = composition(d.items, 50 / 500);
+    expect(parts.map((p) => p.name)).toEqual(['Paneer', 'Ghee', 'Greek yoghurt', 'Tandoori spice mix']);
+    expect(parts.map((p) => p.rank)).toEqual([0, 1, 2, 3]);
+    // 50 g of a 500 g batch holds a tenth of the 28 g of ghee.
+    expect(parts[1].grams).toBeCloseTo(2.8);
+    expect(parts[0].share).toBeCloseTo(1184 / 1601.5);
+    expect(parts.reduce((s, p) => s + p.share, 0)).toBeCloseTo(1);
+    // The spice mix has no weight, so no grams.
+    expect(parts[3].grams).toBeNull();
+  });
+
+  it('groups the smallest ingredients once there are too many to name', () => {
+    const extra = ['Lemon juice', 'Mustard oil', 'Salt'].map((name, i) => itemFromFood(food(`x${i}`, name, [100 * (i + 1), 0, 0, 0, 0]), 10, 'g', 10));
+    const parts = composition([...marinade().items, ...extra], 1, 4);
+    expect(parts).toHaveLength(5);
+    expect(parts[4]).toMatchObject({ key: 'rest', name: '3 more', rank: null });
+    // Mustard oil and lemon juice (10 g each); the spice mix has no weight.
+    expect(parts[4].grams).toBe(20);
+    expect(parts.reduce((s, p) => s + p.share, 0)).toBeCloseTo(1);
+  });
+
+  it('keeps a lone extra ingredient by name rather than "1 more"', () => {
+    const parts = composition(marinade().items, 1, 3);
+    expect(parts.map((p) => p.name)).toContain('Tandoori spice mix');
+    expect(parts.some((p) => p.rank === null)).toBe(false);
   });
 });

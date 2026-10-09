@@ -47,11 +47,11 @@ export default function RecipesScreen() {
 
         {recipes.isPending ? <ActivityIndicator color={colors.accent} /> : null}
         {recipes.isError ? (
-          <EmptyState icon="fork" title="Couldn’t load your recipes" body={loadErrorMessage(recipes.error, 'Check your internet connection, then close this and open it again.')} />
+          <EmptyState icon="pot" title="Couldn’t load your recipes" body={loadErrorMessage(recipes.error, 'Check your internet connection, then close this and open it again.')} />
         ) : null}
         {recipes.data && recipes.data.length === 0 ? (
           <EmptyState
-            icon="fork"
+            icon="pot"
             title="No recipes yet"
             body="Tap New recipe, add what went in (ghee, paneer, yoghurt…), and weigh the finished dish if you can. Then log 50 g of it like any food, or use it inside another recipe."
           />
@@ -70,6 +70,7 @@ export default function RecipesScreen() {
                 key={r.id}
                 first={i === 0}
                 name={r.food.name}
+                recipe
                 detail={[`${r.itemCount} ingredient${r.itemCount === 1 ? '' : 's'}`, ...size].filter(Boolean).join(' · ')}
                 kcal={n.kcal}
                 macros={{ p: n.protein_g, c: n.carbs_g, f: n.fat_g }}

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
 import { FoodRow } from '@/components/food/FoodRow';
+import { RecipePortion } from '@/components/food/RecipePortion';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { Text } from '@/components/ui/Text';
@@ -35,12 +36,15 @@ function AmountStep({
   mode,
   old,
   onDone,
+  recipe,
 }: {
   food: FoodWithServings;
   external: ExternalFood | null;
   mode: Mode;
   old: RecipeItem | null;
   onDone: (item: RecipeItem) => void;
+  /** The food is itself a recipe: show what's in the amount. */
+  recipe?: boolean;
 }) {
   // Swapping keeps the weight: 200 g of paneer becomes 200 g of the new food.
   const start = mode === 'amount' && old ? { unit: old.unit, qty: old.quantity } : mode === 'swap' && old?.grams ? { unit: 'g', qty: Math.round(old.grams) } : null;
@@ -58,15 +62,18 @@ function AmountStep({
       submitLabel={mode === 'amount' ? 'Update amount' : mode === 'swap' && old ? `Use instead of ${old.name.length > 18 ? `${old.name.slice(0, 18)}…` : old.name}` : 'Add to recipe'}
       onClose={() => router.back()}
       onSubmit={(c: PortionChoice) => onDone(itemFromFood(food, c.qty, c.unit.label, c.grams, external))}
+      recipe={recipe}
+      extra={recipe ? (portion) => <RecipePortion id={food.id} {...portion} /> : undefined}
     />
   );
 }
 
 function SavedAmount({ id, ...rest }: { id: string; mode: Mode; old: RecipeItem | null; onDone: (item: RecipeItem) => void }) {
   const food = useFood(id);
+  const recipeIds = useRecipeIds();
   if (food.isPending) return <EditorStatus title="Ingredient" onClose={() => router.back()} />;
   if (!food.data) return <EditorStatus title="Ingredient" onClose={() => router.back()} problem={{ title: 'Couldn’t open this food', body: 'Go back and try again.' }} />;
-  return <AmountStep food={food.data} external={null} {...rest} />;
+  return <AmountStep food={food.data} external={null} recipe={recipeIds.has(id)} {...rest} />;
 }
 
 /** Pick an ingredient for a recipe (your foods, recipes, recent foods or the food database), or a replacement for one. */
@@ -132,7 +139,7 @@ export default function IngredientPicker() {
   if (chosen?.kind === 'saved') return <SavedAmount id={chosen.id} mode={mode} old={old} onDone={done} />;
   if (chosen?.kind === 'external') return <AmountStep food={asFood(chosen.food)} external={chosen.food} mode={mode} old={old} onDone={done} />;
 
-  const row = (f: FoodRecord, i: number, tag?: string) => {
+  const row = (f: FoodRecord, i: number, tag?: string, recipe?: boolean) => {
     const p = defaultPortion(f);
     const n = nutrientsFor(f, p.grams);
     return (
@@ -141,6 +148,7 @@ export default function IngredientPicker() {
         first={i === 0}
         name={f.name}
         tag={tag}
+        recipe={recipe}
         detail={[describeLogged(p.qty, p.unit, p.unit === 'g' ? null : p.grams), f.brand].filter(Boolean).join(' · ')}
         kcal={n.kcal}
         macros={macrosOf(n)}
@@ -192,7 +200,7 @@ export default function IngredientPicker() {
               <Text variant="label">Your foods and recipes</Text>
               <Text variant="label">kcal</Text>
             </View>
-            {mine.slice(0, searching ? 20 : 12).map((f, i) => row(f, i, recipeIds.has(f.id) ? 'RECIPE' : undefined))}
+            {mine.slice(0, searching ? 20 : 12).map((f, i) => row(f, i, undefined, recipeIds.has(f.id)))}
           </View>
         ) : null}
 

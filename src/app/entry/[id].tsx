@@ -2,9 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
+import { RecipePortion } from '@/components/food/RecipePortion';
 import { QuickAddForm, type QuickAddChoice } from '@/components/food/QuickAddForm';
 import { useAddUnit, useDeleteEntry, useEntry, useFavorites, useFood, useToggleFavorite, useUpdateEntry } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
+import { useRecipeIds } from '@/features/recipes/api';
 import { formatQty, type Nutrients } from '@/lib/portion';
 import { tap } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
@@ -29,6 +31,7 @@ export default function EntryScreen() {
   const remove = useDeleteEntry();
   const addUnit = useAddUnit();
   const showToast = useToast((s) => s.show);
+  const recipeIds = useRecipeIds();
   const { eaten, targets } = useDayBudget(entry.data?.log_date ?? '');
   const close = () => router.back();
 
@@ -92,6 +95,8 @@ export default function EntryScreen() {
         favorite={favorite}
         onToggleFavorite={() => toggleFavorite.mutate({ foodId: f.id, on: !favorite })}
         onAddUnit={(serving) => addUnit.mutate({ foodId: f.id, serving })}
+        recipe={recipeIds.has(f.id)}
+        extra={recipeIds.has(f.id) ? (portion) => <RecipePortion id={f.id} {...portion} /> : undefined}
       />
     );
   }

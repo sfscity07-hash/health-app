@@ -9,7 +9,7 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 ## What works right now
 
-Updated with every release. **Latest: Recipes (build a dish from its ingredients, log it by the gram, swap an ingredient, use it inside another recipe).**
+Updated with every release. **Latest: Recipes (build a dish from its ingredients, log it by the gram, swap an ingredient, use it inside another recipe), now with their own color and a "what's in this portion" breakdown.**
 
 **Before running this version:**
 1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages this time.
@@ -50,6 +50,8 @@ Updated with every release. **Latest: Recipes (build a dish from its ingredients
   - **Finished weight** (optional): weigh the dish after cooking, without the pot. Cooking drives off water, so this makes every gram you log exact. Leave it empty and the ingredients' weights are added up.
   - **Servings** (optional): split the batch into servings to get a "serving" unit.
   - **Log it like any food**: by the gram, the serving, ounces or the **whole batch**. 50 g of the marinade gets exactly 50/520 of the ghee, paneer and everything else.
+  - **What's in this portion**: on a recipe's screen, a card under the amount lists each ingredient's grams and calories in the amount you're logging (50 g of marinade = 38 g paneer, 2.5 g ghee…), with a bar showing where the calories come from. It follows the ruler as you drag it, and shows again when you open a logged recipe.
+  - **Recipes look different everywhere**: they have their own color (orchid) and a pot mark. In the logger, search and Recent they carry a RECIPE tag and an orchid **+**; on the dashboard, the Food log, saved meals and inside other recipes they show the pot and "Recipe ·". The recipe editor colors each ingredient by its share of the calories.
   - **Change it later**: open the recipe (from Recipes, Recent or search, where it's tagged RECIPE), tap **Edit**, then tap any ingredient to **change its amount**, **swap it for another food** (paneer → soya chaap keeps the same 400 g) or remove it.
   - **Save as a new recipe** keeps the original and saves your changed one under a new name, so you can have a paneer and a soya chaap version.
   - **Recipes inside recipes**: a taco with 50 g of the marinade, a slice of cheddar and a tortilla.

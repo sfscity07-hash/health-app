@@ -51,6 +51,12 @@ type FoodDetailProps = {
   submitLabel?: string;
   /** Shown under the name, e.g. a recipe's "6 ingredients · Edit recipe". */
   banner?: ReactNode;
+  /** Shown under the amount and kept in step with it, e.g. what's in this much of a recipe. */
+  extra?: (portion: { grams: number; kcal: number }) => ReactNode;
+  /** The header's title when it isn't "Food", e.g. "Recipe". */
+  title?: string;
+  /** The food is a recipe: says so in the recipe color. */
+  recipe?: boolean;
 };
 
 export function FoodDetail(p: FoodDetailProps) {
@@ -107,7 +113,7 @@ export function FoodDetail(p: FoodDetailProps) {
   return (
     <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ModalHeader
-        title={p.purpose === 'ingredient' ? 'Ingredient' : p.mode === 'edit' ? 'Edit entry' : 'Food'}
+        title={p.purpose === 'ingredient' ? 'Ingredient' : p.mode === 'edit' ? 'Edit entry' : (p.title ?? 'Food')}
         onClose={p.onClose}
         right={
           p.onToggleFavorite ? (
@@ -128,9 +134,9 @@ export function FoodDetail(p: FoodDetailProps) {
             {p.food.brand && p.food.source !== 'custom' ? `${p.food.name}, ${p.food.brand}` : p.food.name}
           </Text>
           <View style={styles.source}>
-            <Icon name="check" size={13} color="good" strokeWidth={2.6} />
-            <Text variant="caption" color="textSecondary">
-              {SOURCE_LABEL[p.food.source]}
+            {p.recipe ? <Icon name="pot" size={14} color="recipe" strokeWidth={2.1} /> : <Icon name="check" size={13} color="good" strokeWidth={2.6} />}
+            <Text variant="caption" color={p.recipe ? 'recipe' : 'textSecondary'}>
+              {p.recipe ? 'Your recipe' : SOURCE_LABEL[p.food.source]}
               {p.food.source === 'custom' && p.food.brand ? ` · ${p.food.brand}` : ''}
             </Text>
             {p.favorite ? <Icon name="star" size={13} color="carbs" filled /> : null}
@@ -239,6 +245,8 @@ export function FoodDetail(p: FoodDetailProps) {
             </>
           )}
         </Card>
+
+        {p.extra?.({ grams, kcal: n.kcal })}
 
         {p.purpose !== 'ingredient' ? (
           <>

@@ -147,3 +147,39 @@ export function recipeUnits(d: RecipeDraft): Serving[] {
 
 /** "Paneer marinade" → "Paneer marinade (copy)". */
 export const copyName = (name: string) => (/\(copy\)$/i.test(name.trim()) ? name.trim() : `${name.trim()} (copy)`);
+
+export type Part = {
+  key: string;
+  name: string;
+  /** Grams of it in the portion (as it went in), or null when it has no weight. */
+  grams: number | null;
+  /** Its share of the calories, 0–1. */
+  share: number;
+  /** 0 for the biggest; null for the "N more" group. */
+  rank: number | null;
+};
+
+/**
+ * Where a recipe's calories come from, biggest first, scaled to a portion
+ * (`scale` = portion grams ÷ finished weight). Past `top` ingredients the
+ * rest are grouped as "N more" (a lone extra one keeps its name).
+ */
+export function composition(items: Pick<RecipeItem, 'key' | 'name' | 'grams' | 'nutrients'>[], scale: number, top = 4): Part[] {
+  const total = items.reduce((s, i) => s + Math.max(0, i.nutrients.kcal), 0);
+  const share = (kcal: number) => (total > 0 ? Math.max(0, kcal) / total : 0);
+  const sorted = [...items].sort((a, b) => b.nutrients.kcal - a.nutrients.kcal);
+  const named = sorted.length <= top + 1 ? sorted : sorted.slice(0, top);
+  const parts: Part[] = named.map((i, rank) => ({ key: i.key, name: i.name, grams: i.grams === null ? null : i.grams * scale, share: share(i.nutrients.kcal), rank }));
+  const rest = sorted.slice(named.length);
+  if (rest.length > 0) {
+    const weighed = rest.filter((i) => i.grams !== null);
+    parts.push({
+      key: 'rest',
+      name: `${rest.length} more`,
+      grams: weighed.length ? weighed.reduce((s, i) => s + (i.grams ?? 0), 0) * scale : null,
+      share: rest.reduce((s, i) => s + share(i.nutrients.kcal), 0),
+      rank: null,
+    });
+  }
+  return parts;
+}

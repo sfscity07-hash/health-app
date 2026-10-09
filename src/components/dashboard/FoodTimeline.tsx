@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { MacroMix } from '@/components/food/MacroMix';
+import { RecipeGlyph } from '@/components/food/RecipeMarks';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
@@ -47,10 +48,12 @@ type FoodTimelineProps = {
   onAdd: (meal: Meal) => void;
   /** Opens an entry to change or delete it. */
   onPressEntry: (entry: FoodLogEntry) => void;
+  /** Foods that are recipes, marked with the recipe pot. */
+  recipeIds?: ReadonlySet<string>;
 };
 
 /** Today's food on a time rail, one section per meal, with the next meal waiting to be filled. */
-export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd, onPressEntry }: FoodTimelineProps) {
+export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd, onPressEntry, recipeIds }: FoodTimelineProps) {
   const { colors } = useTheme();
   const byMeal = new Map<Meal, FoodLogEntry[]>(MEALS.map((m) => [m, []]));
   for (const e of entries) byMeal.get(e.meal)?.push(e);
@@ -118,30 +121,41 @@ export function FoodTimeline({ entries, nextMeal, kcalLeft, onAdd, onPressEntry 
                       {formatInt(kcal)}
                     </Text>
                   </View>
-                  {items.map((it, n) => (
-                    <PressableScale
-                      key={it.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${it.name}, ${formatInt(it.kcal)} calories. Tap to edit.`}
-                      pressedScale={0.985}
-                      onPress={() => onPressEntry(it)}
-                      style={[styles.item, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline }]}>
-                      <View style={styles.itemText}>
-                        <Text variant="small" numberOfLines={1}>
-                          {it.name}
-                        </Text>
-                        <Text variant="caption" color="textTertiary">
-                          {it.unit === 'serving' && it.quantity === 1 ? 'Quick add' : describeLogged(it.quantity, it.unit, null)}
-                        </Text>
-                      </View>
-                      <View style={styles.itemKcal}>
-                        <Text variant="smallStrong" tabular>
-                          {formatInt(it.kcal)}
-                        </Text>
-                        <MacroMix p={it.protein_g} c={it.carbs_g} f={it.fat_g} />
-                      </View>
-                    </PressableScale>
-                  ))}
+                  {items.map((it, n) => {
+                    const recipe = Boolean(it.food_id && recipeIds?.has(it.food_id));
+                    return (
+                      <PressableScale
+                        key={it.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${it.name}${recipe ? ', recipe' : ''}, ${formatInt(it.kcal)} calories. Tap to edit.`}
+                        pressedScale={0.985}
+                        onPress={() => onPressEntry(it)}
+                        style={[styles.item, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline }]}>
+                        <View style={styles.itemText}>
+                          <View style={styles.nameRow}>
+                            {recipe ? <RecipeGlyph size={12} /> : null}
+                            <Text variant="small" numberOfLines={1} style={styles.name}>
+                              {it.name}
+                            </Text>
+                          </View>
+                          <Text variant="caption" color="textTertiary">
+                            {recipe ? (
+                              <Text variant="caption" color="recipe">
+                                Recipe ·{' '}
+                              </Text>
+                            ) : null}
+                            {it.unit === 'serving' && it.quantity === 1 ? 'Quick add' : describeLogged(it.quantity, it.unit, null)}
+                          </Text>
+                        </View>
+                        <View style={styles.itemKcal}>
+                          <Text variant="smallStrong" tabular>
+                            {formatInt(it.kcal)}
+                          </Text>
+                          <MacroMix p={it.protein_g} c={it.carbs_g} f={it.fat_g} />
+                        </View>
+                      </PressableScale>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -164,6 +178,8 @@ const styles = StyleSheet.create({
   mealHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
   item: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   itemText: { flex: 1, minWidth: 0 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  name: { flexShrink: 1 },
   itemKcal: { alignItems: 'flex-end', gap: 5 },
   slot: { borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.lg, padding: space.md, gap: space.sm + 2, marginTop: -3 },
   slotHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },

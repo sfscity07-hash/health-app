@@ -7,9 +7,11 @@ import { EditorFooter } from '@/components/food/EditorFooter';
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { MacroMix } from '@/components/food/MacroMix';
 import { ModalHeader } from '@/components/food/ModalHeader';
+import { CompositionBar, PartDot, RecipeGlyph } from '@/components/food/RecipeMarks';
 import { ActionSheet, type SheetAction } from '@/components/ui/ActionSheet';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Stepper } from '@/components/ui/Stepper';
 import { Text } from '@/components/ui/Text';
@@ -17,9 +19,9 @@ import { TextField } from '@/components/ui/TextField';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { authErrorMessage } from '@/features/auth/errors';
 import { parseNumber } from '@/features/onboarding/draft';
-import { useDeleteRecipe, useRecipe, useSaveRecipe } from '@/features/recipes/api';
+import { useDeleteRecipe, useRecipe, useRecipeIds, useSaveRecipe } from '@/features/recipes/api';
 import { useRecipeDraft } from '@/features/recipes/draft';
-import { copyName, describeItem, emptyDraft, finishedWeight, per100, perServing, rawWeight, recipeProblem, totals, type RecipeItem } from '@/features/recipes/logic';
+import { composition, copyName, describeItem, emptyDraft, finishedWeight, per100, perServing, rawWeight, recipeProblem, totals, type RecipeItem } from '@/features/recipes/logic';
 import { formatInt } from '@/lib/format';
 import { success, tap, tick } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
@@ -67,6 +69,7 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
   const removeItem = useRecipeDraft((s) => s.removeItem);
   const save = useSaveRecipe();
   const remove = useDeleteRecipe();
+  const recipeIds = useRecipeIds();
   const [menuFor, setMenuFor] = useState<RecipeItem | null>(null);
   const [weightText, setWeightText] = useState(draft.finalWeight ? String(draft.finalWeight) : '');
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +80,13 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
   const p100 = per100(draft);
   const pServing = perServing(draft);
   const problem = recipeProblem(draft);
+  // Every ingredient by its share of the calories; the bar and the dots on each row share colors.
+  const parts = composition(draft.items, 1, draft.items.length);
+  const rankOf = new Map(parts.map((p) => [p.key, p.rank]));
+  const showMix = draft.items.length >= 2 && t.kcal > 0;
 
-  const openPicker = (mode: 'add' | 'swap' | 'amount', key?: string) => router.push({ pathname: '/recipe/pick', params: { mode, ...(key ? { key } : {}), ...(draftId ? { exclude: draftId } : {}) } });
+  const openPicker = (mode: 'add' | 'swap' | 'amount', key?: string) =>
+    router.push({ pathname: '/recipe/pick', params: { mode, ...(key ? { key } : {}), ...(draftId ? { exclude: draftId } : {}) } });
 
   function setWeight(text: string) {
     setWeightText(text);
@@ -120,7 +128,12 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
     item.food || item.external
       ? [
           { label: 'Change amount', icon: 'pencil', hint: describeItem(item), onPress: () => openPicker('amount', item.key) },
-          { label: 'Swap for another food', icon: 'swap', hint: item.grams ? `Keeps the same ${Math.round(item.grams)} g` : 'Pick what to use instead', onPress: () => openPicker('swap', item.key) },
+          {
+            label: 'Swap for another food',
+            icon: 'swap',
+            hint: item.grams ? `Keeps the same ${Math.round(item.grams)} g` : 'Pick what to use instead',
+            onPress: () => openPicker('swap', item.key),
+          },
           { label: 'Remove', icon: 'trash', onPress: () => removeItem(item.key) },
         ]
       : [
@@ -145,7 +158,12 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
         />
 
         <Card style={styles.totals}>
-          <Text variant="label">Whole batch</Text>
+          <View style={styles.batchHead}>
+            <Icon name="pot" size={14} color="recipe" strokeWidth={2} />
+            <Text variant="label" color="recipe">
+              Whole batch
+            </Text>
+          </View>
           <View style={styles.kcalRow}>
             <Text variant="hero" tabular>
               {formatInt(t.kcal)}
@@ -174,6 +192,24 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
             </Text>{' '}
             {g(t.fiber_g)} g
           </Text>
+          {showMix ? (
+            <View style={styles.mix} accessible accessibilityLabel={`Calories by ingredient: ${parts.map((p) => `${p.name} ${Math.round(p.share * 100)}%`).join(', ')}`}>
+              <CompositionBar parts={parts} />
+              <View style={styles.mixLegend}>
+                {parts.slice(0, 3).map((p) => (
+                  <View key={p.key} style={styles.mixItem}>
+                    <PartDot rank={p.rank} size={7} />
+                    <Text variant="caption" color="textSecondary" numberOfLines={1} style={styles.mixName}>
+                      {p.name}
+                    </Text>
+                    <Text variant="caption" tabular>
+                      {Math.round(p.share * 100)}%
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
           <View style={[styles.perRow, { borderTopColor: colors.hairline }]}>
             <View style={styles.per}>
               <Text variant="caption" color="textSecondary">
@@ -213,34 +249,46 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
             </Text>
           ) : (
             <Card style={styles.list}>
-              {draft.items.map((i, n) => (
-                <PressableScale
-                  key={i.key}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${i.name}, ${describeItem(i)}, ${formatInt(i.nutrients.kcal)} calories. Tap to change, swap or remove.`}
-                  pressedScale={0.985}
-                  onPress={() => {
-                    tick();
-                    setMenuFor(i);
-                  }}
-                  style={[styles.item, n > 0 && { borderTopColor: colors.hairline, borderTopWidth: StyleSheet.hairlineWidth * 2 }]}>
-                  <View style={styles.itemText}>
-                    <Text variant="body" numberOfLines={1}>
-                      {i.name}
-                    </Text>
-                    <Text variant="caption" color="textTertiary" numberOfLines={1}>
-                      {describeItem(i)}
-                      {i.brand ? ` · ${i.brand}` : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.itemKcal}>
-                    <Text variant="smallStrong" color="textSecondary" tabular>
-                      {formatInt(i.nutrients.kcal)}
-                    </Text>
-                    <MacroMix p={i.nutrients.protein_g} c={i.nutrients.carbs_g} f={i.nutrients.fat_g} width={24} />
-                  </View>
-                </PressableScale>
-              ))}
+              {draft.items.map((i, n) => {
+                const nested = Boolean(i.food && recipeIds.has(i.food.id));
+                return (
+                  <PressableScale
+                    key={i.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${i.name}${nested ? ', a recipe' : ''}, ${describeItem(i)}, ${formatInt(i.nutrients.kcal)} calories. Tap to change, swap or remove.`}
+                    pressedScale={0.985}
+                    onPress={() => {
+                      tick();
+                      setMenuFor(i);
+                    }}
+                    style={[styles.item, n > 0 && { borderTopColor: colors.hairline, borderTopWidth: StyleSheet.hairlineWidth * 2 }]}>
+                    {showMix ? <PartDot rank={rankOf.get(i.key) ?? null} /> : null}
+                    <View style={styles.itemText}>
+                      <View style={styles.nameRow}>
+                        {nested ? <RecipeGlyph /> : null}
+                        <Text variant="body" numberOfLines={1} style={styles.name}>
+                          {i.name}
+                        </Text>
+                      </View>
+                      <Text variant="caption" color="textTertiary" numberOfLines={1}>
+                        {nested ? (
+                          <Text variant="caption" color="recipe">
+                            Recipe ·{' '}
+                          </Text>
+                        ) : null}
+                        {describeItem(i)}
+                        {i.brand ? ` · ${i.brand}` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.itemKcal}>
+                      <Text variant="smallStrong" color="textSecondary" tabular>
+                        {formatInt(i.nutrients.kcal)}
+                      </Text>
+                      <MacroMix p={i.nutrients.protein_g} c={i.nutrients.carbs_g} f={i.nutrients.fat_g} width={24} />
+                    </View>
+                  </PressableScale>
+                );
+              })}
             </Card>
           )}
           <Button label="Add ingredient" icon="plus" variant="secondary" onPress={() => openPicker('add')} />
@@ -318,6 +366,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingHorizontal: gutter, paddingBottom: space.xxl, paddingTop: space.sm, gap: space.xl },
   totals: { padding: space.lg, gap: space.sm },
+  batchHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  mix: { gap: space.sm, marginTop: space.xs },
+  mixLegend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.md, rowGap: 4 },
+  mixItem: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '100%' },
+  mixName: { flexShrink: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { flexShrink: 1 },
   kcalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   perRow: { flexDirection: 'row', paddingTop: space.md, marginTop: space.xs, borderTopWidth: StyleSheet.hairlineWidth * 2 },
   per: { flex: 1, gap: 2 },

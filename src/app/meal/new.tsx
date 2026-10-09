@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 
 import { EditorFooter } from '@/components/food/EditorFooter';
 import { ModalHeader } from '@/components/food/ModalHeader';
+import { RecipeGlyph } from '@/components/food/RecipeMarks';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
@@ -13,6 +14,7 @@ import { authErrorMessage } from '@/features/auth/errors';
 import { useFoodLogs } from '@/features/dashboard/api';
 import { useCreateSavedMeal } from '@/features/meals/api';
 import { mealSummary, suggestedMealName, totalOf } from '@/features/meals/logic';
+import { useRecipeIds } from '@/features/recipes/api';
 import { formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
 import { isMeal, MEAL_LABEL } from '@/lib/meals';
@@ -28,6 +30,7 @@ export default function NewSavedMealScreen() {
   const meal = isMeal(params.meal) ? params.meal : 'breakfast';
   const logs = useFoodLogs(params.date ?? '');
   const create = useCreateSavedMeal();
+  const recipeIds = useRecipeIds();
   const showToast = useToast((s) => s.show);
   const entries = (logs.data ?? []).filter((e) => e.meal === meal && !e.id.startsWith('temp-'));
   const [name, setName] = useState(suggestedMealName(meal));
@@ -90,9 +93,12 @@ export default function NewSavedMealScreen() {
                   {on ? <Icon name="check" size={13} color="accentInk" strokeWidth={3} /> : null}
                 </View>
                 <View style={styles.rowText}>
-                  <Text variant="body" numberOfLines={1} color={on ? 'text' : 'textTertiary'}>
-                    {e.name}
-                  </Text>
+                  <View style={styles.nameRow}>
+                    {e.food_id && recipeIds.has(e.food_id) ? <RecipeGlyph /> : null}
+                    <Text variant="body" numberOfLines={1} color={on ? 'text' : 'textTertiary'} style={styles.name}>
+                      {e.name}
+                    </Text>
+                  </View>
                   <Text variant="caption" color="textTertiary">
                     {e.food_id ? describeLogged(e.quantity, e.unit, null) : 'Quick add'}
                   </Text>
@@ -118,4 +124,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
   check: { width: 22, height: 22, borderRadius: radius.sm - 3, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, minWidth: 0, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { flexShrink: 1 },
 });

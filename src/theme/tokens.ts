@@ -27,6 +27,9 @@ const dark = {
   warn: '#FF8A5C',
   flame: '#FF9A3C',
   water: '#5CB8FF',
+  /** Recipes (dishes made of other foods): orchid, a hue no macro or state uses. */
+  recipe: '#D08BFF',
+  recipeSoft: 'rgba(208,139,255,0.14)',
   glass: 'rgba(24,27,37,0.94)',
   segmentOn: '#2A2E3D',
   scrim: 'rgba(0,0,0,0.5)',
@@ -60,6 +63,8 @@ const light: ThemeColors = {
   warn: '#E0602F',
   flame: '#F07A1A',
   water: '#2E8FE0',
+  recipe: '#9A3FD6',
+  recipeSoft: 'rgba(154,63,214,0.10)',
   glass: 'rgba(255,255,255,0.96)',
   segmentOn: '#FFFFFF',
   scrim: 'rgba(16,18,30,0.28)',

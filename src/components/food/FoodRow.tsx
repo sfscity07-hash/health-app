@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { MacroMix } from '@/components/food/MacroMix';
+import { RecipeTag } from '@/components/food/RecipeMarks';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
@@ -19,6 +20,8 @@ type FoodRowProps = {
   macros?: { p: number; c: number; f: number };
   /** Where it's from, e.g. "USDA". */
   tag?: string;
+  /** A dish made of other foods: shown in the recipe color with a pot. */
+  recipe?: boolean;
   favorite?: boolean;
   /** Opens the food so you can change the amount. */
   onPress: () => void;
@@ -30,7 +33,7 @@ type FoodRowProps = {
 };
 
 /** One food in the logger: tap the row to adjust, tap + to log it as shown. */
-export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, onAdd, first, pressHint = 'Opens the food.' }: FoodRowProps) {
+export function FoodRow({ name, detail, kcal, macros, tag, recipe, favorite, onPress, onAdd, first, pressHint = 'Opens the food.' }: FoodRowProps) {
   const { colors } = useTheme();
   const [added, setAdded] = useState(0);
 
@@ -44,7 +47,7 @@ export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, on
     <View style={[styles.row, !first && { borderTopColor: colors.hairline, borderTopWidth: StyleSheet.hairlineWidth * 2 }]}>
       <PressableScale
         accessibilityRole="button"
-        accessibilityLabel={`${name}, ${detail}, ${formatInt(kcal)} calories. ${pressHint}`}
+        accessibilityLabel={`${name}${recipe ? ', recipe' : ''}, ${detail}, ${formatInt(kcal)} calories. ${pressHint}`}
         pressedScale={0.985}
         onPress={onPress}
         style={styles.main}>
@@ -56,7 +59,9 @@ export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, on
             </Text>
           </View>
           <View style={styles.detailRow}>
-            {tag ? (
+            {recipe ? (
+              <RecipeTag />
+            ) : tag ? (
               <View style={[styles.tag, { borderColor: colors.hairlineStrong }]}>
                 <Text variant="label" style={styles.tagText}>
                   {tag}
@@ -86,13 +91,13 @@ export function FoodRow({ name, detail, kcal, macros, tag, favorite, onPress, on
           setAdded((n) => n + 1);
           onAdd();
         }}
-        style={[styles.add, { backgroundColor: added ? colors.good : colors.accentSoft }]}>
+        style={[styles.add, { backgroundColor: added ? colors.good : recipe ? colors.recipeSoft : colors.accentSoft }]}>
         {added ? (
           <Animated.View key={added} entering={ZoomIn.springify().damping(14)}>
             <Icon name="check" size={17} color="bg" strokeWidth={2.6} />
           </Animated.View>
         ) : (
-          <Icon name="plus" size={17} color="accent" strokeWidth={2.4} />
+          <Icon name="plus" size={17} color={recipe ? 'recipe' : 'accent'} strokeWidth={2.4} />
         )}
       </PressableScale>
     </View>

@@ -16,30 +16,33 @@ export function RecipeBanner({ count, onEdit }: { count: number; onEdit: () => v
       haptic="tap"
       pressedScale={0.98}
       onPress={onEdit}
-      style={[styles.banner, { backgroundColor: colors.surface1, borderColor: colors.hairline }]}>
-      <Icon name="fork" size={16} color="accent" />
+      style={[styles.banner, { backgroundColor: colors.recipeSoft }]}>
+      <View style={[styles.badge, { backgroundColor: colors.recipe }]}>
+        <Icon name="pot" size={17} color="bg" strokeWidth={2.1} />
+      </View>
       <View style={styles.text}>
-        <Text variant="smallStrong">Recipe · {count} ingredient{count === 1 ? '' : 's'}</Text>
+        <Text variant="smallStrong">
+          <Text variant="smallStrong" color="recipe">
+            Recipe
+          </Text>{' '}
+          · {count} ingredient{count === 1 ? '' : 's'}
+        </Text>
         <Text variant="caption" color="textSecondary">
           Change amounts, swap an ingredient, or save a new version
         </Text>
       </View>
-      <Text variant="smallStrong" color="accent">
-        Edit
-      </Text>
-      <Icon name="chevronRight" size={15} color="accent" />
+      <View style={[styles.edit, { borderColor: colors.recipe }]}>
+        <Text variant="smallStrong" color="recipe">
+          Edit
+        </Text>
+      </View>
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    padding: space.md,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-  },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg },
+  badge: { width: 34, height: 34, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 1 },
+  edit: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: space.md, paddingVertical: 5 },
 });

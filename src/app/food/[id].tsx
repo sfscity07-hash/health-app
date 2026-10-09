@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
 import { RecipeBanner } from '@/components/food/RecipeBanner';
+import { RecipePortion } from '@/components/food/RecipePortion';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { useAddUnit, useFavorites, useFood, useLogFood, useToggleFavorite } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
@@ -81,7 +82,10 @@ export default function FoodScreen() {
         favorite={favorite}
         onToggleFavorite={() => toggleFavorite.mutate({ foodId: f.id, on: !favorite })}
         onAddUnit={(serving) => addUnit.mutate({ foodId: f.id, serving })}
+        title={recipe ? 'Recipe' : undefined}
+        recipe={Boolean(recipe)}
         banner={recipe ? <RecipeBanner count={recipe.itemCount} onEdit={() => router.push({ pathname: '/recipe/edit', params: { id: f.id, from: 'food' } })} /> : undefined}
+        extra={recipe ? (portion) => <RecipePortion id={f.id} {...portion} /> : undefined}
       />
       {/* "Saved Paneer marinade" when a new recipe opens here. */}
       <ToastHost bottom={insets.bottom + 100} />

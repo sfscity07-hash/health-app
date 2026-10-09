@@ -6,6 +6,7 @@ import { EditorFooter } from '@/components/food/EditorFooter';
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { MacroMix } from '@/components/food/MacroMix';
 import { ModalHeader } from '@/components/food/ModalHeader';
+import { RecipeGlyph } from '@/components/food/RecipeMarks';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconButton } from '@/components/ui/IconButton';
@@ -16,6 +17,7 @@ import { TextField } from '@/components/ui/TextField';
 import { useLogEntries } from '@/features/food/api';
 import { useDeleteSavedMeal, useRemoveMealItem, useRenameSavedMeal, useSavedMeals } from '@/features/meals/api';
 import { entriesFromMeal, mealSummary } from '@/features/meals/logic';
+import { useRecipeIds } from '@/features/recipes/api';
 import { formatInt } from '@/lib/format';
 import { success, tap } from '@/lib/haptics';
 import { isMeal, MEAL_LABEL, MEAL_OPTIONS, mealForTime, type Meal } from '@/lib/meals';
@@ -38,6 +40,7 @@ export default function SavedMealScreen() {
   const rename = useRenameSavedMeal();
   const remove = useDeleteSavedMeal();
   const removeItem = useRemoveMealItem();
+  const recipeIds = useRecipeIds();
   const showToast = useToast((s) => s.show);
   const [slot, setSlot] = useState<Meal>(isMeal(params.meal) ? params.meal : mealForTime(new Date()));
   const [editing, setEditing] = useState<string | null>(null);
@@ -116,10 +119,18 @@ export default function SavedMealScreen() {
           {m.items.map((i, n) => (
             <View key={i.id} style={[styles.row, n > 0 && { borderTopColor: colors.hairline, borderTopWidth: StyleSheet.hairlineWidth * 2 }]}>
               <View style={styles.rowText}>
-                <Text variant="body" numberOfLines={1}>
-                  {i.name}
-                </Text>
+                <View style={styles.nameRow}>
+                  {i.food && recipeIds.has(i.food.id) ? <RecipeGlyph /> : null}
+                  <Text variant="body" numberOfLines={1} style={styles.name}>
+                    {i.name}
+                  </Text>
+                </View>
                 <Text variant="caption" color="textTertiary">
+                  {i.food && recipeIds.has(i.food.id) ? (
+                    <Text variant="caption" color="recipe">
+                      Recipe ·{' '}
+                    </Text>
+                  ) : null}
                   {i.food ? describeLogged(i.quantity, i.unit, i.grams) : 'Quick add'}
                 </Text>
               </View>
@@ -176,6 +187,8 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: space.lg, paddingVertical: space.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
   rowText: { flex: 1, minWidth: 0, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  name: { flexShrink: 1 },
   kcal: { alignItems: 'flex-end', gap: 5 },
   group: { gap: space.sm },
 });

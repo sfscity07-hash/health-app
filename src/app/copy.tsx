@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EditorFooter } from '@/components/food/EditorFooter';
+import { RecipeGlyph } from '@/components/food/RecipeMarks';
 import { DayNav, relativeDay } from '@/components/foodlog/DayNav';
 import { IconButton } from '@/components/ui/IconButton';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -10,6 +11,7 @@ import { Text } from '@/components/ui/Text';
 import { useFoodLogs } from '@/features/dashboard/api';
 import { useLogEntries } from '@/features/food/api';
 import { copyEntries, mealSummary, totalOf } from '@/features/meals/logic';
+import { useRecipeIds } from '@/features/recipes/api';
 import { addDays, fromISODate, toISODate } from '@/lib/dates';
 import { formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
@@ -32,6 +34,7 @@ export default function CopySheet() {
   const [slot, setSlot] = useState<Meal>(meal ?? 'breakfast');
   const logs = useFoodLogs(from);
   const logEntries = useLogEntries();
+  const recipeIds = useRecipeIds();
   const showToast = useToast((s) => s.show);
 
   const entries = (logs.data ?? []).filter((e) => !e.id.startsWith('temp-') && (meal === null || e.meal === meal));
@@ -88,6 +91,7 @@ export default function CopySheet() {
           {logs.isPending ? <ActivityIndicator color={colors.accent} /> : null}
           {(meal ? entries : MEALS.flatMap((m) => entries.filter((e) => e.meal === m))).map((e) => (
             <View key={e.id} style={[styles.item, { borderTopColor: colors.hairline }]}>
+              {e.food_id && recipeIds.has(e.food_id) ? <RecipeGlyph /> : null}
               <Text variant="body" numberOfLines={1} style={styles.itemName}>
                 {e.name}
               </Text>

@@ -19,6 +19,7 @@ import { useLogEntries } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { copyEntries } from '@/features/meals/logic';
 import { useProfile } from '@/features/profile/api';
+import { useRecipeIds } from '@/features/recipes/api';
 import { fromISODate, toISODate } from '@/lib/dates';
 import { formatDayLabel, formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
@@ -42,6 +43,7 @@ export default function FoodLogScreen() {
   const date = useViewedDate();
   const setDate = useDay((s) => s.setDate);
   const logs = useFoodLogs(date);
+  const recipeIds = useRecipeIds();
   const workouts = useWorkouts(date);
   const { data: profile } = useProfile();
   const { eaten, targets } = useDayBudget(date);
@@ -142,6 +144,7 @@ export default function FoodLogScreen() {
             onAdd={() => router.push({ pathname: '/log', params: { date, meal } })}
             onPressEntry={openEntry}
             onMore={() => setMenuFor(meal)}
+            recipeIds={recipeIds}
           />
         ))
       )}

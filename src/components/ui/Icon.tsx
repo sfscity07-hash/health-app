@@ -40,6 +40,8 @@ const ICONS = {
   more: [circle(5.5, 12, 1.1), circle(12, 12, 1.1), circle(18.5, 12, 1.1)],
   copy: ['M9 9h10v10H9z', 'M5 15V5h10'],
   swap: ['M4 8h15M15 4l4 4-4 4', 'M20 16H5M9 12l-4 4 4 4'],
+  /** A lidded pot: recipes. */
+  pot: ['M3.5 9.5h17', 'M6.5 9.5a5.5 3 0 0 1 11 0M12 6.5V5', 'M5 9.5v6.5a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4V9.5', 'M5 13H2.5M19 13h2.5'],
   trash: ['M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3'],
   pencil: ['M4 20h4L19 9l-4-4L4 16z', 'M13.5 6.5l4 4'],
   flame: [

@@ -25,6 +25,7 @@ import { useWorkouts } from '@/features/exercise/api';
 import { workoutSummary } from '@/features/exercise/logic';
 import { goodDirection } from '@/features/weight/logic';
 import { useProfile } from '@/features/profile/api';
+import { useRecipeIds } from '@/features/recipes/api';
 import { useAddWater } from '@/features/water/api';
 import { formatDrink, formatVolume, reachesGoal, totalValue, waterPresets } from '@/features/water/logic';
 import { addDays, dayName, fromISODate, toISODate, weekOf } from '@/lib/dates';
@@ -86,6 +87,7 @@ export default function DashboardScreen() {
   const inWeek = week.includes(selected);
   const otherDay = useDaySummaries(inWeek ? '' : selected, inWeek ? '' : selected);
   const logs = useFoodLogs(selected);
+  const recipeIds = useRecipeIds();
   const weighIns = useWeighIns();
   const closures = useClosures();
   const workouts = useWorkouts(selected);
@@ -312,6 +314,7 @@ export default function DashboardScreen() {
           kcalLeft={left}
           onAdd={(meal) => router.push({ pathname: '/log', params: { date: selected, meal } })}
           onPressEntry={openEntry}
+          recipeIds={recipeIds}
         />
 
         {canFinish || closed ? (
