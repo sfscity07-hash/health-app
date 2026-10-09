@@ -5,15 +5,15 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done (13, polish and the installable app, is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes (13, polish and the installable app, is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 12 (settings, reminders, export, delete account, smarter exercise calories).**
+Updated with every release. **Latest: Recipes (build a dish from its ingredients, log it by the gram, swap an ingredient, use it inside another recipe).**
 
 **Before running this version:**
-1. `git pull`, then **`npm ci`** (three new Expo modules: notifications, file system, sharing), then `npx expo start --clear`.
-2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261009090000_account_and_workouts.sql` once. It adds **Delete account** and saves the speed, incline, effort and heart rate behind each workout. Until you run it, those two show "Your database is missing an update"; everything else works. (Skipped Phase 7's `20261008090000_saved_meal_quick_adds.sql`? Run that too.)
+1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages this time.
+2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261010090000_recipes.sql` once. It adds the two tables recipes are kept in. Until you run it, Recipes shows "Your database is missing an update"; everything else works. (Skipped Phase 12's `20261009090000_account_and_workouts.sql`? Run that too, first.)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -43,6 +43,17 @@ Updated with every release. **Latest: Phase 12 (settings, reminders, export, del
   - **Saved** in the logger lists your meals; tap **+** to add a whole meal in one tap, or tap the meal to rename it, take foods out, pick which meal to add it to, or delete it. Searching in the logger finds saved meals by name too.
   - **Copy to today** (on past days), or **Copy to another day**: any day up to a week ahead, into any meal ("copy yesterday's snacks to tomorrow's lunch").
   - Under the meals: **Copy this day to today** (on past days) and **Copy … to another day**, which copy every food into its own meal.
+- **Recipes** (the **Recipes** button in the logger): anything you make from several foods, like a marinade, a curry or a smoothie.
+  - **New recipe**: name it, then **Add ingredient** for everything that went in: your own foods, anything from USDA or Open Food Facts (search "ghee", "paneer", "greek yoghurt"), recent foods, or **another recipe**. Tap **+** for the usual amount, or tap the food to pick it in tbsp, grams, slices or any of its units.
+  - **Quick ingredient (just the numbers)**: for a spice mix or anything that isn't a food in Fuel. Calories (or macros), weight optional.
+  - The card at the top adds it all up as you go: the whole batch's calories, protein, carbs, fat and fibre, what it weighs, per 100 g and per serving.
+  - **Finished weight** (optional): weigh the dish after cooking, without the pot. Cooking drives off water, so this makes every gram you log exact. Leave it empty and the ingredients' weights are added up.
+  - **Servings** (optional): split the batch into servings to get a "serving" unit.
+  - **Log it like any food**: by the gram, the serving, ounces or the **whole batch**. 50 g of the marinade gets exactly 50/520 of the ghee, paneer and everything else.
+  - **Change it later**: open the recipe (from Recipes, Recent or search, where it's tagged RECIPE), tap **Edit**, then tap any ingredient to **change its amount**, **swap it for another food** (paneer → soya chaap keeps the same 400 g) or remove it.
+  - **Save as a new recipe** keeps the original and saves your changed one under a new name, so you can have a paneer and a soya chaap version.
+  - **Recipes inside recipes**: a taco with 50 g of the marinade, a slice of cheddar and a tortilla.
+  - What you already logged keeps its numbers when you change or delete a recipe.
 - Dashboard:
   - calorie gauge
   - protein/carbs/fat bars
@@ -73,6 +84,8 @@ Updated with every release. **Latest: Phase 12 (settings, reminders, export, del
 
 🚧 **Not yet** (shows a placeholder or "Soon")
 - Phase 13: loading skeletons, offline cache, the app icon and splash, and the installable APK.
+- A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
+- Vitamins and minerals (micronutrients) aren't tracked yet.
 - Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
 - Reminders can't be tried on the web version, only in Expo Go or the installed app.
 
@@ -109,6 +122,7 @@ You only need to do this once.
    4. `20261006150000_fibre.sql` (fibre on logged food and daily totals)
    5. `20261008090000_saved_meal_quick_adds.sql` (quick adds in saved meals)
    6. `20261009090000_account_and_workouts.sql` (delete account, workout details)
+   7. `20261010090000_recipes.sql` (recipes)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 
@@ -122,7 +136,7 @@ You only need to do this once.
      (select count(*) from public.exercises) as exercises;
    ```
 
-   You should see **13** tables, **18** privacy rules and **29** exercises.
+   You should see **15** tables, **22** privacy rules and **29** exercises.
 3. Turn off email confirmation: go to **Authentication → Sign In / Providers → Email**, switch off **Confirm email**, and save.
 
    Fuel signs you in with an email and password. With confirmation on, every new account waits for an emailed link, and the free plan only sends a few emails an hour. If you leave it on, open the link from the email (the page it opens may not load, but your account is confirmed anyway), then sign in.

@@ -1,9 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
+import { RecipeBanner } from '@/components/food/RecipeBanner';
+import { ToastHost } from '@/components/ui/ToastHost';
 import { useAddUnit, useFavorites, useFood, useLogFood, useToggleFavorite } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
+import { useRecipes } from '@/features/recipes/api';
 import { formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
 import { isMeal, mealForTime } from '@/lib/meals';
@@ -16,6 +20,7 @@ type Params = { id: string; date?: string; meal?: string; qty?: string; unit?: s
 export default function FoodScreen() {
   const params = useLocalSearchParams<Params>();
   const viewedDay = useViewedDate();
+  const insets = useSafeAreaInsets();
   const date = params.date || viewedDay;
   const food = useFood(params.id);
   const favorites = useFavorites();
@@ -24,6 +29,8 @@ export default function FoodScreen() {
   const addUnit = useAddUnit();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(date);
+  const recipes = useRecipes();
+  const recipe = recipes.data?.find((r) => r.id === params.id);
   const close = () => router.back();
 
   if (food.isPending) return <EditorStatus title="Food" onClose={close} />;
@@ -59,20 +66,25 @@ export default function FoodScreen() {
   }
 
   return (
-    <FoodDetail
-      food={f}
-      mode="add"
-      initialUnit={params.unit}
-      initialQty={qty !== undefined && Number.isFinite(qty) ? qty : undefined}
-      initialMeal={isMeal(params.meal) ? params.meal : mealForTime(new Date())}
-      before={eaten}
-      targets={targets}
-      saving={false}
-      onClose={close}
-      onSubmit={add}
-      favorite={favorite}
-      onToggleFavorite={() => toggleFavorite.mutate({ foodId: f.id, on: !favorite })}
-      onAddUnit={(serving) => addUnit.mutate({ foodId: f.id, serving })}
-    />
+    <>
+      <FoodDetail
+        food={f}
+        mode="add"
+        initialUnit={params.unit}
+        initialQty={qty !== undefined && Number.isFinite(qty) ? qty : undefined}
+        initialMeal={isMeal(params.meal) ? params.meal : mealForTime(new Date())}
+        before={eaten}
+        targets={targets}
+        saving={false}
+        onClose={close}
+        onSubmit={add}
+        favorite={favorite}
+        onToggleFavorite={() => toggleFavorite.mutate({ foodId: f.id, on: !favorite })}
+        onAddUnit={(serving) => addUnit.mutate({ foodId: f.id, serving })}
+        banner={recipe ? <RecipeBanner count={recipe.itemCount} onEdit={() => router.push({ pathname: '/recipe/edit', params: { id: f.id, from: 'food' } })} /> : undefined}
+      />
+      {/* "Saved Paneer marinade" when a new recipe opens here. */}
+      <ToastHost bottom={insets.bottom + 100} />
+    </>
   );
 }

@@ -54,6 +54,9 @@ export const BUILT_IN_UNITS = ['g', 'oz'];
 
 export const isMillilitres = (label: string) => /^(ml|millilit(re|er)s?)$/i.test(label.trim());
 
+/** A recipe's "whole batch" unit; it goes last, after grams and ounces, since you rarely eat the whole pot. */
+export const WHOLE_BATCH = 'whole batch';
+
 /**
  * Your food's own units first (scoop, cup, slice…, the way you usually think
  * of it), then grams and ounces, which work for anything.
@@ -65,7 +68,8 @@ export function unitsFor(food: FoodRecord, servings: Serving[] = []): PortionUni
     if (s.grams > 0 && !taken && !BUILT_IN_UNITS.includes(s.label.toLowerCase())) named.push(s);
   };
   if (food.default_serving_label && food.default_serving_g) add({ label: food.default_serving_label, grams: food.default_serving_g });
-  for (const s of servings) add(s);
+  for (const s of servings) if (s.label !== WHOLE_BATCH) add(s);
+  const batch = servings.find((s) => s.label === WHOLE_BATCH && s.grams > 0);
 
   const units: PortionUnit[] = named.map((s) =>
     isMillilitres(s.label)
@@ -76,6 +80,7 @@ export function unitsFor(food: FoodRecord, servings: Serving[] = []): PortionUni
   const usual = units[0] ? units[0].defaultQty * units[0].grams : (food.default_serving_g ?? 100);
   units.push({ key: 'g', label: 'g', grams: 1, defaultQty: Math.max(5, roundTo(usual, 5)), ...GRAMS });
   units.push({ key: 'oz', label: 'oz', grams: OUNCE_G, defaultQty: Math.max(0.25, roundTo(usual / OUNCE_G, 0.25)), ...OUNCES });
+  if (batch) units.push({ key: `serving:${WHOLE_BATCH}`, label: WHOLE_BATCH, grams: batch.grams, defaultQty: 1, ...COUNTED });
   return units;
 }
 

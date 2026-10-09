@@ -17,6 +17,7 @@ import { matches, rankRecents, type RecentFood } from '@/features/food/recents';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { useSavedMeals } from '@/features/meals/api';
 import { entriesFromMeal } from '@/features/meals/logic';
+import { useRecipeIds } from '@/features/recipes/api';
 import { MIN_SEARCH_LENGTH, useFoodSearch, useFoundFoods, type SearchOutcome } from '@/features/search/api';
 import { MIN_RELEVANCE, relevance, withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
@@ -62,6 +63,7 @@ export default function LogSheet() {
   const logFood = useLogFood();
   const logEntries = useLogEntries();
   const savedMeals = useSavedMeals();
+  const recipeIds = useRecipeIds();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(date);
   const db = useFoodSearch(query);
@@ -107,6 +109,7 @@ export default function LogSheet() {
     { icon: 'plus', label: 'New food', onPress: () => openNewFood() },
     { icon: 'scan', label: 'Scan', onPress: () => openScanner() },
     { icon: 'bookmark', label: 'Saved', onPress: () => router.push({ pathname: '/meals', params: { date, meal } }) },
+    { icon: 'fork', label: 'Recipes', onPress: () => router.push({ pathname: '/recipes', params: { date, meal } }) },
   ];
 
   function nextMeal() {
@@ -300,6 +303,7 @@ export default function LogSheet() {
                 kcal={r.last.kcal}
                 macros={macrosOf(r.last)}
                 favorite={r.foodId ? favs.has(r.foodId) : false}
+                tag={r.foodId && recipeIds.has(r.foodId) ? 'RECIPE' : undefined}
                 onPress={() => openRecent(r)}
                 onAdd={() => logRecent(r)}
               />
@@ -325,6 +329,7 @@ export default function LogSheet() {
                   kcal={n.kcal}
                   macros={macrosOf(n)}
                   favorite={favs.has(f.id)}
+                  tag={recipeIds.has(f.id) ? 'RECIPE' : undefined}
                   onPress={() => openFood(f)}
                   onAdd={() => logFoodRecord(f)}
                 />

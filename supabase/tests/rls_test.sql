@@ -56,6 +56,27 @@ values ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-0000000
 insert into public.saved_meal_items (saved_meal_id, name, quantity, unit, kcal, protein_g, carbs_g, fat_g, position)
 values ('20000000-0000-0000-0000-000000000001', 'Side salad', 1, 'serving', 120, 3, 8, 9, 1);
 
+-- A recipe (a marinade from a food and a quick ingredient), and a taco made with the marinade.
+insert into public.foods (id, source, name, kcal_100g, protein_100g, fat_100g, default_serving_g, default_serving_label)
+values ('30000000-0000-0000-0000-000000000001', 'custom', 'Paneer marinade', 114, 7.4, 9.1, 150, 'serving'),
+       ('30000000-0000-0000-0000-000000000002', 'custom', 'Paneer taco', 220, 9, 11, 120, 'serving');
+insert into public.recipes (food_id, final_weight_g, servings) values ('30000000-0000-0000-0000-000000000001', 600, 4);
+insert into public.recipes (food_id, servings) values ('30000000-0000-0000-0000-000000000002', 1);
+insert into public.recipe_items (recipe_id, food_id, name, quantity, unit, grams, kcal, protein_g, fat_g, position) values
+  ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Salmon, Atlantic, cooked', 200, 'g', 200, 412, 44.2, 24.8, 0);
+insert into public.recipe_items (recipe_id, name, quantity, unit, grams, kcal, fat_g, position) values
+  ('30000000-0000-0000-0000-000000000001', 'Ghee', 30, 'g', 30, 270, 30, 1);
+insert into public.recipe_items (recipe_id, food_id, name, quantity, unit, grams, kcal, protein_g, fat_g, position) values
+  ('30000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000001', 'Paneer marinade', 50, 'g', 50, 57, 3.7, 4.6, 0);
+do $$
+begin
+  begin
+    insert into public.recipe_items (recipe_id, name, quantity, unit, kcal) values ('30000000-0000-0000-0000-000000000001', 'Nothing', 0, 'g', 0);
+    raise exception 'saved an ingredient with no amount';
+  exception when check_violation then null;
+  end;
+end $$;
+
 do $$
 begin
   begin
@@ -117,6 +138,23 @@ begin
   assert (select count(*) from public.day_closures) = 0, 'B cannot see A''s closed days';
   assert (select count(*) from public.daily_summary) = 0, 'B cannot see A''s daily summary';
   assert (select count(*) from public.exercises) >= 25, 'B can read the exercise catalog';
+  assert (select count(*) from public.recipes) = 0, 'B cannot see A''s recipes';
+  assert (select count(*) from public.recipe_items) = 0, 'B cannot see A''s recipe ingredients';
+end $$;
+
+-- B cannot add to A's recipe, or turn A's food into B's recipe.
+do $$
+begin
+  begin
+    insert into public.recipe_items (recipe_id, name, quantity, unit, kcal) values ('30000000-0000-0000-0000-000000000001', 'Sneaky', 1, 'g', 10);
+    raise exception 'added an ingredient to another user''s recipe';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.recipes (food_id) values ('10000000-0000-0000-0000-000000000001');
+    raise exception 'made a recipe out of another user''s food';
+  exception when insufficient_privilege then null;
+  end;
 end $$;
 
 -- B cannot change or delete A's rows (they are invisible, so nothing is affected).
@@ -161,6 +199,15 @@ begin
   assert (select sum(kcal) from public.food_logs) = 427, 'A''s food logs are untouched';
   assert (select count(*) from public.weight_logs) = 1, 'A''s weight log is untouched';
   assert (select count(*) from public.saved_meal_items) = 2, 'A''s saved meal is untouched';
+end $$;
+
+-- Deleting a recipe takes its ingredients with it; a recipe that used it keeps its numbers.
+delete from public.foods where id = '30000000-0000-0000-0000-000000000001';
+do $$
+begin
+  assert (select count(*) from public.recipes) = 1, 'only the taco recipe remains';
+  assert (select count(*) from public.recipe_items) = 1, 'the marinade''s ingredients are gone';
+  assert (select food_id is null and kcal = 57 from public.recipe_items), 'the taco keeps the marinade''s numbers';
 end $$;
 
 -- Deleting an account removes all of its data.

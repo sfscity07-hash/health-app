@@ -170,6 +170,10 @@ function RootStack() {
               contentStyle: { backgroundColor: colors.surface1 },
             }}
           />
+          <Stack.Screen name="recipes" options={EDITOR} />
+          <Stack.Screen name="recipe/edit" options={EDITOR} />
+          <Stack.Screen name="recipe/pick" options={EDITOR} />
+          <Stack.Screen name="recipe/quick" options={EDITOR} />
           <Stack.Screen name="goals" options={EDITOR} />
           <Stack.Screen name="export" options={EDITOR} />
           <Stack.Screen name="delete-account" options={EDITOR} />

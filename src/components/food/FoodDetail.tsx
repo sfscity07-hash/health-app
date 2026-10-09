@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { AddUnitPanel } from '@/components/food/AddUnitPanel';
@@ -45,6 +45,12 @@ type FoodDetailProps = {
   onToggleFavorite?: () => void;
   /** Lets you add a unit (scoop, cup…) to the food. It's used straight away and saved with the food. */
   onAddUnit?: (serving: Serving) => void;
+  /** Picking an amount for a recipe ingredient: no meal, no day preview. */
+  purpose?: 'log' | 'ingredient';
+  /** The main button's words, e.g. "Add to recipe". */
+  submitLabel?: string;
+  /** Shown under the name, e.g. a recipe's "6 ingredients · Edit recipe". */
+  banner?: ReactNode;
 };
 
 export function FoodDetail(p: FoodDetailProps) {
@@ -101,7 +107,7 @@ export function FoodDetail(p: FoodDetailProps) {
   return (
     <KeyboardAvoidingView style={[styles.root, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ModalHeader
-        title={p.mode === 'edit' ? 'Edit entry' : 'Food'}
+        title={p.purpose === 'ingredient' ? 'Ingredient' : p.mode === 'edit' ? 'Edit entry' : 'Food'}
         onClose={p.onClose}
         right={
           p.onToggleFavorite ? (
@@ -129,6 +135,7 @@ export function FoodDetail(p: FoodDetailProps) {
             </Text>
             {p.favorite ? <Icon name="star" size={13} color="carbs" filled /> : null}
           </View>
+          {p.banner}
         </View>
 
         <View style={styles.kcalRow}>
@@ -174,7 +181,7 @@ export function FoodDetail(p: FoodDetailProps) {
                 {fiberKnown ? `${n.fiber_g > 0 && n.fiber_g < 10 ? n.fiber_g.toFixed(1) : Math.round(n.fiber_g)} g` : '–'}
               </Text>
               <Text variant="caption" color="textTertiary" tabular>
-                {fiberKnown ? `${Math.round((n.fiber_g / (p.targets.fiber_g || 1)) * 100)}% of day` : 'Not listed'}
+                {!fiberKnown ? 'Not listed' : p.purpose === 'ingredient' ? 'in this amount' : `${Math.round((n.fiber_g / (p.targets.fiber_g || 1)) * 100)}% of day`}
               </Text>
             </View>
           </View>
@@ -233,18 +240,22 @@ export function FoodDetail(p: FoodDetailProps) {
           )}
         </Card>
 
-        <View style={styles.group}>
-          <Text variant="caption" color="textSecondary">
-            Meal
-          </Text>
-          <SegmentedControl label="Meal" options={MEAL_OPTIONS} value={meal} onChange={setMeal} />
-        </View>
+        {p.purpose !== 'ingredient' ? (
+          <>
+            <View style={styles.group}>
+              <Text variant="caption" color="textSecondary">
+                Meal
+              </Text>
+              <SegmentedControl label="Meal" options={MEAL_OPTIONS} value={meal} onChange={setMeal} />
+            </View>
 
-        <ImpactPreview before={p.before} adding={n} targets={p.targets} />
+            <ImpactPreview before={p.before} adding={n} targets={p.targets} />
+          </>
+        ) : null}
       </ScrollView>
 
       <EditorFooter
-        label={p.mode === 'edit' ? 'Save changes' : `Add to ${MEAL_LABEL[meal]}`}
+        label={p.submitLabel ?? (p.mode === 'edit' ? 'Save changes' : `Add to ${MEAL_LABEL[meal]}`)}
         trailing={`${formatInt(n.kcal)} kcal`}
         loading={p.saving}
         error={p.error}

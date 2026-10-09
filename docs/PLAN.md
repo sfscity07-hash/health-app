@@ -175,12 +175,16 @@ Every hook rewards logging honestly, and none of them punish a bad day.
 - **Export everything to CSV** (you own your data).
 - Sign out, and delete account (wipes all your data).
 
+### 11. Recipes
+- Build a dish from its ingredients: your foods, database foods, other recipes, or a quick ingredient with just its numbers (a spice mix).
+- Optional finished weight (weighed after cooking) and servings; the recipe becomes a food you log by the gram, serving, ounce or whole batch.
+- Tap an ingredient to change its amount, swap it for another food at the same weight, or remove it. **Save as a new recipe** makes a version (paneer → soya chaap) and keeps the original.
+
 ### Later (still free)
 - Android home-screen widget (calories left)
 - Google sign-in
 - Health Connect sync (steps/weight)
 - Different calorie budgets per weekday
-- Recipe builder
 - Micronutrients
 
 ---
@@ -223,6 +227,7 @@ Every table has `user_id` and a row-level security rule (`user_id = auth.uid()`)
 | `exercise_logs` | date, activity, duration_min, kcal_burned |
 | `checkins` | week_start, avg_intake, trend_change, expenditure, old_target, new_target, accepted |
 | `day_closures` | date, closed_at (powers "Finish today", streaks, week rings and the heatmap) |
+| `recipes` + `recipe_items` | a recipe is a `foods` row (per 100 g of the finished dish) plus its finished weight and servings; each item keeps a food reference (nullable) and a copy of what it adds |
 
 - `food_logs` stores a **copy of the nutrients** at the moment you log, so editing a food later never changes your history.
 - A view, `daily_summary`, totals each day for the dashboard and charts.
@@ -290,6 +295,7 @@ health-app/
     - **Delete account:** `delete_my_account()`, a security-definer function that deletes only `auth.uid()`; everything cascades. Confirmed by typing DELETE, with an export link first.
     - **Smarter exercise calories:** see Exercise above.
     - Profile is reorganised into targets, exercise, reminders, appearance, your data and account.
+    **Recipe builder** ✅ (added after Phase 12, migration `20261010090000_recipes.sql`): a recipe is a custom `foods` row, so logging, Recent, search, favorites and saved meals work with it unchanged. `recipes` (food_id, final_weight_g, servings) and `recipe_items` (position, food_id → foods on delete set null, name, quantity, unit, grams, nutrient snapshot) with own-rows RLS plus restrictive policies that only allow your own foods as the recipe and its ingredients. Per 100 g = ingredient totals ÷ finished weight (or the ingredients' summed weight); the default portion is one serving, else 100 g; a "whole batch" unit is stored in `food_servings` and listed last. Database ingredients are saved to your foods when the recipe is saved, and a new recipe is removed again if any later step fails. Editor: live totals card, ingredient menu (change amount, swap at the same grams, remove), quick ingredients, finished weight, servings, "Save as a new recipe", delete. The ingredient picker searches your foods and recipes (minus the recipe itself), Recent and both databases.
 13. **Polish + release**: skeletons, empty states, app icon and splash screen, offline cache, EAS build of the APK, install on your phone.
 
 Each phase ends in a working app you can try in Expo Go, committed to `claude/quirky-carson-ybf2zv`.
