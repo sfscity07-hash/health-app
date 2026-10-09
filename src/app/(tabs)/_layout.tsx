@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingTabBar, TabButton } from '@/components/navigation/FloatingTabBar';
 import { ToastHost } from '@/components/ui/ToastHost';
+import { useReminderPlanner } from '@/features/reminders/usePlanner';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  useReminderPlanner();
   return (
     // All four tabs are built up front (lazy: false) so switching never waits on
     // a first render; hidden tabs are frozen so they cost nothing while away.

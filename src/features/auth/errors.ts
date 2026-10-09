@@ -7,7 +7,8 @@ export const DB_UPDATE_NEEDED =
 export function isDatabaseBehind(error: unknown): boolean {
   const e = error as MaybeAuthError;
   if (e?.code === '22P02' && /enum/i.test(e?.message ?? '')) return true;
-  return e?.code === '42P01' || e?.code === '42703' || e?.code === 'PGRST204' || e?.code === 'PGRST205';
+  // Missing table, column or function (PostgREST and Postgres codes).
+  return ['42P01', '42703', '42883', 'PGRST202', 'PGRST204', 'PGRST205'].includes(e?.code ?? '');
 }
 
 /** What to say when a screen's data didn't load. */

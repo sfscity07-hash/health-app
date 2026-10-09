@@ -170,6 +170,9 @@ function RootStack() {
               contentStyle: { backgroundColor: colors.surface1 },
             }}
           />
+          <Stack.Screen name="goals" options={EDITOR} />
+          <Stack.Screen name="export" options={EDITOR} />
+          <Stack.Screen name="delete-account" options={EDITOR} />
           <Stack.Screen name="exercise/new" options={EDITOR} />
           <Stack.Screen name="exercise/[id]" options={EDITOR} />
         </Stack.Protected>

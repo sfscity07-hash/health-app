@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { RemindersCard } from '@/components/profile/RemindersCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
@@ -56,8 +57,9 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-        <Text variant="caption">Your weekly check-in tunes these every Monday from what you eat and how your trend moves. Editing goals by hand arrives in Phase 12.</Text>
-        <Button label="Open weekly check-in" variant="secondary" icon="pulse" onPress={() => router.push('/checkin')} />
+        <Text variant="caption">Your weekly check-in tunes these every Monday from what you eat and how your trend moves. You can also set them yourself.</Text>
+        <Button label="Edit goals & targets" variant="secondary" icon="pencil" onPress={() => router.push('/goals')} />
+        <Button label="Open weekly check-in" variant="ghost" icon="pulse" onPress={() => router.push('/checkin')} />
       </Card>
 
       <Card style={styles.section}>
@@ -69,6 +71,8 @@ export default function ProfileScreen() {
           onChange={(v) => updateProfile.mutate({ exercise_addback: v })}
         />
       </Card>
+
+      <RemindersCard />
 
       <Card style={styles.section}>
         <Text variant="label">Appearance</Text>
@@ -83,7 +87,17 @@ export default function ProfileScreen() {
         />
       </Card>
 
-      <Button label="Sign out" variant="secondary" onPress={() => supabase?.auth.signOut()} />
+      <Card style={styles.section}>
+        <Text variant="label">Your data</Text>
+        <Text variant="caption">Everything you log is yours. Export it as spreadsheets any time.</Text>
+        <Button label="Export my data (CSV)" variant="secondary" icon="arrowRight" onPress={() => router.push('/export')} />
+      </Card>
+
+      <Card style={styles.section}>
+        <Text variant="label">Account</Text>
+        <Button label="Sign out" variant="secondary" onPress={() => supabase?.auth.signOut()} />
+        <Button label="Delete account" variant="ghost" icon="trash" onPress={() => router.push('/delete-account')} />
+      </Card>
 
       <Text variant="label" align="center">
         Fuel {version}

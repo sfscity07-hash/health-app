@@ -79,13 +79,32 @@ export function useSaveOnboarding() {
   });
 }
 
-/** Small profile edits: theme, water goal, exercise add-back (goals and units in Phase 12). Updates the cache optimistically. */
+/** What the app lets you change after setup. */
+export type ProfilePatch = Partial<
+  Pick<
+    Profile,
+    | 'theme'
+    | 'units'
+    | 'water_goal_ml'
+    | 'exercise_addback'
+    | 'goal'
+    | 'goal_weight_kg'
+    | 'goal_rate_kg_week'
+    | 'activity_level'
+    | 'calorie_target'
+    | 'protein_g'
+    | 'carbs_g'
+    | 'fat_g'
+  >
+>;
+
+/** Profile edits from settings: goals and targets, units, theme, water goal, exercise add-back. Updates the cache optimistically. */
 export function useUpdateProfile() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
   return useMutation({
-    mutationFn: async (patch: Partial<Pick<Profile, 'theme' | 'units' | 'water_goal_ml' | 'exercise_addback'>>) => {
+    mutationFn: async (patch: ProfilePatch) => {
       const { error } = await requireSupabase().from('profiles').update(patch).eq('id', userId as string);
       if (error) throw error;
     },

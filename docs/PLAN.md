@@ -145,12 +145,13 @@ The interactive design preview is the reference for all of this: https://claude.
 ### 7. Exercise
 - Built-in activity list with MET values. Calories burned are *active* calories, `(MET − 1) × trend kg × hours`. Or type in calories from your watch.
 - A setting controls whether exercise adds to your budget (off by default, because the adaptive budget already accounts for your activity).
-- **Later (Phase 12): calories that fit you, not an average person.** Today only your weight changes the number. The upgrade:
-  - **Your own resting burn.** Standard METs assume an average resting rate (3.5 ml O₂/kg/min). Correct each MET with your resting rate from sex, age, height and weight (Mifflin-St Jeor), so the number fits your body, not just your weight.
-  - **How hard you went.** Pick pace, speed or incline for walking, running and cycling (ACSM walking and running equations, including hills), or an effort level (easy / moderate / hard) for everything else.
-  - **Heart rate.** Optionally type your average heart rate from a watch. Calories then come from heart rate, age, weight and sex (the Keytel equation), which tracks real effort better than any table.
-  - **Learns from you.** Once the adaptive expenditure has a few weeks of data, check how logged workouts line up with what your weight actually did, and gently scale exercise numbers that are consistently too high or too low.
-  - Show what went into the number ("for 82.8 kg, 34 y, running at 10 km/h") so it never feels like a black box.
+- **Calories that fit you** (Phase 12 ✅, `features/exercise/energy.ts`). Active kcal = (gross − your resting burn) × minutes, where:
+  - **Resting burn** is your own: Mifflin-St Jeor BMR ÷ 1,440 from sex, age, height and trend weight. Without stats it falls back to the textbook 3.5 ml O₂/kg/min.
+  - **Walking and running** use speed and incline (ACSM: walking 0.1·v + 1.8·v·grade + 3.5, running 0.2·v + 0.9·v·grade + 3.5 ml/kg/min, at 5 kcal per litre O₂; running from 8 km/h). Hiking isn't a treadmill, so it uses effort.
+  - **Everything else** uses the MET value × effort (easy 0.8, moderate 1, hard 1.2).
+  - **Average heart rate**, when given, wins (Keytel et al., 2005, by sex, with weight and age).
+  - A caption shows what went into the number. Speed, incline, effort and heart rate are saved with the workout (migration `20261009090000_account_and_workouts.sql`).
+- **Later: learning from your results.** Comparing logged workouts with what your weight did needs months of data to separate workout error from everyday movement. Until then, the adaptive expenditure (which already includes your real activity) is the safeguard, which is why add-back is off by default.
 
 ### 8. Progress / insights
 - **Goal journey** and **weight trend** (above).
@@ -276,7 +277,19 @@ health-app/
     - Next week's budget: −/+ in 50s, macros recalculated, goal date and "N days sooner/later" than the current budget.
     "Start next week" upserts `checkins` (accepted/adjusted) and updates `profiles` targets; "Keep" records `kept`. Due from Monday until done (not in your first part-week), with a dashboard banner; it can be opened any time from the Expenditure tile or Profile. Each past day is judged against the budget it had (`budgetOn`: the old target before each check-in's day). No new SQL.
 11. **Progress tab** ✅: goal journey card (start → goal track with 2.5 kg notches, knob, % done, next milestone with a rounded-up ETA at the weekly rate, goal-date sentence from the projection); the weight chart card is headed "Weight" when the journey card shows the trend. 7-day calories chart: emphasis bars with today in the accent, >5% over in warn (with a legend), the rest grey; a dashed step line for each day's budget (`budgetOn`); tap to read. Macro split bar (calorie shares, grams vs targets) and protein days over the past week. Milestones: 8 badges with progress rings (perfect week, 7/30-day streak, protein week, first 5 kg / 10 lb (2 kg / 5 lb gaining), halfway, goal weight, 4 check-ins). Near (≥80%) badges glow; tap for how to earn. Consistency: 13-week heatmap (not logged / logged / finished, sequential in the accent) with streak and best. Celebrations: newly earned badges and passed 2.5 kg marks get confetti and a toast once. Seen keys are kept in on-device localStorage; nothing is celebrated on the first visit. No new SQL.
-12. **Reminders, settings, CSV export, delete account, smarter exercise calories** (personal resting rate, pace/incline or effort, optional heart rate, learning from your data; see Exercise above).
+12. **Reminders, settings, CSV export, delete account, smarter exercise calories** ✅:
+    - **Goals & targets screen:** goal, goal weight (checked against the direction), pace, activity, calories with the expenditure-based suggestion, macros in grams or % (protein and fat stepped, carbs fill), units.
+    - **Reminders:** local notifications via expo-notifications, loaded only when used. Weigh-in, lunch, finish day and Monday check-in; settings are stored on the device. The next 7 days are re-planned whenever data changes or the app comes back, skipping today's reminder for anything already done. Tapping one opens the screen.
+    - **CSV export** with expo-file-system and expo-sharing (web: a download):
+      - everything, as one dated list with a type column;
+      - daily totals, with trend weight and that day's budget;
+      - foods;
+      - check-ins.
+
+      Files are paged 1,000 rows at a time with a stable order, defuse spreadsheet formulas, and start with a BOM for Excel.
+    - **Delete account:** `delete_my_account()`, a security-definer function that deletes only `auth.uid()`; everything cascades. Confirmed by typing DELETE, with an export link first.
+    - **Smarter exercise calories:** see Exercise above.
+    - Profile is reorganised into targets, exercise, reminders, appearance, your data and account.
 13. **Polish + release**: skeletons, empty states, app icon and splash screen, offline cache, EAS build of the APK, install on your phone.
 
 Each phase ends in a working app you can try in Expo Go, committed to `claude/quirky-carson-ybf2zv`.

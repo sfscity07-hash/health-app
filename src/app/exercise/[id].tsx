@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { WorkoutEditor } from '@/components/exercise/WorkoutEditor';
 import { useWeighIns } from '@/features/dashboard/api';
-import { useActivities, useBodyWeightKg, useWorkouts } from '@/features/exercise/api';
+import { useActivities, useBody, useWorkouts } from '@/features/exercise/api';
 import { useProfile } from '@/features/profile/api';
 import { toISODate } from '@/lib/dates';
 
@@ -16,7 +16,7 @@ export default function WorkoutScreen() {
   const workouts = useWorkouts(date);
   const activities = useActivities();
   const weighIns = useWeighIns();
-  const kg = useBodyWeightKg();
+  const body = useBody();
   const close = () => router.back();
 
   if (workouts.isPending || activities.isPending || weighIns.isPending) return <EditorStatus title="Workout" onClose={close} />;
@@ -31,7 +31,7 @@ export default function WorkoutScreen() {
       today={today}
       activity={activity}
       existing={workout}
-      kg={kg}
+      body={body}
       units={profile?.units ?? 'metric'}
       addback={profile?.exercise_addback ?? false}
     />

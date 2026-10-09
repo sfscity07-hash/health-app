@@ -13,6 +13,11 @@ export type Workout = {
   duration_min: number | null;
   kcal_burned: number;
   created_at: string;
+  /** What the calories were worked out from (all optional; older workouts have none). */
+  speed_kmh?: number | null;
+  incline_pct?: number | null;
+  effort?: 'easy' | 'moderate' | 'hard' | null;
+  avg_hr?: number | null;
 };
 
 /** What the database accepts. */

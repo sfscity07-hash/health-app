@@ -34,6 +34,17 @@ insert into public.food_logs (log_date, meal, food_id, name, quantity, unit, gra
 insert into public.water_logs (log_date, amount_ml) values ('2026-10-06', 250), ('2026-10-06', 500);
 insert into public.exercise_logs (log_date, exercise_id, name, duration_min, kcal_burned)
 values ('2026-10-06', (select id from public.exercises where name like 'Walking, brisk%'), 'Walking, brisk', 45, 180);
+-- A run with its speed, incline and heart rate; an unknown effort is refused.
+insert into public.exercise_logs (log_date, exercise_id, name, duration_min, kcal_burned, speed_kmh, incline_pct, avg_hr, effort)
+values ('2026-10-05', (select id from public.exercises where name like 'Running (10%'), 'Running', 30, 330, 10, 1.5, 152, 'hard');
+do $$
+begin
+  begin
+    insert into public.exercise_logs (log_date, name, kcal_burned, effort) values ('2026-10-06', 'Spin', 300, 'brutal');
+    raise exception 'saved an effort that isn''t easy, moderate or hard';
+  exception when check_violation then null;
+  end;
+end $$;
 insert into public.weight_logs (log_date, weight_kg) values ('2026-10-06', 82.9);
 insert into public.day_closures (log_date) values ('2026-10-06');
 insert into public.favorites (food_id) values ('10000000-0000-0000-0000-000000000001');
@@ -159,6 +170,33 @@ begin
   assert (select count(*) from public.food_logs) = 0, 'food logs are removed with the account';
   assert (select count(*) from public.foods) = 0, 'foods are removed with the account';
   assert (select count(*) from public.profiles) = 1, 'only B''s profile remains';
+end $$;
+
+-- Signed out, nobody can delete an account.
+begin;
+set local role anon;
+do $$
+begin
+  begin
+    perform public.delete_my_account();
+    raise exception 'an anonymous caller could run delete_my_account';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+commit;
+
+-- B deletes their own account from the app: B and B's data are gone.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+insert into public.weight_logs (log_date, weight_kg) values ('2026-10-07', 70.2);
+select public.delete_my_account();
+commit;
+do $$
+begin
+  assert (select count(*) from auth.users) = 0, 'B''s account is deleted';
+  assert (select count(*) from public.profiles) = 0, 'B''s profile is deleted';
+  assert (select count(*) from public.weight_logs) = 0, 'B''s weigh-ins are deleted';
 end $$;
 
 \echo 'All database checks passed.'

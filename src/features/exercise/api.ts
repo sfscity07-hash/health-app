@@ -3,7 +3,10 @@ import { useMemo } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { patchSummaries, useWeighIns } from '@/features/dashboard/api';
-import { recentWorkouts, type Activity, type Workout } from '@/features/exercise/logic';
+import type { Body } from '@/features/exercise/energy';
+import { FALLBACK_KG, recentWorkouts, type Activity, type Workout } from '@/features/exercise/logic';
+import { useProfile } from '@/features/profile/api';
+import { ageOn, fromISODate } from '@/lib/dates';
 import { reportFailure } from '@/lib/failure';
 import { requireSupabase } from '@/lib/supabase';
 import { trendSeries } from '@/lib/trend';
@@ -14,7 +17,10 @@ export const exerciseKeys = {
   recent: ['workouts', 'recent'] as const,
 };
 
-const COLUMNS = 'id, log_date, exercise_id, name, duration_min, kcal_burned, created_at';
+// Everything, so the app still works on a database without the optional detail columns yet.
+const COLUMNS = '*';
+
+const numOrNull = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 const toWorkout = (r: Record<string, unknown>): Workout => ({
   id: r.id as string,
@@ -24,6 +30,10 @@ const toWorkout = (r: Record<string, unknown>): Workout => ({
   duration_min: r.duration_min === null || r.duration_min === undefined ? null : Number(r.duration_min),
   kcal_burned: Number(r.kcal_burned ?? 0),
   created_at: r.created_at as string,
+  speed_kmh: numOrNull(r.speed_kmh),
+  incline_pct: numOrNull(r.incline_pct),
+  effort: (r.effort as Workout['effort']) ?? null,
+  avg_hr: numOrNull(r.avg_hr),
 });
 
 /** The built-in activity list. It never changes, so it's fetched once. */
@@ -70,6 +80,21 @@ export function useRecentWorkouts() {
   });
 }
 
+/** What workout calories are worked out from: your trend weight (or the fallback) and your stats. */
+export function useBody(): Body {
+  const kg = useBodyWeightKg();
+  const { data: profile } = useProfile();
+  return useMemo(
+    () => ({
+      kg: kg ?? FALLBACK_KG,
+      sex: profile?.sex ?? null,
+      age: profile?.birth_date ? ageOn(fromISODate(profile.birth_date), new Date()) : null,
+      heightCm: profile?.height_cm ?? null,
+    }),
+    [kg, profile],
+  );
+}
+
 /** Your trend weight in kg (what calories burned are worked out from), or null before the first weigh-in. */
 export function useBodyWeightKg(): number | null {
   const weighIns = useWeighIns();
@@ -79,7 +104,17 @@ export function useBodyWeightKg(): number | null {
   }, [weighIns.data]);
 }
 
-export type NewWorkout = Pick<Workout, 'log_date' | 'exercise_id' | 'name' | 'duration_min' | 'kcal_burned'>;
+export type NewWorkout = Pick<Workout, 'log_date' | 'exercise_id' | 'name' | 'duration_min' | 'kcal_burned' | 'speed_kmh' | 'incline_pct' | 'effort' | 'avg_hr'>;
+
+/** Leaves out details that weren't given, so a database without those columns still accepts the workout. */
+function row<T extends Partial<NewWorkout>>(w: T) {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(w)) {
+    const optional = k === 'speed_kmh' || k === 'incline_pct' || k === 'effort' || k === 'avg_hr';
+    if (!optional || (v !== null && v !== undefined)) out[k] = v;
+  }
+  return out;
+}
 
 /** Re-fetches day totals and workouts (each day's list and Recent). */
 function settle(queryClient: ReturnType<typeof useQueryClient>) {
@@ -94,7 +129,7 @@ export function useLogWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (w: NewWorkout) => {
-      const { error } = await requireSupabase().from('exercise_logs').insert(w);
+      const { error } = await requireSupabase().from('exercise_logs').insert(row(w));
       if (error) throw error;
     },
     onMutate: (w) => {
@@ -110,6 +145,7 @@ export function useLogWorkout() {
 export function useUpdateWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
+    // The editor only includes details that are set, or that it is clearing on a workout that had them.
     mutationFn: async ({ id, patch }: { id: string; date: string; before: number; patch: Omit<NewWorkout, 'log_date'> }) => {
       const { error } = await requireSupabase().from('exercise_logs').update(patch).eq('id', id);
       if (error) throw error;

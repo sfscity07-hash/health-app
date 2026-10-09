@@ -14,13 +14,12 @@ import { SwitchRow } from '@/components/ui/SwitchRow';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
-import { useActivities, useBodyWeightKg, useLogWorkout, useRecentWorkouts, useWorkouts } from '@/features/exercise/api';
+import { estimateWorkout } from '@/features/exercise/energy';
+import { useActivities, useBody, useLogWorkout, useRecentWorkouts, useWorkouts } from '@/features/exercise/api';
 import {
-  activeKcal,
   activityMatches,
   ADDBACK,
   DEFAULT_MINUTES,
-  FALLBACK_KG,
   groupActivities,
   intensity,
   workoutDetail,
@@ -49,7 +48,7 @@ export default function ExerciseSheet() {
   const activities = useActivities();
   const logWorkout = useLogWorkout();
   const showToast = useToast((s) => s.show);
-  const kg = useBodyWeightKg() ?? FALLBACK_KG;
+  const body = useBody();
 
   const searching = query.trim().length > 0;
   const day = relativeDay(date, today);
@@ -59,12 +58,13 @@ export default function ExerciseSheet() {
   const recents = (recent.data ?? []).filter((w) => !searching || activityMatches(query, { name: w.name, category: '' }));
   const groups = groupActivities(activities.data ?? [], query);
 
-  const openActivity = (id: number, minutes?: number) =>
-    router.push({ pathname: '/exercise/new', params: { date, activity: String(id), ...(minutes ? { minutes: String(minutes) } : {}) } });
+  const openActivity = (id: number, recentId?: string) =>
+    router.push({ pathname: '/exercise/new', params: { date, activity: String(id), ...(recentId ? { from: recentId } : {}) } });
   const openOwn = () => router.push({ pathname: '/exercise/new', params: { date } });
 
   function repeat(w: Workout) {
-    logWorkout.mutate({ log_date: date, exercise_id: w.exercise_id, name: w.name, duration_min: w.duration_min, kcal_burned: w.kcal_burned });
+    const { exercise_id, name, duration_min, kcal_burned, speed_kmh, incline_pct, effort, avg_hr } = w;
+    logWorkout.mutate({ log_date: date, exercise_id, name, duration_min, kcal_burned, speed_kmh, incline_pct, effort, avg_hr });
     showToast(`Logged ${w.name} · ${formatInt(w.kcal_burned)} kcal`);
   }
 
@@ -143,7 +143,7 @@ export default function ExerciseSheet() {
                 detail={workoutDetail(w)}
                 kcal={w.kcal_burned}
                 pressHint="Opens the workout."
-                onPress={() => (w.exercise_id !== null && w.duration_min ? openActivity(w.exercise_id, w.duration_min) : openOwn())}
+                onPress={() => (w.exercise_id !== null && w.duration_min ? openActivity(w.exercise_id, w.id) : openOwn())}
                 onAdd={() => repeat(w)}
               />
             ))}
@@ -169,7 +169,7 @@ export default function ExerciseSheet() {
                 first={i === 0}
                 name={a.name}
                 detail={intensity(a.met)}
-                kcal={activeKcal(a.met, kg, DEFAULT_MINUTES)}
+                kcal={estimateWorkout(a, DEFAULT_MINUTES, body).kcal}
                 hint="Tap to pick how long."
                 onPress={() => openActivity(a.id)}
               />

@@ -5,13 +5,15 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–11 are done (12, settings, reminders and export, is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done (13, polish and the installable app, is next). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Phase 11 (the full Progress tab).**
+Updated with every release. **Latest: Phase 12 (settings, reminders, export, delete account, smarter exercise calories).**
 
-**Before running this version:** `git pull`, then `npx expo start --clear`. No new packages and no new SQL. (Coming from a version before barcode scanning? Run `npm ci` after pulling. If you skipped Phase 7's `supabase/migrations/20261008090000_saved_meal_quick_adds.sql`, run it once now; without it, saved meals show "Your database is missing an update".)
+**Before running this version:**
+1. `git pull`, then **`npm ci`** (three new Expo modules: notifications, file system, sharing), then `npx expo start --clear`.
+2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261009090000_account_and_workouts.sql` once. It adds **Delete account** and saves the speed, incline, effort and heart rate behind each workout. Until you run it, those two show "Your database is missing an update"; everything else works. (Skipped Phase 7's `20261008090000_saved_meal_quick_adds.sql`? Run that too.)
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -50,7 +52,8 @@ Updated with every release. **Latest: Phase 11 (the full Progress tab).**
   - pull down to refresh
 - **Water**: the **+** on the dashboard's Water tile adds a glass in one tap. Tap the tile for the Water screen: add a glass, bottle or large bottle (or type any amount), see each drink with its time and remove one you added by mistake, and change your daily goal. Hitting the goal gets a little celebration. Shown in L, or fl oz if you chose imperial units.
 - **Exercise** (tap the Exercise tile on the dashboard, or **+** on the Exercise card at the bottom of the Food log):
-  - Pick from the activity list (search works with everyday words: "jog", "weights", "gym", "spin"), drag the ruler or tap to type the minutes, and see the calories for your weight.
+  - Pick from the activity list (search works with everyday words: "jog", "weights", "gym", "spin"), drag the ruler or tap to type the minutes.
+  - **Calories that fit you**: worked out from your weight, age, sex and height (your own resting burn, not a textbook average). Walking and running use your **speed and incline**; everything else has an **effort** setting (easy / moderate / hard). Add your **average heart rate** from a watch and it's used instead (the most accurate). Under the number, a line shows exactly what went into it.
   - Or **Type calories from my watch**: a name, the calories, and minutes if you like.
   - **Recent** workouts log again in one tap with **+**. Tap a logged workout to change or delete it.
   - Calories are *active* calories (on top of what you'd burn resting anyway), the same number watches show.
@@ -61,10 +64,17 @@ Updated with every release. **Latest: Phase 11 (the full Progress tab).**
   - Old days stay judged against the budget you had then, so lowering it doesn't turn last week orange.
   - You can open the check-in any time from the Expenditure tile or Profile → **Open weekly check-in**. Doing it again in the same week replaces that week's.
 - **Finish today** (or yesterday, if you forgot): closes the day's ring, extends your streak, celebrates.
-- Theme (system, dark or light), saved to your account.
+- **Profile**:
+  - **Edit goals & targets**: goal (lose, recomp, maintain, gain), goal weight, pace, activity level, daily calories (with the suggestion from your expenditure), and macros set in grams or percent (carbs fill what protein and fat leave), plus units (kg/lb).
+  - **Reminders** (on your phone): morning weigh-in, log your lunch, finish your day, and Monday's check-in, each with its own switch and time. They skip themselves on days you've already done the thing, and tapping one opens the right screen.
+  - **Export my data**: CSV files for everything you logged, daily totals (with your trend weight and each day's budget), your foods, and your check-ins. On your phone, send them to Drive, email or Files.
+  - **Delete account**: type DELETE to permanently remove your account and every bit of your data.
+  - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Editing goals by hand, reminders, CSV export, smarter exercise calories (Phase 12). Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
+- Phase 13: loading skeletons, offline cache, the app icon and splash, and the installable APK.
+- Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
+- Reminders can't be tried on the web version, only in Expo Go or the installed app.
 
 ## Run it on your Android phone (free)
 
@@ -98,6 +108,7 @@ You only need to do this once.
    3. `20261006120000_recomp_goal.sql` (adds the Recomp goal)
    4. `20261006150000_fibre.sql` (fibre on logged food and daily totals)
    5. `20261008090000_saved_meal_quick_adds.sql` (quick adds in saved meals)
+   6. `20261009090000_account_and_workouts.sql` (delete account, workout details)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 
