@@ -160,13 +160,13 @@ You only need to do this once.
    EXPO_PUBLIC_SUPABASE_KEY=sb_publishable_9xQ2c7LmTq4ZbR1vN8wKpA_3fYhD0sE
    ```
 
-   Optional, for food search: USDA allows about 30 searches an hour on its shared demo key. For 1,000 an hour, get a free key at [api.data.gov/signup](https://api.data.gov/signup/) (it's emailed to you straight away) and add a third line:
+   **Recommended, for USDA food search:** without a key, the app uses USDA's shared `DEMO_KEY`, which allows about 30 searches an hour and 50 a day, counted for everyone on your internet connection. On mobile data many people share one connection, so it's often used up before you start, and you only get Open Food Facts results (the logger says so under the results). A free personal key allows 1,000 an hour. Get one at [api.data.gov/signup](https://api.data.gov/signup/) (it's emailed to you straight away) and add a third line:
 
    ```
    EXPO_PUBLIC_USDA_API_KEY=your-key-here
    ```
 
-   Your `.env` is in a public GitHub repo, so anyone can read this key. The worst they can do is use up its hourly limit, and you can make a new one for free at any time. Open Food Facts needs no key.
+   It only needs to be in the `.env` on your computer; you don't have to send it anywhere or push it to GitHub. If it ever leaks, the worst anyone can do is use up its hourly limit, and a new one is free. Open Food Facts needs no key.
 
    Common mistakes:
    - The file must be named exactly `.env`. Windows Notepad sometimes saves it as `.env.txt`.

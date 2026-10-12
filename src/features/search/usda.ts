@@ -131,6 +131,19 @@ export class SearchLimitError extends Error {
   }
 }
 
+/** USDA turned the key down (mistyped, or disabled). */
+export class SearchKeyError extends Error {
+  constructor(status: number) {
+    super(`USDA rejected the API key (${status})`);
+  }
+}
+
+function checkUsda(res: Response, what: string) {
+  if (res.status === 429) throw new SearchLimitError();
+  if (res.status === 401 || res.status === 403) throw new SearchKeyError(res.status);
+  if (!res.ok) throw new Error(`USDA ${what} failed (${res.status})`);
+}
+
 export async function searchUsda(query: string, apiKey: string, signal?: AbortSignal): Promise<ExternalFood[]> {
   const res = await fetch(`${USDA_SEARCH_URL}?api_key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
@@ -138,8 +151,7 @@ export async function searchUsda(query: string, apiKey: string, signal?: AbortSi
     body: JSON.stringify({ query, dataType: DATA_TYPES, pageSize: 30, requireAllWords: true }),
     signal,
   });
-  if (res.status === 429) throw new SearchLimitError();
-  if (!res.ok) throw new Error(`USDA search failed (${res.status})`);
+  checkUsda(res, 'search');
   const body = (await res.json()) as { foods?: UsdaFood[] };
   return (body.foods ?? []).map(mapUsdaFood).filter((f): f is ExternalFood => f !== null);
 }
@@ -154,8 +166,7 @@ export async function findUsdaByBarcode(codes: string[], apiKey: string, signal?
     body: JSON.stringify({ query: codes[0], dataType: ['Branded'], pageSize: 5 }),
     signal,
   });
-  if (res.status === 429) throw new SearchLimitError();
-  if (!res.ok) throw new Error(`USDA lookup failed (${res.status})`);
+  checkUsda(res, 'lookup');
   const body = (await res.json()) as { foods?: UsdaFood[] };
   const wanted = new Set(codes.map(withoutLeadingZeros));
   const hit = (body.foods ?? []).find((f) => f.gtinUpc && wanted.has(withoutLeadingZeros(f.gtinUpc)));

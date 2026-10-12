@@ -24,6 +24,8 @@ export const isSupabaseConfigured = supabaseUrl.startsWith('https://') && supaba
 
 /**
  * USDA FoodData Central key. The shared DEMO_KEY works without signing up but
- * allows only about 30 searches an hour; a free personal key allows 1,000.
+ * allows only about 30 searches an hour and 50 a day, counted for everyone on
+ * your internet connection; a free personal key allows 1,000 an hour.
  */
 export const usdaApiKey = (process.env.EXPO_PUBLIC_USDA_API_KEY ?? '').trim() || 'DEMO_KEY';
+export const usingUsdaDemoKey = usdaApiKey === 'DEMO_KEY';

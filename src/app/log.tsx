@@ -18,7 +18,7 @@ import { useDayBudget } from '@/features/food/useDayBudget';
 import { useSavedMeals } from '@/features/meals/api';
 import { entriesFromMeal } from '@/features/meals/logic';
 import { useRecipeIds } from '@/features/recipes/api';
-import { MIN_SEARCH_LENGTH, useFoodSearch, useFoundFoods, type SearchOutcome } from '@/features/search/api';
+import { MIN_SEARCH_LENGTH, sourceNote, useFoodSearch, useFoundFoods } from '@/features/search/api';
 import { MIN_RELEVANCE, relevance, withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
 import { fromISODate, toISODate } from '@/lib/dates';
@@ -33,17 +33,6 @@ import { fonts, gutter, radius, space, type ColorName } from '@/theme/tokens';
 type Action = { icon: IconName; label: string; onPress: () => void; soon?: boolean; tint?: ColorName };
 
 const macrosOf = (n: { protein_g: number; carbs_g: number; fat_g: number }) => ({ p: n.protein_g, c: n.carbs_g, f: n.fat_g });
-
-/** A line under the database results when a source didn't answer. */
-function sourceNote(s: SearchOutcome): string | null {
-  if (s.usda === 'limited') {
-    return 'USDA’s shared demo key is used up for this hour, so only Open Food Facts is shown. A free personal key fixes this (see the README).';
-  }
-  if (s.usda !== 'ok' && s.off !== 'ok') return 'Couldn’t reach the food databases. Check your connection and try again.';
-  if (s.usda !== 'ok') return 'USDA didn’t answer, so these are from Open Food Facts only.';
-  if (s.off !== 'ok') return 'Open Food Facts didn’t answer, so these are from USDA only.';
-  return null;
-}
 
 /** The food logger sheet: search your foods, repeat recent ones in one tap, quick add or create a food. */
 export default function LogSheet() {

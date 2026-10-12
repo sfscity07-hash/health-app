@@ -5,12 +5,12 @@ import { searchOff } from '@/features/search/off';
 import { interleave, rankResults } from '@/features/search/rank';
 import { usSpelling } from '@/features/search/spelling';
 import type { ExternalFood } from '@/features/search/types';
-import { SearchLimitError, searchUsda } from '@/features/search/usda';
+import { SearchKeyError, SearchLimitError, searchUsda } from '@/features/search/usda';
 import { useDebounced } from '@/hooks/useDebounced';
-import { usdaApiKey } from '@/lib/env';
+import { usdaApiKey, usingUsdaDemoKey } from '@/lib/env';
 import { requireSupabase } from '@/lib/supabase';
 
-export type SourceStatus = 'ok' | 'failed' | 'limited';
+export type SourceStatus = 'ok' | 'failed' | 'limited' | 'rejected';
 
 export type SearchOutcome = {
   results: ExternalFood[];
@@ -19,7 +19,25 @@ export type SearchOutcome = {
 };
 
 const status = (r: PromiseSettledResult<unknown>): SourceStatus =>
-  r.status === 'fulfilled' ? 'ok' : r.reason instanceof SearchLimitError ? 'limited' : 'failed';
+  r.status === 'fulfilled' ? 'ok' : r.reason instanceof SearchLimitError ? 'limited' : r.reason instanceof SearchKeyError ? 'rejected' : 'failed';
+
+/** A line under the database results when a source didn't answer, saying why and what fixes it. */
+export function sourceNote(s: Pick<SearchOutcome, 'usda' | 'off'>, demoKey = usingUsdaDemoKey): string | null {
+  if (s.usda === 'limited') {
+    return demoKey
+      ? 'USDA’s shared demo key has run out (it’s shared with everyone on your internet connection), so only Open Food Facts is shown. Add your own free key to fix this: see the README.'
+      : 'USDA’s hourly limit for your key is used up, so only Open Food Facts is shown for now. It resets within the hour.';
+  }
+  if (s.usda === 'rejected') {
+    return demoKey
+      ? 'USDA turned down its shared demo key, so only Open Food Facts is shown. Add your own free key to fix this: see the README.'
+      : 'USDA didn’t accept the key in your .env, so only Open Food Facts is shown. Check EXPO_PUBLIC_USDA_API_KEY is copied exactly, then restart with npx expo start --clear.';
+  }
+  if (s.usda !== 'ok' && s.off !== 'ok') return 'Couldn’t reach the food databases. Check your connection and try again.';
+  if (s.usda !== 'ok') return 'USDA didn’t answer, so these are from Open Food Facts only.';
+  if (s.off !== 'ok') return 'Open Food Facts didn’t answer, so these are from USDA only.';
+  return null;
+}
 
 /** Searches both databases at once. One failing doesn't hide the other's results. */
 export async function searchFoodDatabases(query: string, signal?: AbortSignal): Promise<SearchOutcome> {
