@@ -23,6 +23,8 @@ export type Profile = {
   units: UnitSystem;
   theme: ThemeSetting;
   exercise_addback: boolean;
+  /** Milk, tea, juice and other drinks you log count toward water. Missing until the water-from-drinks SQL is run (counts as on). */
+  count_drink_water?: boolean;
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;

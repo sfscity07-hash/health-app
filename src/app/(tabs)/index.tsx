@@ -28,7 +28,8 @@ import { goodDirection } from '@/features/weight/logic';
 import { useDayDeficit } from '@/features/deficit/useDayDeficit';
 import { useProfile } from '@/features/profile/api';
 import { useRecipeIds } from '@/features/recipes/api';
-import { useAddWater } from '@/features/water/api';
+import { useAddWater, useDrinkWaterSetting } from '@/features/water/api';
+import { waterTotal } from '@/features/water/drinks';
 import { formatDrink, formatVolume, reachesGoal, totalValue, waterPresets } from '@/features/water/logic';
 import { addDays, dayName, fromISODate, toISODate, weekOf } from '@/lib/dates';
 import { formatDayLabel, formatInt, greetingFor } from '@/lib/format';
@@ -110,6 +111,9 @@ export default function DashboardScreen() {
   const budgetFor = (date: string) => budgetOn(date, expenditure.checkins, current);
   const budget = budgetFor(selected);
   const day = (inWeek ? summaries.data : otherDay.data)?.[selected] ?? emptyDay(selected);
+  const drinkSetting = useDrinkWaterSetting();
+  const water = waterTotal(day, drinkSetting.on);
+  const fromDrinks = drinkSetting.on ? day.drink_ml : 0;
   const addback = profile?.exercise_addback ? day.kcal_out : 0;
   const dayBudget = budget + addback;
   const left = dayBudget - day.kcal_in;
@@ -187,9 +191,9 @@ export default function DashboardScreen() {
 
   function addGlass() {
     addWater.mutate({ date: selected, ml: glass.ml });
-    if (reachesGoal(day.water_ml, glass.ml, waterGoal)) {
+    if (reachesGoal(water, glass.ml, waterGoal)) {
       success();
-      showToast(`Water goal hit · ${formatVolume(day.water_ml + glass.ml, units)}`);
+      showToast(`Water goal hit · ${formatVolume(water + glass.ml, units)}`);
       waterRef.current?.measureInWindow((x, y, w) => setBurst({ id: Date.now(), x: x + w - 24, y: y + 24 }));
     }
   }
@@ -279,11 +283,13 @@ export default function DashboardScreen() {
         <View style={styles.tiles}>
           <WaterTile
             ref={waterRef}
-            ml={day.water_ml}
+            ml={water}
+            drinkMl={fromDrinks}
+            drinkLabel={formatVolume(fromDrinks, units)}
             goalMl={waterGoal}
             glassMl={glass.ml}
             glassLabel={formatDrink(glass.ml, units)}
-            value={totalValue(day.water_ml, units)}
+            value={totalValue(water, units)}
             unit={`/ ${formatVolume(waterGoal, units)}`}
             onAdd={addGlass}
             onOpen={() => router.push({ pathname: '/water', params: { date: selected } })}

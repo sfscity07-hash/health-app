@@ -84,6 +84,12 @@ export default function FoodLogScreen() {
       hint: 'Log it all again in one tap from Saved',
       onPress: () => router.push({ pathname: '/meal/new', params: { date, meal } }),
     },
+    {
+      label: 'Make it a recipe',
+      icon: 'pot',
+      hint: 'One dish from these foods, to log by the serving',
+      onPress: () => router.push({ pathname: '/recipe/from-log', params: { date, meal } }),
+    },
   ];
 
   const openEntry = (e: FoodLogEntry) => {
@@ -174,6 +180,7 @@ export default function FoodLogScreen() {
             variant="ghost"
             onPress={() => router.push({ pathname: '/copy', params: { from: date } })}
           />
+          <Button label="Build a recipe from these foods" variant="ghost" onPress={() => router.push({ pathname: '/recipe/from-log', params: { date } })} />
         </View>
       ) : null}
 

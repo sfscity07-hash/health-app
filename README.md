@@ -5,15 +5,16 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done, plus recipes and steps 1–2 of your new list (deficit per day; recipe ingredient ideas and scanning). The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes and the first four steps of your new list (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks). The calendar is on hold. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Fuel learns your pantry. Recipe ingredients come up as the exact products you use (Great Value Greek yoghurt, not "Greek Yoghurt"), at your usual amounts. Also: tapping an ingredient no longer bounces.** (Before that: recipe ingredient ideas and scanning, deficit per day, the − 1 + counter.)
+Updated with every release. **Latest: build a recipe from foods you logged (tick them on the Food log), and water from drinks: milk, tea, coffee, juice, buttermilk and soup count toward your water, with a switch for anything cooked down (milk in oats) that Fuel remembers.** (Before that: Fuel learns your pantry, recipe ingredient ideas and scanning, deficit per day, the − 1 + counter.)
 
 **Before running this version:**
-1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages and no new SQL this time.
-2. Haven't run `supabase/migrations/20261010090000_recipes.sql` yet? Run it once in Supabase's SQL Editor; until then Recipes shows "Your database is missing an update".
+1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages.
+2. **New SQL:** open Supabase's SQL Editor and run `supabase/migrations/20261013090000_water_from_drinks.sql` once. It's safe to run again. Until you do, logging works as before but drinks don't count toward water (the Water screen reminds you).
+3. Haven't run `supabase/migrations/20261010090000_recipes.sql` yet? Run it first; until then Recipes shows "Your database is missing an update".
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -38,12 +39,14 @@ Updated with every release. **Latest: Fuel learns your pantry. Recipe ingredient
   - **Consistency**: your streak and best streak, and 13 weeks of days on one grid (not logged, logged, finished).
   - Every weigh-in, tap to change.
 - **Food log tab**: your day meal by meal with calories, macros and fibre; step back through earlier days.
-- **Saved meals and copying** (the **⋯** button on any meal in the Food log):
+- **Saved meals, copying and recipes from your log** (the **⋯** button on any meal in the Food log):
   - **Save as a meal**: name it ("Usual breakfast" is suggested), untick anything you don't want, save. Quick adds are kept with their numbers.
   - **Saved** in the logger lists your meals; tap **+** to add a whole meal in one tap, or tap the meal to rename it, take foods out, pick which meal to add it to, or delete it. Searching in the logger finds saved meals by name too.
   - **Copy to today** (on past days), or **Copy to another day**: any day up to a week ahead, into any meal ("copy yesterday's snacks to tomorrow's lunch").
   - Under the meals: **Copy this day to today** (on past days) and **Copy … to another day**, which copy every food into its own meal.
+  - **Make it a recipe** (in the **⋯** menu), or **Build a recipe from these foods** under the day: tick the foods that went into the dish, from any meal that day (the meal you came from starts ticked). They go into a new recipe at the amounts you logged; quick adds come in as quick ingredients. Name it, set servings or the finished weight, and save. Your log stays as it is, and next time the dish is one food.
 - **Recipes** (the **Recipes** button in the logger): anything you make from several foods, like a marinade, a curry or a smoothie.
+  - **Build one from foods you logged** (on the Recipes screen, or from the Food log): tick what you logged and it becomes the ingredient list.
   - **New recipe**: name it, then **Add ingredient** for everything that went in: your own foods, anything from USDA or Open Food Facts (search "ghee", "paneer", "greek yoghurt"), recent foods, or **another recipe**. Tap **+** for the usual amount, or tap the food to pick it in tbsp, grams, slices or any of its units.
   - **Ideas while you add**: Add ingredient opens with chips from the recipe's name ("Paneer tikka marinade" → paneer, yoghurt, ginger garlic paste, lemon juice, mustard oil, ghee), and the first one is already searched, so the usual ingredients are one tap. Ideas already in the recipe drop off. Tap another chip to search it, or type anything.
   - **From your recipes**: if you've saved a similar recipe ("Paneer marinade"), its chip comes first: add the whole recipe, or any of its ingredients at the same amount.
@@ -77,6 +80,10 @@ Updated with every release. **Latest: Fuel learns your pantry. Recipe ingredient
   - trend weight, and your expenditure (marked ADAPTIVE once it's learning from your logs)
   - pull down to refresh
 - **Water**: the **+** on the dashboard's Water tile adds a glass in one tap. Tap the tile for the Water screen: add a glass, bottle or large bottle (or type any amount), see each drink with its time and remove one you added by mistake, and change your daily goal. Hitting the goal gets a little celebration. Shown in L, or fl oz if you chose imperial units.
+  - **Water from drinks** (needs the new SQL): milk, tea, chai, coffee, juice, buttermilk / chaas, lassi, coconut water, soft drinks and soup you log as food count toward water, by roughly how much of each is water (a 250 ml glass of milk adds 220 ml). Fuel goes by the end of the name, so "chocolate milk" counts but "milk chocolate" and "oats with milk" don't; powders, concentrates and alcohol never do. A recipe counts only if the dish is a drink (a smoothie).
+  - The tile and the Water screen include it: those glasses fill in a lighter blue, and the Water screen says "Includes 0.2 L from drinks you logged".
+  - **Doesn't count**: when you log a drink, a **Counts toward water** switch shows how much it adds; turn it off when it was cooked down, like milk simmered into oats. Fuel remembers per food and meal, so your breakfast milk stays off next time while a glass of milk as a snack still counts. You can also flip it on the entry later, or on the Water screen under **From your food log**, which lists the day's drinks with a switch each.
+  - **Count water in drinks** (Water screen or Profile) turns it all off.
 - **Exercise** (tap the Exercise tile on the dashboard, or **+** on the Exercise card at the bottom of the Food log):
   - Pick from the activity list (search works with everyday words: "jog", "weights", "gym", "spin"), drag the ruler or tap to type the minutes.
   - **Calories that fit you**: worked out from your weight, age, sex and height (your own resting burn, not a textbook average). Walking and running use your **speed and incline**; everything else has an **effort** setting (easy / moderate / hard). Add your **average heart rate** from a watch and it's used instead (the most accurate). Under the number, a line shows exactly what went into it.
@@ -98,7 +105,8 @@ Updated with every release. **Latest: Fuel learns your pantry. Recipe ingredient
   - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): a calendar of past days, water from drinks like milk, micronutrients / salt / caffeine, then the AI features (monthly adaptive targets, programs, pantry meal plans).
+- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): micronutrients / salt / caffeine, then the AI features (monthly adaptive targets, programs, pantry meal plans). The calendar of past days is on hold.
+- Water from drinks goes by a list of drinks, not each food's own water value, so an unusual drink may not count (log it on the Water screen instead). Drinks you logged before running the new SQL don't count until you switch them on in the Water screen.
 - Phase 13: loading skeletons, offline cache, and the installable APK.
 - A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
 - Vitamins and minerals (micronutrients) aren't tracked yet.
@@ -139,6 +147,7 @@ You only need to do this once.
    5. `20261008090000_saved_meal_quick_adds.sql` (quick adds in saved meals)
    6. `20261009090000_account_and_workouts.sql` (delete account, workout details)
    7. `20261010090000_recipes.sql` (recipes)
+   8. `20261013090000_water_from_drinks.sql` (water from drinks; safe to run again)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 

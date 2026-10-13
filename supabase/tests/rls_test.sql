@@ -32,6 +32,19 @@ insert into public.food_logs (log_date, meal, food_id, name, quantity, unit, gra
   ('2026-10-06', 'dinner', '10000000-0000-0000-0000-000000000001', 'Salmon, Atlantic, cooked', 1, 'fillet', 150, 309, 33.2, 0, 18.6, null);
 
 insert into public.water_logs (log_date, amount_ml) values ('2026-10-06', 250), ('2026-10-06', 500);
+-- Drinks: a glass of milk counts toward water, milk cooked into oats doesn't, a roti isn't a drink.
+insert into public.food_logs (log_date, meal, name, quantity, unit, grams, kcal, water_ml) values
+  ('2026-10-05', 'snack', 'Milk', 250, 'ml', 250, 155, 220),
+  ('2026-10-05', 'breakfast', 'Milk', 150, 'ml', 150, 93, 0),
+  ('2026-10-05', 'lunch', 'Roti', 1, 'piece', 40, 120, null);
+do $$
+begin
+  begin
+    insert into public.food_logs (log_date, meal, name, quantity, unit, kcal, water_ml) values ('2026-10-05', 'snack', 'Lake', 1, 'serving', 0, 20000);
+    raise exception 'saved 20 litres of water from one drink';
+  exception when check_violation then null;
+  end;
+end $$;
 insert into public.exercise_logs (log_date, exercise_id, name, duration_min, kcal_burned)
 values ('2026-10-06', (select id from public.exercises where name like 'Walking, brisk%'), 'Walking, brisk', 45, 180);
 -- A run with its speed, incline and heart rate; an unknown effort is refused.
@@ -98,6 +111,11 @@ begin
   assert s.kcal_out = 180, 'exercise kcal';
   assert s.water_ml = 750, 'water total';
   assert s.closed, 'day is closed';
+  assert s.drink_ml = 0, 'no drinks that day';
+  select * into s from public.daily_summary where log_date = '2026-10-05';
+  assert s.drink_ml = 220, format('water from drinks should be 220 (cooked down counts nothing), got %s', s.drink_ml);
+  assert s.water_ml = 0, 'drinks don''t change the water you logged';
+  assert (select count_drink_water from public.profiles), 'water from drinks counts unless you turn it off';
   assert (select calorie_target from public.profiles) = 1950, 'own profile is updatable';
   assert (select goal from public.profiles) = 'recomp', 'the recomp goal can be saved';
 end $$;
@@ -196,7 +214,8 @@ commit;
 -- A's data survived B's attempts.
 do $$
 begin
-  assert (select sum(kcal) from public.food_logs) = 427, 'A''s food logs are untouched';
+  assert (select sum(kcal) from public.food_logs where log_date = '2026-10-06') = 427, 'A''s food logs are untouched';
+  assert (select sum(water_ml) from public.food_logs) = 220, 'A''s drinks are untouched';
   assert (select count(*) from public.weight_logs) = 1, 'A''s weight log is untouched';
   assert (select count(*) from public.saved_meal_items) = 2, 'A''s saved meal is untouched';
 end $$;

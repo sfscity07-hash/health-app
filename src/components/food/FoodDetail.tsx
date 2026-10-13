@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { AddUnitPanel } from '@/components/food/AddUnitPanel';
+import { DrinkWater } from '@/components/food/DrinkWater';
 import { EditorFooter } from '@/components/food/EditorFooter';
 import { ImpactPreview } from '@/components/food/ImpactPreview';
 import { ModalHeader } from '@/components/food/ModalHeader';
@@ -15,6 +16,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Text } from '@/components/ui/Text';
 import type { FoodWithServings } from '@/features/food/api';
 import { parseNumber } from '@/features/onboarding/draft';
+import { drinkWater } from '@/features/water/drinks';
 import { formatInt } from '@/lib/format';
 import { MEAL_LABEL, MEAL_OPTIONS, type Meal } from '@/lib/meals';
 import { clampQty, formatQty, isMillilitres, nutrientsFor, pluralize, unitsFor, type Nutrients, type PortionUnit, type Serving } from '@/lib/portion';
@@ -23,7 +25,7 @@ import { fonts, gutter, radius, space } from '@/theme/tokens';
 
 const SOURCE_LABEL = { custom: 'Your food', usda: 'USDA FoodData Central', off: 'Open Food Facts' } as const;
 
-export type PortionChoice = { meal: Meal; qty: number; unit: PortionUnit; grams: number; nutrients: Nutrients };
+export type PortionChoice = { meal: Meal; qty: number; unit: PortionUnit; grams: number; nutrients: Nutrients; countsAsWater: boolean };
 
 type FoodDetailProps = {
   food: FoodWithServings;
@@ -57,6 +59,11 @@ type FoodDetailProps = {
   title?: string;
   /** The food is a recipe: says so in the recipe color. */
   recipe?: boolean;
+  /**
+   * For a drink, whether its water counts to start with, by meal (what you
+   * chose last time). Given, a drink gets a "Counts toward water" switch.
+   */
+  countsAsWater?: (meal: Meal) => boolean;
 };
 
 export function FoodDetail(p: FoodDetailProps) {
@@ -71,9 +78,13 @@ export function FoodDetail(p: FoodDetailProps) {
   const [qty, setQty] = useState(p.initialQty && p.initialQty > 0 ? p.initialQty : startUnit.defaultQty);
   const [meal, setMeal] = useState<Meal>(p.initialMeal);
   const [typing, setTyping] = useState<string | null>(null);
+  // Null until you flip the switch: then it follows what you chose last time at this meal.
+  const [waterChoice, setWaterChoice] = useState<boolean | null>(null);
 
   const grams = qty * unit.grams;
   const n = nutrientsFor(p.food, grams);
+  const counts = waterChoice ?? p.countsAsWater?.(meal) ?? true;
+  const drinkMl = p.countsAsWater && p.purpose !== 'ingredient' ? drinkWater(p.food.name, grams) : null;
   const pk = n.protein_g * 4;
   const ck = n.carbs_g * 4;
   const fk = n.fat_g * 9;
@@ -248,6 +259,8 @@ export function FoodDetail(p: FoodDetailProps) {
 
         {p.extra?.({ grams, kcal: n.kcal })}
 
+        {drinkMl !== null ? <DrinkWater ml={drinkMl} counts={counts} onChange={setWaterChoice} /> : null}
+
         {p.purpose !== 'ingredient' ? (
           <>
             <View style={styles.group}>
@@ -267,7 +280,7 @@ export function FoodDetail(p: FoodDetailProps) {
         trailing={`${formatInt(n.kcal)} kcal`}
         loading={p.saving}
         error={p.error}
-        onPress={() => p.onSubmit({ meal, qty, unit, grams, nutrients: n })}
+        onPress={() => p.onSubmit({ meal, qty, unit, grams, nutrients: n, countsAsWater: counts })}
         onDelete={p.onDelete}
         deleting={p.deleting}
       />

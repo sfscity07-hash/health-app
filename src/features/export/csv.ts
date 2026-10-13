@@ -30,7 +30,7 @@ export function everythingRows(input: { food: Row[]; weight: Row[]; water: Row[]
   for (const f of input.food) {
     rows.push({
       sort: `${f.log_date} ${time(f.logged_at)} 1`,
-      cells: [f.log_date, time(f.logged_at), 'food', f.meal, f.name, f.brand, f.quantity, f.unit, f.grams, f.kcal, f.protein_g, f.carbs_g, f.fat_g, f.fiber_g, null, null, null, null],
+      cells: [f.log_date, time(f.logged_at), 'food', f.meal, f.name, f.brand, f.quantity, f.unit, f.grams, f.kcal, f.protein_g, f.carbs_g, f.fat_g, f.fiber_g, null, f.water_ml ?? null, null, null],
     });
   }
   for (const w of input.weight) rows.push({ sort: `${w.log_date} 00:00 0`, cells: [w.log_date, '', 'weight', '', '', '', '', '', '', '', '', '', '', '', w.weight_kg, '', '', ''] });
@@ -47,7 +47,7 @@ export function everythingRows(input: { food: Row[]; weight: Row[]; water: Row[]
 }
 
 export const DAILY_HEADERS = [
-  'date', 'kcal_in', 'budget', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'food_entries', 'kcal_burned', 'water_ml', 'finished', 'weight_kg', 'trend_kg',
+  'date', 'kcal_in', 'budget', 'protein_g', 'carbs_g', 'fat_g', 'fiber_g', 'food_entries', 'kcal_burned', 'water_ml', 'water_from_drinks_ml', 'finished', 'weight_kg', 'trend_kg',
 ];
 
 /** One row per day you logged anything or weighed in, with your trend weight and that day's budget. */
@@ -69,6 +69,7 @@ export function dailyRows(summaries: Row[], weighIns: WeighIn[], budgetOn: (date
       s?.food_entries ?? 0,
       s?.kcal_out ?? 0,
       s?.water_ml ?? 0,
+      s?.drink_ml ?? 0,
       Boolean(s?.closed),
       w?.kg ?? null,
       w ? Math.round(w.trend * 100) / 100 : null,

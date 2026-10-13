@@ -316,26 +316,30 @@ In order. Each step ships on its own, with "what works" notes before you try it.
    - A saved recipe with a similar name gets the first chip: add the whole recipe, or its ingredients at the same amounts.
    - Swapping suggests stand-ins (paneer → tofu, soya chaap…; ghee → olive oil…).
    - **Learns your pantry** (`features/recipes/pantry.ts`): every product you've logged (60 days) or put in a recipe (`recipe_items`, no new SQL), weighted 1.5× for recipes and halving every 45 days. "Your usual" leads every idea and search with your exact products and usual amounts; chips show your brand; a similar recipe's generic ingredient is replaced by your usual product of the same kind (e.g. "greek yogurt"), never by a dish that only mentions it. Your recipes never hide database foods (fixes plain paneer being hidden by a paneer marinade, in the logger too).
-3. **Calendar** (M)
+3. **Recipe from what you logged** ✅ (S, added October 13)
+   - Food log: a meal's ⋯ menu has "Make it a recipe", and under the day "Build a recipe from these foods" (also on the Recipes screen). Tick foods from any meal of that day (the meal you came from starts ticked); they go into a new recipe at the amounts you logged, still linked to their foods; quick adds come in as quick ingredients. Name it, set servings, save. Your log isn't changed.
+4. **Water from drinks** ✅ (S/M, new SQL: `20261013090000_water_from_drinks.sql`)
+   - Milk, tea, coffee, juice, buttermilk / chaas, lassi, coconut water, soups and soft drinks count toward water by roughly how much of them is water (`features/water/drinks.ts`, a drinks list read from the end of the food's name, so "chocolate milk" counts and "milk chocolate" / "oats with milk" don't; powders, concentrates and alcohol never do). Each log stores the water it adds (`food_logs.water_ml`); the daily summary adds them up (`drink_ml`). The dashboard tile and the Water sheet include it (drink glasses in a lighter blue, "Includes 0.18 L from drinks you logged").
+   - **Doesn't count / cooked down**: a "Counts toward water" switch when you log a drink and on the entry later; the Water sheet lists the day's drinks with a switch each. Fuel remembers your choice per food and meal: milk at breakfast (into oats) stays off, a glass of milk as a snack still counts. A recipe counts only if the dish itself is a drink (a smoothie), never for the milk inside it.
+   - "Count water in drinks" on the Water sheet and in Profile turns it all off. Before the SQL is run, logging carries on as before (it retries without the new column) and the Water sheet says how to turn it on.
+   - Not done: using USDA's per-food water value instead of the list (most Open Food Facts products don't have one).
+5. **Calendar** — deferred (you said "ditch the calendar for now")
    - A month view of the past year (and before): each day marked on budget / over / not logged / finished; tap a day to open its meals. Jump to any month; search your history ("when did I eat paneer").
-4. **Water from drinks** (S/M)
-   - Milk, tea, coffee, juice, buttermilk / chaas, lassi, coconut water and soups count toward water automatically, using each food's water content (USDA lists it) or a drinks list when it isn't known. The Water tile shows "+0.4 L from drinks"; a switch turns it off.
-   - **Reduced / cooked down**: a toggle when you log a drink-like food (and on the entry afterwards) for liquid that was boiled down or cooked into something, like milk condensed into oats. It then doesn't count toward water. Fuel remembers your choice per food, so milk in your oats stays "reduced" next time while a glass of milk still counts. Liquid ingredients inside a recipe only count if you say the dish is a drink.
-5. **Micronutrients, salt and caffeine, every day** (L, new SQL)
+6. **Micronutrients, salt and caffeine, every day** (L, new SQL)
    - Store sodium (and salt), potassium, calcium, iron, magnesium, vitamins A, C, D, B12, folate, saturated fat, sugar and caffeine per food (USDA has full profiles, Open Food Facts some, your own foods optional fields), copy them onto every log like the macros.
    - A daily Nutrients screen: % of daily value bars, sodium and caffeine against upper limits, and an honest "3 foods had no data for this" so a gap never looks like zero.
-6. **AI groundwork** (S/M) — decision needed first
+7. **AI groundwork** (S/M) — decision needed first
    - AI runs in a Supabase Edge Function (free tier) that holds the AI key, so no key is ever in the app or the public repo; it checks you're signed in and caps calls per day.
    - Rule for every AI feature: the AI suggests meals and writes explanations; Fuel's own food data and maths compute every calorie and gram, so numbers are never made up.
-   - **Your call:** Claude's API is pay-per-use, not free. A meal plan is a few thousand tokens: about $0.001–0.002 on Claude Haiku 5.5 ($0.10 / $0.50 per million tokens in / out), about $0.05 on Claude Opus 5.5 ($4 / $20). That breaks the $0 rule unless you're fine with cents a month. Free tiers from other AI providers exist, with daily limits and data-use terms to read. We pick before step 7.
-7. **Adaptive calories & macros, weekly and monthly** (M)
+   - **Your call:** Claude's API is pay-per-use, not free. A meal plan is a few thousand tokens: about $0.001–0.002 on Claude Haiku 5.5 ($0.10 / $0.50 per million tokens in / out), about $0.05 on Claude Opus 5.5 ($4 / $20). That breaks the $0 rule unless you're fine with cents a month. Free tiers from other AI providers exist, with daily limits and data-use terms to read. We pick before step 8.
+8. **Adaptive calories & macros, weekly and monthly** (M)
    - Builds on the weekly check-in: a monthly review (trend vs plan, how many days you logged, protein days, the month's deficit) with an adjusted budget and macros, and an AI-written summary of what changed and why (optional).
-8. **Programs** (L)
+9. **Programs** (L)
    - Lose fat, lose fat + build muscle (recomp), or your own goal, over a period you choose. Generates a day-by-day regimen: each day's calories and macros (higher on training days, lower on rest days, optional diet breaks / refeeds), where you are in the program, and AI meal ideas for each day.
-9. **Pantry → meal plan** (L)
+10. **Pantry → meal plan** (L)
    - Keep an inventory of what's at home (type it, scan barcodes, or tick foods you log). Choose the days and meals ("just breakfast for 3 days", "breakfast and lunch for 2"); AI drafts meals using only what you have, Fuel scales the portions to hit your targets, and each meal logs in one tap or saves as a meal.
 
-**Phase 13 (installable APK + over-the-air updates, skeletons, offline)** can slot in anywhere; before step 6 is best, since the installed app then gets every later step without a reinstall.
+**Phase 13 (installable APK + over-the-air updates, skeletons, offline)** can slot in anywhere; before step 7 is best, since the installed app then gets every later step without a reinstall.
 
 ---
 

@@ -5,6 +5,10 @@ import { QuickAddForm } from '@/components/food/QuickAddForm';
 import { relativeDay } from '@/components/foodlog/DayNav';
 import type { FoodWithServings } from '@/features/food/api';
 
+// The "Counts toward water" switch reads your settings.
+jest.mock('@/features/water/api', () => ({ useDrinkWaterSetting: () => ({ ready: true, on: true }) }));
+jest.mock('@/features/profile/api', () => ({ useProfile: () => ({ data: { units: 'metric', count_drink_water: true } }) }));
+
 const bar: FoodWithServings = {
   id: 'f1',
   source: 'custom',
@@ -108,6 +112,44 @@ describe('FoodDetail', () => {
     await user.press(screen.getByRole('button', { name: /Add to Breakfast/ }));
     expect(onSubmit.mock.calls[0][0]).toMatchObject({ qty: 1, grams: 30, unit: { label: 'scoop' } });
     expect(onSubmit.mock.calls[0][0].nutrients.kcal).toBe(120);
+  });
+
+  it('lets a drink count toward water or not, starting from what you chose last time at that meal', async () => {
+    const milk: FoodWithServings = { ...bar, id: 'milk', name: 'Milk', brand: null, kcal_100g: 62, default_serving_g: 250, default_serving_label: 'glass' };
+    const onSubmit = jest.fn();
+    await render(
+      <FoodDetail
+        food={milk}
+        mode="add"
+        initialMeal="breakfast"
+        before={zero}
+        targets={targets}
+        saving={false}
+        onClose={jest.fn()}
+        onSubmit={onSubmit}
+        // Last time, the milk at breakfast went into oats.
+        countsAsWater={(meal) => meal !== 'breakfast'}
+      />,
+    );
+    const toggle = () => screen.getByRole('switch', { name: 'Counts toward water' });
+    expect(toggle()).not.toBeChecked();
+    expect(screen.getByText(/Not counted/)).toBeOnTheScreen();
+
+    const user = userEvent.setup();
+    await user.press(screen.getByRole('radio', { name: 'Snacks' }));
+    expect(toggle()).toBeChecked();
+    expect(screen.getByText('Adds 220 ml to today’s water')).toBeOnTheScreen();
+
+    await user.press(toggle());
+    await user.press(screen.getByRole('button', { name: /Add to Snacks/ }));
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ meal: 'snack', grams: 250, countsAsWater: false });
+  });
+
+  it('has no water switch for food that isn’t a drink', async () => {
+    await render(
+      <FoodDetail food={bar} mode="add" initialMeal="lunch" before={zero} targets={targets} saving={false} onClose={jest.fn()} onSubmit={jest.fn()} countsAsWater={() => true} />,
+    );
+    expect(screen.queryByRole('switch', { name: 'Counts toward water' })).toBeNull();
   });
 
   it('asks for a second tap before deleting', async () => {

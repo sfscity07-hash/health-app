@@ -12,6 +12,7 @@ const summary = (log_date: string, kcal_in: number, over: Partial<DaySummary> = 
   food_entries: kcal_in > 0 ? 3 : 0,
   kcal_out: 0,
   water_ml: 0,
+  drink_ml: 0,
   closed: false,
   ...over,
 });

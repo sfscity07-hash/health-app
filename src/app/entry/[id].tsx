@@ -76,6 +76,7 @@ export default function EntryScreen() {
         unit: c.unit.label,
         grams: c.grams,
         nutrients: c.nutrients,
+        countsAsWater: c.countsAsWater,
       });
       saved();
     };
@@ -97,6 +98,7 @@ export default function EntryScreen() {
         onAddUnit={(serving) => addUnit.mutate({ foodId: f.id, serving })}
         recipe={recipeIds.has(f.id)}
         extra={recipeIds.has(f.id) ? (portion) => <RecipePortion id={f.id} {...portion} /> : undefined}
+        countsAsWater={() => e.water_ml !== 0}
       />
     );
   }
@@ -112,6 +114,7 @@ export default function EntryScreen() {
       unit: e.unit,
       grams: e.grams,
       nutrients: c.nutrients,
+      countsAsWater: e.water_ml !== 0,
     });
     saved();
   };

@@ -102,9 +102,9 @@ describe('CSV export', () => {
       (d) => (d < '2026-10-08' ? 1950 : 1850),
     );
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toEqual(['2026-10-07', 1900, 1950, 0, 0, 0, 0, 4, 0, 0, true, 82.6, 82.6]);
+    expect(rows[0]).toEqual(['2026-10-07', 1900, 1950, 0, 0, 0, 0, 4, 0, 0, 0, true, 82.6, 82.6]);
     expect(rows[1][2]).toBe(1850);
-    expect(rows[1][12]).toBeCloseTo(82.56);
+    expect(rows[1][13]).toBeCloseTo(82.56);
     expect(checkinRows([{ week_start: '2026-10-12', new_target: 1850 }])[0][0]).toBe('2026-10-12');
   });
 });

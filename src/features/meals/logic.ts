@@ -119,6 +119,8 @@ export function copyEntries(entries: FoodLogEntry[], date: string, slot?: Meal):
     unit: e.unit,
     grams: e.grams,
     nutrients: entryNutrients(e),
+    // A drink keeps whether it counted toward water.
+    ...(e.water_ml === 0 ? { countsAsWater: false } : e.water_ml ? { countsAsWater: true } : {}),
   }));
 }
 

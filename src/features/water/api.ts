@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { patchSummaries } from '@/features/dashboard/api';
+import { useProfile } from '@/features/profile/api';
 import { reportFailure } from '@/lib/failure';
 import { requireSupabase } from '@/lib/supabase';
 
@@ -65,4 +66,13 @@ export function useDeleteWater() {
     onError: (e) => reportFailure('remove that drink', e),
     onSettled: (_d, _e, v) => settle(queryClient, v.date),
   });
+}
+
+/**
+ * Whether drinks you log as food count toward water: `ready` once the
+ * water-from-drinks SQL is run, `on` unless you turned it off.
+ */
+export function useDrinkWaterSetting() {
+  const { data: profile } = useProfile();
+  return { ready: typeof profile?.count_drink_water === 'boolean', on: profile?.count_drink_water === true };
 }

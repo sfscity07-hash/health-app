@@ -6,9 +6,10 @@ import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
 import { RecipeBanner } from '@/components/food/RecipeBanner';
 import { RecipePortion } from '@/components/food/RecipePortion';
 import { ToastHost } from '@/components/ui/ToastHost';
-import { useAddUnit, useFavorites, useFood, useLogFood, useToggleFavorite } from '@/features/food/api';
+import { useAddUnit, useFavorites, useFood, useLogFood, useRecentLogs, useToggleFavorite } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { useRecipes } from '@/features/recipes/api';
+import { rememberedCounts } from '@/features/water/drinks';
 import { formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
 import { isMeal, mealForTime } from '@/lib/meals';
@@ -27,6 +28,7 @@ export default function FoodScreen() {
   const favorites = useFavorites();
   const toggleFavorite = useToggleFavorite();
   const logFood = useLogFood();
+  const recent = useRecentLogs();
   const addUnit = useAddUnit();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(date);
@@ -60,6 +62,7 @@ export default function FoodScreen() {
       unit: c.unit.label,
       grams: c.grams,
       nutrients: c.nutrients,
+      countsAsWater: c.countsAsWater,
     });
     success();
     showToast(`Added ${f.name} · ${formatInt(c.nutrients.kcal)} kcal`);
@@ -86,6 +89,7 @@ export default function FoodScreen() {
         recipe={Boolean(recipe)}
         banner={recipe ? <RecipeBanner count={recipe.itemCount} onEdit={() => router.push({ pathname: '/recipe/edit', params: { id: f.id, from: 'food' } })} /> : undefined}
         extra={recipe ? (portion) => <RecipePortion id={f.id} {...portion} /> : undefined}
+        countsAsWater={(meal) => rememberedCounts(recent.data, { foodId: f.id, name: f.name }, meal) ?? true}
       />
       {/* "Saved Paneer marinade" when a new recipe opens here. */}
       <ToastHost bottom={insets.bottom + 100} />

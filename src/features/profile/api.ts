@@ -87,6 +87,7 @@ export type ProfilePatch = Partial<
     | 'units'
     | 'water_goal_ml'
     | 'exercise_addback'
+    | 'count_drink_water'
     | 'goal'
     | 'goal_weight_kg'
     | 'goal_rate_kg_week'

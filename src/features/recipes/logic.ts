@@ -92,6 +92,34 @@ export function quickItem(name: string, nutrients: Nutrients, grams: number | nu
   return { key: nextKey(), food: null, external: null, name, brand: null, quantity: grams ?? 1, unit: grams ? 'g' : 'serving', grams, nutrients };
 }
 
+export type LoggedFood = Nutrients & { food_id: string | null; name: string; brand: string | null; quantity: number; unit: string; grams: number | null };
+
+/**
+ * Foods you logged, as ingredients at the amounts you logged them. Ones that
+ * came from a food you still have stay linked to it (so you can change the
+ * amount or swap them); quick adds, and foods since deleted, come in as quick
+ * ingredients with the numbers you logged.
+ */
+export function itemsFromLog(entries: LoggedFood[], foods: Map<string, FoodRecord>): RecipeItem[] {
+  return entries.map((e) => {
+    const food = e.food_id ? foods.get(e.food_id) : undefined;
+    const logged: Nutrients = { kcal: e.kcal, protein_g: e.protein_g, carbs_g: e.carbs_g, fat_g: e.fat_g, fiber_g: e.fiber_g };
+    if (!food) return { ...quickItem(e.name, logged, e.grams), brand: e.brand };
+    return {
+      key: nextKey(),
+      food: { ...food, servings: [] },
+      external: null,
+      name: food.name,
+      brand: food.brand,
+      quantity: e.quantity,
+      unit: e.unit,
+      grams: e.grams,
+      // By weight it follows the food's numbers, like any ingredient; a serving without a weight keeps what you logged.
+      nutrients: e.grams ? nutrientsFor(food, e.grams) : logged,
+    };
+  });
+}
+
 /**
  * Swaps an ingredient for another food, keeping the same weight: 200 g of
  * paneer becomes 200 g of soya chaap. Without a weight, it starts at the new

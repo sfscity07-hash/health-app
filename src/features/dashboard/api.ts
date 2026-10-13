@@ -16,6 +16,8 @@ export type DaySummary = {
   water_ml: number;
   closed: boolean;
   fiber_g: number;
+  /** Water in the drinks you logged as food (milk, tea, juice…), in ml. */
+  drink_ml: number;
 };
 
 export type FoodLogEntry = {
@@ -34,6 +36,8 @@ export type FoodLogEntry = {
   carbs_g: number;
   fat_g: number;
   fiber_g: number;
+  /** Water it adds if it's a drink: 0 if you said it doesn't count, null if it isn't a drink. Missing until the water-from-drinks SQL is run. */
+  water_ml?: number | null;
 };
 
 export const emptyDay = (log_date: string): DaySummary => ({
@@ -47,6 +51,7 @@ export const emptyDay = (log_date: string): DaySummary => ({
   water_ml: 0,
   closed: false,
   fiber_g: 0,
+  drink_ml: 0,
 });
 
 export const keys = {
@@ -85,6 +90,7 @@ export function useDaySummaries(from: string, to: string) {
           water_ml: num(r.water_ml),
           closed: Boolean(r.closed),
           fiber_g: num(r.fiber_g),
+          drink_ml: num(r.drink_ml),
         };
       }
       return out;
@@ -100,7 +106,8 @@ export function useFoodLogs(date: string) {
     queryFn: async (): Promise<FoodLogEntry[]> => {
       const { data, error } = await requireSupabase()
         .from('food_logs')
-        .select('id, logged_at, meal, food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g')
+        // Everything, so it keeps working before and after a new column is added.
+        .select('*')
         .eq('log_date', date)
         .order('logged_at');
       if (error) throw error;
@@ -113,6 +120,7 @@ export function useFoodLogs(date: string) {
         carbs_g: num(r.carbs_g),
         fat_g: num(r.fat_g),
         fiber_g: num(r.fiber_g),
+        ...('water_ml' in r ? { water_ml: r.water_ml === null ? null : num(r.water_ml) } : {}),
       })) as FoodLogEntry[];
     },
   });

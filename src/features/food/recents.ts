@@ -17,6 +17,8 @@ export type LoggedRow = {
   external_key?: string | null;
   meal: Meal;
   log_date: string;
+  /** Water it added as a drink (0: you said it doesn't count; null: not a drink). */
+  water_ml?: number | null;
 };
 
 export type RecentFood = {

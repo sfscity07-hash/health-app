@@ -72,6 +72,8 @@ export function Tile(props: TileProps) {
 /** Water: the + adds a glass in one tap; the rest of the tile opens the water sheet. */
 export function WaterTile({
   ml,
+  drinkMl = 0,
+  drinkLabel,
   goalMl,
   glassMl,
   value,
@@ -82,6 +84,10 @@ export function WaterTile({
   ref,
 }: {
   ml: number;
+  /** How much of `ml` came from drinks you logged as food; those glasses fill in a lighter blue. */
+  drinkMl?: number;
+  /** "0.4 L", for screen readers. */
+  drinkLabel?: string;
   goalMl: number;
   glassMl: number;
   /** The day's total and the goal, formatted in your units ("1.25", "/ 2.5 L"). */
@@ -96,12 +102,13 @@ export function WaterTile({
   const { colors } = useTheme();
   const glasses = glassCount(goalMl, glassMl);
   const filled = Math.min(glasses, Math.floor(ml / glassMl + 0.001));
+  const plain = Math.min(filled, Math.floor((ml - drinkMl) / glassMl + 0.001));
   const left = Math.max(0, Math.ceil((goalMl - ml) / glassMl - 0.001));
   return (
     <View ref={ref} style={styles.waterWrap}>
       <PressableScale
         accessibilityRole="button"
-        accessibilityLabel={`Water, ${value} ${unit}${left === 0 ? ', goal hit' : `, ${left} glass${left === 1 ? '' : 'es'} to go`}. Opens water.`}
+        accessibilityLabel={`Water, ${value} ${unit}${drinkMl > 0 && drinkLabel ? `, including ${drinkLabel} from drinks` : ''}${left === 0 ? ', goal hit' : `, ${left} glass${left === 1 ? '' : 'es'} to go`}. Opens water.`}
         haptic="tap"
         pressedScale={0.97}
         onPress={onOpen}
@@ -122,7 +129,7 @@ export function WaterTile({
           footer={
             <View style={styles.glasses}>
               {Array.from({ length: glasses }, (_, i) => (
-                <View key={i} style={[styles.glass, { backgroundColor: i < filled ? colors.water : colors.surface3 }]} />
+                <View key={i} style={[styles.glass, { backgroundColor: i < filled ? colors.water : colors.surface3 }, i >= plain && i < filled && styles.fromDrinks]} />
               ))}
             </View>
           }
@@ -183,5 +190,6 @@ const styles = StyleSheet.create({
   waterAdd: { position: 'absolute', top: 9, right: 9, width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   glasses: { flexDirection: 'row', gap: 3, height: 20 },
   glass: { flex: 1, borderRadius: 3 },
+  fromDrinks: { opacity: 0.45 },
   mini: { height: 4, borderRadius: 2, overflow: 'hidden' },
 });

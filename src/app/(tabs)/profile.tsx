@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { ADDBACK } from '@/features/exercise/logic';
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
+import { useDrinkWaterSetting } from '@/features/water/api';
 import { formatInt } from '@/lib/format';
 import { fiberTarget } from '@/lib/nutrition';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +29,7 @@ export default function ProfileScreen() {
   const { session } = useAuth();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
+  const drinkSetting = useDrinkWaterSetting();
   const theme = usePreferences((s) => s.theme);
   const setTheme = usePreferences((s) => s.setTheme);
   const version = Constants.expoConfig?.version ?? '1.0.0';
@@ -71,6 +73,23 @@ export default function ProfileScreen() {
           onChange={(v) => updateProfile.mutate({ exercise_addback: v })}
         />
       </Card>
+
+      {drinkSetting.ready ? (
+        <Card style={styles.section}>
+          <Text variant="label">Water</Text>
+          <SwitchRow
+            label="Count water in drinks"
+            description={
+              drinkSetting.on
+                ? 'Milk, tea, coffee, juice, buttermilk and soup you log add the water in them. Turn one off when you log it if it was cooked down, like milk in oats.'
+                : 'Off: only water you add on the Water tile counts.'
+            }
+            value={drinkSetting.on}
+            tint="water"
+            onChange={(v) => updateProfile.mutate({ count_drink_water: v })}
+          />
+        </Card>
+      ) : null}
 
       <RemindersCard />
 

@@ -2,10 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
-import { useLogFood } from '@/features/food/api';
+import { useLogFood, useRecentLogs } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { useFoundFoods } from '@/features/search/api';
 import { asFood } from '@/features/search/types';
+import { rememberedCounts } from '@/features/water/drinks';
 import { formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
 import { isMeal, mealForTime } from '@/lib/meals';
@@ -25,6 +26,7 @@ export default function FoundFoodScreen() {
   const found = useFoundFoods((s) => s.foods[params.key]);
   const keepFound = useFoundFoods((s) => s.keep);
   const logFood = useLogFood();
+  const recent = useRecentLogs();
   const showToast = useToast((s) => s.show);
   const { eaten, targets } = useDayBudget(date);
   const close = () => router.back();
@@ -51,6 +53,7 @@ export default function FoundFoodScreen() {
       unit: c.unit.label,
       grams: c.grams,
       nutrients: c.nutrients,
+      countsAsWater: c.countsAsWater,
     });
     success();
     showToast(`Added ${found.name} · ${formatInt(c.nutrients.kcal)} kcal`);
@@ -69,6 +72,7 @@ export default function FoundFoodScreen() {
       onSubmit={add}
       // Saved along with the food when you add it.
       onAddUnit={(serving) => keepFound({ ...found, servings: [...found.servings, serving] })}
+      countsAsWater={(meal) => rememberedCounts(recent.data, { foodId: null, name: found.name }, meal) ?? true}
     />
   );
 }

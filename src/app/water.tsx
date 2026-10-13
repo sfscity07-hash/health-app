@@ -4,17 +4,21 @@ import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { relativeDay } from '@/components/foodlog/DayNav';
+import { Card } from '@/components/ui/Card';
 import { AnimatedBar } from '@/components/ui/AnimatedBar';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { PressableScale } from '@/components/ui/PressableScale';
+import { SwitchRow } from '@/components/ui/SwitchRow';
 import { Text } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
 import { ToastHost } from '@/components/ui/ToastHost';
-import { emptyDay, useDaySummaries } from '@/features/dashboard/api';
+import { emptyDay, useDaySummaries, useFoodLogs } from '@/features/dashboard/api';
+import { useSetDrinkWater } from '@/features/food/api';
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
-import { useAddWater, useDeleteWater, useWaterLogs } from '@/features/water/api';
+import { useAddWater, useDeleteWater, useDrinkWaterSetting, useWaterLogs } from '@/features/water/api';
+import { drinkWater, waterTotal } from '@/features/water/drinks';
 import {
   drinkUnit,
   formatDrink,
@@ -31,6 +35,8 @@ import {
 } from '@/features/water/logic';
 import { toISODate } from '@/lib/dates';
 import { success, tick } from '@/lib/haptics';
+import { MEAL_LABEL } from '@/lib/meals';
+import { describeLogged } from '@/lib/portion';
 import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
 import { gutter, radius, space } from '@/theme/tokens';
@@ -48,15 +54,25 @@ export default function WaterSheet() {
   const updateProfile = useUpdateProfile();
   const summary = useDaySummaries(date, date);
   const drinks = useWaterLogs(date);
+  const logs = useFoodLogs(date);
   const addWater = useAddWater();
   const deleteWater = useDeleteWater();
+  const setDrinkWater = useSetDrinkWater();
+  const drinkSetting = useDrinkWaterSetting();
   const showToast = useToast((s) => s.show);
   const [other, setOther] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const units = profile?.units ?? 'metric';
   const goal = profile?.water_goal_ml ?? 2500;
-  const total = (summary.data?.[date] ?? emptyDay(date)).water_ml;
+  const day = summary.data?.[date] ?? emptyDay(date);
+  const total = waterTotal(day, drinkSetting.on);
+  const fromDrinks = drinkSetting.on ? day.drink_ml : 0;
+  // Drinks you logged as food (milk, tea, juice…), with the water each one holds.
+  const loggedDrinks = (logs.data ?? []).flatMap((e) => {
+    const ml = drinkWater(e.name, e.grams);
+    return ml !== null ? [{ entry: e, ml, counts: (e.water_ml ?? 0) > 0 }] : [];
+  });
   const presets = waterPresets(units);
   const left = Math.max(0, goal - total);
   const count = (drinks.data ?? []).length;
@@ -118,6 +134,11 @@ export default function WaterSheet() {
           <View style={styles.bar}>
             <AnimatedBar fraction={goal > 0 ? total / goal : 0} color={colors.water} height={10} />
           </View>
+          {fromDrinks > 0 ? (
+            <Text variant="caption" color="water">
+              Includes {formatVolume(fromDrinks, units)} from drinks you logged
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.presets}>
@@ -195,6 +216,52 @@ export default function WaterSheet() {
           ))}
         </View>
 
+        {drinkSetting.ready ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">From your food log</Text>
+              {drinkSetting.on && loggedDrinks.length > 0 ? <Text variant="label">{formatDrink(fromDrinks, units)}</Text> : null}
+            </View>
+            <Card style={styles.logged}>
+              {drinkSetting.on
+                ? loggedDrinks.map(({ entry: e, ml, counts }) => (
+                    <View key={e.id} style={[styles.loggedRow, { borderBottomColor: colors.hairline }]}>
+                      <Icon name="drop" size={15} color={counts ? 'water' : 'textTertiary'} />
+                      <View style={styles.flex}>
+                        <SwitchRow
+                          label={e.name}
+                          description={`${MEAL_LABEL[e.meal]} · ${describeLogged(e.quantity, e.unit, null)} · ${counts ? `${formatDrink(ml, units)} of water` : 'not counted'}`}
+                          value={counts}
+                          tint="water"
+                          onChange={(on) => {
+                            if (!e.id.startsWith('temp-')) setDrinkWater.mutate({ id: e.id, date, ml: on ? ml : 0 });
+                          }}
+                        />
+                      </View>
+                    </View>
+                  ))
+                : null}
+              <SwitchRow
+                label="Count water in drinks"
+                description={
+                  drinkSetting.on
+                    ? loggedDrinks.length > 0
+                      ? 'Turn one off above if it was cooked down, like milk simmered into oats.'
+                      : 'Milk, tea, coffee, juice, buttermilk and soup you log add the water in them.'
+                    : 'Off: only the water you add here counts.'
+                }
+                value={drinkSetting.on}
+                tint="water"
+                onChange={(on) => updateProfile.mutate({ count_drink_water: on })}
+              />
+            </Card>
+          </View>
+        ) : loggedDrinks.length > 0 ? (
+          <Text variant="caption" color="textSecondary">
+            Milk, tea and juice you log can count toward water too. To turn that on, run the newest file in supabase/migrations in your Supabase SQL Editor.
+          </Text>
+        ) : null}
+
         <View style={[styles.goal, { backgroundColor: colors.surface2 }]}>
           <View style={styles.goalText}>
             <Text variant="bodyStrong">Daily goal</Text>
@@ -237,6 +304,9 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: space.sm },
   drink: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.xs },
   drinkAmount: { flex: 1 },
+  logged: { paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.md },
+  loggedRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingBottom: space.md, borderBottomWidth: StyleSheet.hairlineWidth * 2 },
+  flex: { flex: 1 },
   goal: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, borderRadius: radius.lg },
   goalText: { flex: 1, gap: 2 },
   goalValue: { minWidth: 64, textAlign: 'center' },

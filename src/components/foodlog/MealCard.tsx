@@ -19,7 +19,7 @@ type MealCardProps = {
   entries: FoodLogEntry[];
   onAdd: () => void;
   onPressEntry: (entry: FoodLogEntry) => void;
-  /** Opens the meal's menu (copy, save as a meal). Shown when the meal has food. */
+  /** Opens the meal's menu (copy, save as a meal, make a recipe). Shown when the meal has food. */
   onMore?: () => void;
   /** Foods that are recipes, marked with the recipe pot. */
   recipeIds?: ReadonlySet<string>;
@@ -47,7 +47,7 @@ export function MealCard({ meal, entries, onAdd, onPressEntry, onMore, recipeIds
         {onMore && entries.length > 0 ? (
           <PressableScale
             accessibilityRole="button"
-            accessibilityLabel={`More for ${label.toLowerCase()}: copy or save as a meal`}
+            accessibilityLabel={`More for ${label.toLowerCase()}: copy, save as a meal or make a recipe`}
             haptic="tick"
             pressedScale={0.9}
             hitSlop={6}

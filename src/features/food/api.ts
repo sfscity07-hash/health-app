@@ -6,6 +6,7 @@ import type { CustomFoodInsert } from '@/features/food/forms';
 import type { LoggedRow } from '@/features/food/recents';
 import { ensureFood } from '@/features/search/api';
 import type { ExternalFood } from '@/features/search/types';
+import { drinkWater, rememberedCounts } from '@/features/water/drinks';
 import { addDays, toISODate } from '@/lib/dates';
 import { formatInt } from '@/lib/format';
 import { reportFailure } from '@/lib/failure';
@@ -90,7 +91,7 @@ export function useRecentLogs() {
       const since = toISODate(addDays(new Date(), -60));
       const { data, error } = await requireSupabase()
         .from('food_logs')
-        .select('food_id, name, brand, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g, meal, log_date, foods(source, external_id)')
+        .select('*, foods(source, external_id)')
         .gte('log_date', since)
         .order('logged_at', { ascending: false })
         .limit(400);
@@ -107,6 +108,7 @@ export function useRecentLogs() {
           carbs_g: num(r.carbs_g),
           fat_g: num(r.fat_g),
           fiber_g: num(r.fiber_g),
+          water_ml: numOrNull(r.water_ml),
           external_key: food?.external_id ? `${food.source}:${food.external_id}` : null,
         };
       }) as LoggedRow[];
@@ -159,6 +161,8 @@ export type NewEntry = {
   nutrients: Nutrients;
   /** A search result that isn't saved yet: it's saved first, then logged. */
   external?: ExternalFood;
+  /** For a drink: whether its water counts toward the day's water. Left out, it's what you chose last time (or yes). */
+  countsAsWater?: boolean;
 };
 
 /**
@@ -171,8 +175,8 @@ function invalidateLogs(queryClient: ReturnType<typeof useQueryClient>, date?: s
   queryClient.invalidateQueries({ queryKey: date ? ['foodLogs', date] : ['foodLogs'] });
 }
 
-/** Adds (sign 1) or removes (sign -1) an entry's nutrients from a cached day total. */
-function shiftDay(d: DaySummary, n: Nutrients, sign: 1 | -1, entries: number): DaySummary {
+/** Adds (sign 1) or removes (sign -1) an entry's nutrients, and the water in it, from a cached day total. */
+function shiftDay(d: DaySummary, n: Nutrients, sign: 1 | -1, entries: number, water: number | null | undefined = 0): DaySummary {
   return {
     ...d,
     kcal_in: Math.max(0, d.kcal_in + sign * n.kcal),
@@ -181,6 +185,7 @@ function shiftDay(d: DaySummary, n: Nutrients, sign: 1 | -1, entries: number): D
     fat_g: Math.max(0, d.fat_g + sign * n.fat_g),
     fiber_g: Math.max(0, d.fiber_g + sign * n.fiber_g),
     food_entries: Math.max(0, d.food_entries + entries),
+    drink_ml: Math.max(0, d.drink_ml + sign * (water ?? 0)),
   };
 }
 
@@ -192,7 +197,13 @@ const pickNutrients = (e: Nutrients): Nutrients => ({
   fiber_g: e.fiber_g,
 });
 
-const logRow = (e: NewEntry, foodId: string | null) => {
+type Recent = Parameters<typeof rememberedCounts>[0];
+
+/** The water a new entry adds: none unless it's a drink, and none if you said (now or last time) that it doesn't count. */
+const waterOf = (e: NewEntry, recent: Recent) =>
+  drinkWater(e.name, e.grams, e.countsAsWater ?? rememberedCounts(recent, { foodId: e.foodId, name: e.name }, e.meal) ?? true);
+
+const logRow = (e: NewEntry, foodId: string | null, recent: Recent) => {
   const n = roundNutrients(e.nutrients);
   return {
     // Every row gets an id from the phone, so a batch insert always sends the same columns.
@@ -210,22 +221,42 @@ const logRow = (e: NewEntry, foodId: string | null) => {
     carbs_g: n.carbs_g,
     fat_g: n.fat_g,
     fiber_g: n.fiber_g,
+    water_ml: waterOf(e, recent),
   };
 };
 
-/** Saves log entries in one request (search results are saved as foods first). */
-async function insertEntries(entries: NewEntry[]) {
-  const rows = [];
-  for (const e of entries) rows.push(logRow(e, e.external ? await ensureFood(e.external) : e.foodId));
-  const { error } = await requireSupabase().from('food_logs').insert(rows);
+/**
+ * Whether food_logs has its water column yet. Until you run the
+ * water-from-drinks SQL it doesn't, and logging carries on without it.
+ */
+let waterColumn = true;
+const missingWater = (e: { code?: string; message?: string }) => e.code === 'PGRST204' && /water_ml/.test(e.message ?? '');
+const dropWater = <T extends { water_ml?: unknown }>({ water_ml, ...row }: T) => row;
+
+/** Runs a food_logs write, again without the water column if the database doesn't have it yet. */
+async function writeLogs(write: (withWater: boolean) => PromiseLike<{ error: { code?: string; message?: string } | null }>) {
+  let { error } = await write(waterColumn);
+  if (error && waterColumn && missingWater(error)) {
+    waterColumn = false;
+    ({ error } = await write(false));
+  }
   if (error) throw error;
+}
+
+/** Saves log entries in one request (search results are saved as foods first). */
+async function insertEntries(entries: NewEntry[], recent: Recent) {
+  const rows: ReturnType<typeof logRow>[] = [];
+  for (const e of entries) rows.push(logRow(e, e.external ? await ensureFood(e.external) : e.foodId, recent));
+  await writeLogs((withWater) => requireSupabase().from('food_logs').insert(withWater ? rows : rows.map(dropWater)));
 }
 
 /** Shows new entries on the dashboard and Food log straight away, before the server answers. */
 function showEntries(queryClient: ReturnType<typeof useQueryClient>, entries: NewEntry[]) {
   const now = Date.now();
+  const recent = recentOf(queryClient);
   entries.forEach((e, i) => {
     const n = roundNutrients(e.nutrients);
+    const water = waterColumn ? waterOf(e, recent) : null;
     const temp: FoodLogEntry = {
       id: e.id ?? `temp-${now}-${i}`,
       logged_at: new Date(now + i).toISOString(),
@@ -237,11 +268,15 @@ function showEntries(queryClient: ReturnType<typeof useQueryClient>, entries: Ne
       unit: e.unit,
       grams: e.grams,
       ...n,
+      water_ml: water,
     };
     queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', e.date], (old) => (old ? [...old, temp] : old));
-    patchSummaries(queryClient, e.date, (d) => shiftDay(d, n, 1, 1));
+    patchSummaries(queryClient, e.date, (d) => shiftDay(d, n, 1, 1, water));
   });
 }
+
+/** What you logged lately, for remembering whether a drink counts toward water. */
+const recentOf = (queryClient: ReturnType<typeof useQueryClient>) => queryClient.getQueryData<LoggedRow[]>(foodKeys.recentLogs);
 
 /**
  * Logs a food. The dashboard and Food log update before the server answers,
@@ -254,7 +289,7 @@ export function useLogFood() {
   const queryClient = useQueryClient();
   return useMutation({
     scope: LOG_WRITES,
-    mutationFn: (e: NewEntry) => insertEntries([e]),
+    mutationFn: (e: NewEntry) => insertEntries([e], recentOf(queryClient)),
     onMutate: (e) => showEntries(queryClient, [e]),
     onError: (e, v) => reportFailure(`add ${v.name}`, e),
     onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),
@@ -266,7 +301,7 @@ export function useLogEntries() {
   const queryClient = useQueryClient();
   return useMutation({
     scope: LOG_WRITES,
-    mutationFn: (entries: NewEntry[]) => insertEntries(entries),
+    mutationFn: (entries: NewEntry[]) => insertEntries(entries, recentOf(queryClient)),
     onMutate: (entries) => showEntries(queryClient, entries),
     onError: (e) => reportFailure('add those foods', e),
     onSettled: (_d, _e, entries) => {
@@ -294,6 +329,7 @@ export function useEntry(id: string | undefined) {
         carbs_g: num(data.carbs_g),
         fat_g: num(data.fat_g),
         fiber_g: num(data.fiber_g),
+        ...('water_ml' in data ? { water_ml: numOrNull(data.water_ml) } : {}),
       } as LogEntry;
     },
   });
@@ -306,36 +342,58 @@ export function useUpdateEntry() {
   return useMutation({
     mutationFn: async ({ id, ...e }: EntryChange) => {
       const n = roundNutrients(e.nutrients);
-      const { error } = await requireSupabase()
-        .from('food_logs')
-        .update({
-          meal: e.meal,
-          name: e.name,
-          quantity: Math.round(e.quantity * 100) / 100,
-          unit: e.unit,
-          grams: e.grams === null ? null : Math.round(e.grams * 100) / 100,
-          kcal: n.kcal,
-          protein_g: n.protein_g,
-          carbs_g: n.carbs_g,
-          fat_g: n.fat_g,
-          fiber_g: n.fiber_g,
-        })
-        .eq('id', id);
-      if (error) throw error;
+      const row = {
+        meal: e.meal,
+        name: e.name,
+        quantity: Math.round(e.quantity * 100) / 100,
+        unit: e.unit,
+        grams: e.grams === null ? null : Math.round(e.grams * 100) / 100,
+        kcal: n.kcal,
+        protein_g: n.protein_g,
+        carbs_g: n.carbs_g,
+        fat_g: n.fat_g,
+        fiber_g: n.fiber_g,
+        water_ml: drinkWater(e.name, e.grams, e.countsAsWater ?? true),
+      };
+      await writeLogs((withWater) => requireSupabase().from('food_logs').update(withWater ? row : dropWater(row)).eq('id', id));
     },
     onMutate: (c) => {
       const n = roundNutrients(c.nutrients);
+      const water = waterColumn ? drinkWater(c.name, c.grams, c.countsAsWater ?? true) : null;
       const previous = queryClient.getQueryData<FoodLogEntry[]>(['foodLogs', c.date])?.find((e) => e.id === c.id);
       queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', c.date], (old) =>
-        old?.map((e) => (e.id === c.id ? { ...e, meal: c.meal, name: c.name, quantity: c.quantity, unit: c.unit, ...n } : e)),
+        old?.map((e) => (e.id === c.id ? { ...e, meal: c.meal, name: c.name, quantity: c.quantity, unit: c.unit, grams: c.grams, ...n, water_ml: water } : e)),
       );
-      if (previous) patchSummaries(queryClient, c.date, (d) => shiftDay(shiftDay(d, pickNutrients(previous), -1, 0), n, 1, 0));
+      if (previous) patchSummaries(queryClient, c.date, (d) => shiftDay(shiftDay(d, pickNutrients(previous), -1, 0, previous.water_ml), n, 1, 0, water));
     },
     onError: (e) => reportFailure('save your changes', e),
     onSettled: (_d, _e, v) => {
       invalidateLogs(queryClient, v.date);
       queryClient.invalidateQueries({ queryKey: foodKeys.entry(v.id) });
     },
+  });
+}
+
+/** Counts a drink you logged toward the day's water, or stops counting it (milk cooked down into oats). */
+export function useSetDrinkWater() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    scope: LOG_WRITES,
+    mutationFn: async ({ id, ml }: { id: string; date: string; ml: number }) => {
+      const { error } = await requireSupabase().from('food_logs').update({ water_ml: ml }).eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: ({ id, date, ml }) => {
+      const previous = queryClient.getQueryData<FoodLogEntry[]>(['foodLogs', date])?.find((e) => e.id === id);
+      queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', date], (old) => old?.map((e) => (e.id === id ? { ...e, water_ml: ml } : e)));
+      patchSummaries(queryClient, date, (d) => ({ ...d, drink_ml: Math.max(0, d.drink_ml - (previous?.water_ml ?? 0) + ml) }));
+      // So the next time you log it, it starts the way you just set it.
+      queryClient.setQueryData<LoggedRow[]>(foodKeys.recentLogs, (old) =>
+        old && previous ? old.map((r) => (r.food_id === previous.food_id && r.name === previous.name && r.meal === previous.meal ? { ...r, water_ml: ml } : r)) : old,
+      );
+    },
+    onError: (e) => reportFailure('change that drink', e),
+    onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),
   });
 }
 
@@ -350,7 +408,7 @@ export function useDeleteEntry() {
     onMutate: ({ id, date }) => {
       const previous = queryClient.getQueryData<FoodLogEntry[]>(['foodLogs', date])?.find((e) => e.id === id);
       queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', date], (old) => old?.filter((e) => e.id !== id));
-      if (previous) patchSummaries(queryClient, date, (d) => shiftDay(d, pickNutrients(previous), -1, -1));
+      if (previous) patchSummaries(queryClient, date, (d) => shiftDay(d, pickNutrients(previous), -1, -1, previous.water_ml));
     },
     onError: (e) => reportFailure('delete that entry', e),
     onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),

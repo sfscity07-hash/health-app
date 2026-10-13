@@ -45,7 +45,10 @@ export default function RecipesScreen() {
             Anything you make from several foods: a marinade, a curry, a smoothie. Log it by the gram, the serving or a share of the batch. Tap + to add the usual amount to {MEAL_LABEL[meal].toLowerCase()}.
           </Text>
         </View>
-        <Button label="New recipe" icon="plus" onPress={() => router.push({ pathname: '/recipe/edit', params: { date, meal } })} />
+        <View style={styles.actions}>
+          <Button label="New recipe" icon="plus" onPress={() => router.push({ pathname: '/recipe/edit', params: { date, meal } })} />
+          <Button label="Build one from foods you logged" variant="ghost" onPress={() => router.push({ pathname: '/recipe/from-log', params: { date } })} />
+        </View>
 
         {recipes.isPending ? <ActivityIndicator color={colors.accent} /> : null}
         {recipes.isError ? (
@@ -98,4 +101,5 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: gutter, gap: space.lg },
   intro: { gap: space.xs, marginTop: space.sm },
+  actions: { gap: space.xs },
 });

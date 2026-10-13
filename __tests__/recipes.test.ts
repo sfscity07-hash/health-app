@@ -7,6 +7,7 @@ import {
   emptyDraft,
   finishedWeight,
   itemFromFood,
+  itemsFromLog,
   per100,
   perServing,
   quickItem,
@@ -131,6 +132,55 @@ describe('ingredients', () => {
     const swapped = swapItem(spices, ghee);
     expect(swapped.grams).toBe(14);
     expect(swapped.food?.id).toBe('f-ghee');
+  });
+});
+
+describe('a recipe from foods you logged', () => {
+  const logged = (food_id: string | null, name: string, quantity: number, unit: string, grams: number | null, kcal: number) => ({
+    food_id,
+    name,
+    brand: null,
+    quantity,
+    unit,
+    grams,
+    kcal,
+    protein_g: 1,
+    carbs_g: 2,
+    fat_g: 3,
+    fiber_g: 0,
+  });
+  const foods = new Map([ghee, paneer].map((f) => [f.id, f]));
+
+  it('brings each food in at the amount you logged, still linked to the food', () => {
+    const [g, p] = itemsFromLog([logged('f-ghee', 'Ghee', 2, 'tbsp', 28, 252), logged('f-paneer', 'Paneer', 200, 'g', 200, 592)], foods);
+    expect(g.food?.id).toBe('f-ghee');
+    expect(describeItem(g)).toBe('2 tbsp · 28 g');
+    expect(g.nutrients).toEqual(nutrientsFor(ghee, 28));
+    expect(p.grams).toBe(200);
+    expect(p.key).not.toBe(g.key);
+  });
+
+  it('turns quick adds and foods you’ve since deleted into quick ingredients with the logged numbers', () => {
+    const [quick, gone] = itemsFromLog([logged(null, 'Chai', 1, 'serving', null, 90), logged('f-deleted', 'Masala', 10, 'g', 10, 30)], foods);
+    expect(quick.food).toBeNull();
+    expect(quick.nutrients.kcal).toBe(90);
+    expect(describeItem(quick)).toBe('Quick ingredient');
+    expect(gone.food).toBeNull();
+    expect(gone.grams).toBe(10);
+    expect(gone.nutrients.fat_g).toBe(3);
+  });
+
+  it('keeps what you logged for a serving that has no weight', () => {
+    const [i] = itemsFromLog([logged('f-paneer', 'Paneer', 1, 'piece', null, 120)], foods);
+    expect(i.food?.id).toBe('f-paneer');
+    expect(i.nutrients.kcal).toBe(120);
+  });
+
+  it('makes a recipe that can be saved once it has a name', () => {
+    const d = { ...emptyDraft(), items: itemsFromLog([logged('f-ghee', 'Ghee', 14, 'g', 14, 126), logged('f-paneer', 'Paneer', 200, 'g', 200, 592)], foods) };
+    expect(recipeProblem(d)).toBe('Give the recipe a name.');
+    expect(recipeProblem({ ...d, name: 'Paneer bhurji' })).toBeNull();
+    expect(finishedWeight(d)).toBe(214);
   });
 });
 

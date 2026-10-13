@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { Text } from '@/components/ui/Text';
 import { tick } from '@/lib/haptics';
 import { useTheme } from '@/theme/theme';
-import { space } from '@/theme/tokens';
+import { space, type ColorName } from '@/theme/tokens';
 
 type SwitchRowProps = {
   label: string;
@@ -11,10 +11,12 @@ type SwitchRowProps = {
   description?: string;
   value: boolean;
   onChange: (value: boolean) => void;
+  /** The track's color when on. */
+  tint?: ColorName;
 };
 
 /** A setting you turn on or off. The whole row is the switch. */
-export function SwitchRow({ label, description, value, onChange }: SwitchRowProps) {
+export function SwitchRow({ label, description, value, onChange, tint = 'accent' }: SwitchRowProps) {
   const { colors } = useTheme();
   const flip = () => {
     tick();
@@ -37,7 +39,7 @@ export function SwitchRow({ label, description, value, onChange }: SwitchRowProp
       </View>
       {/* The row takes the touch (so a tap is never counted twice); the switch only shows the state. */}
       <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <Switch value={value} trackColor={{ false: colors.surface3, true: colors.accent }} thumbColor={Platform.OS === 'android' ? colors.text : undefined} />
+        <Switch value={value} trackColor={{ false: colors.surface3, true: colors[tint] }} thumbColor={Platform.OS === 'android' ? colors.text : undefined} />
       </View>
     </Pressable>
   );
