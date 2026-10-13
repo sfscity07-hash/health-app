@@ -43,7 +43,7 @@ export function Chip({ label, selected, icon, onPress, accessibilityLabel }: Chi
 }
 
 /** Chips that wrap onto more lines, or scroll sideways in one line with `scroll`. */
-export function ChipGroup({ children, scroll, label }: { children: ReactNode; scroll?: boolean; label: string }) {
+export function ChipGroup({ children, scroll, label, inset }: { children: ReactNode; scroll?: boolean; label: string; /** Side padding for a row that runs edge to edge. */ inset?: number }) {
   if (scroll) {
     return (
       <ScrollView
@@ -52,7 +52,7 @@ export function ChipGroup({ children, scroll, label }: { children: ReactNode; sc
         keyboardShouldPersistTaps="handled"
         accessibilityRole="radiogroup"
         accessibilityLabel={label}
-        contentContainerStyle={styles.row}>
+        contentContainerStyle={[styles.row, inset ? { paddingHorizontal: inset } : null]}>
         {children}
       </ScrollView>
     );

@@ -5,11 +5,11 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done, plus recipes and step 1 of your new list (deficit per day). The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes and steps 1–2 of your new list (deficit per day; recipe ingredient ideas and scanning). The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: your deficit for every day, a − 1 + counter when you add the same food twice, and sheets that scroll properly.**
+Updated with every release. **Latest: adding recipe ingredients is faster: ideas from the recipe's name that search straight away, your similar recipes, and barcode scanning.** (Before that: deficit per day, the − 1 + counter, sheets that scroll.)
 
 **Before running this version:**
 1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages and no new SQL this time.
@@ -45,6 +45,10 @@ Updated with every release. **Latest: your deficit for every day, a − 1 + coun
   - Under the meals: **Copy this day to today** (on past days) and **Copy … to another day**, which copy every food into its own meal.
 - **Recipes** (the **Recipes** button in the logger): anything you make from several foods, like a marinade, a curry or a smoothie.
   - **New recipe**: name it, then **Add ingredient** for everything that went in: your own foods, anything from USDA or Open Food Facts (search "ghee", "paneer", "greek yoghurt"), recent foods, or **another recipe**. Tap **+** for the usual amount, or tap the food to pick it in tbsp, grams, slices or any of its units.
+  - **Ideas while you add**: Add ingredient opens with chips from the recipe's name ("Paneer tikka marinade" → paneer, yoghurt, ginger garlic paste, lemon juice, mustard oil, ghee), and the first one is already searched, so the usual ingredients are one tap. Ideas already in the recipe drop off. Tap another chip to search it, or type anything.
+  - **From your recipes**: if you've saved a similar recipe ("Paneer marinade"), its chip comes first: add the whole recipe, or any of its ingredients at the same amount.
+  - **Scan**: the barcode button in the ingredient search adds a pack straight to the recipe. A barcode nobody knows lets you copy the label once, and it goes into the recipe (and scans instantly next time).
+  - **Swap ideas**: swapping an ingredient suggests stand-ins (paneer → tofu, soya chaap, chicken breast, cottage cheese; ghee → olive oil; cream → Greek yoghurt…).
   - **Quick ingredient (just the numbers)**: for a spice mix or anything that isn't a food in Fuel. Calories (or macros), weight optional.
   - The card at the top adds it all up as you go: the whole batch's calories, protein, carbs, fat and fibre, what it weighs, per 100 g and per serving.
   - **Finished weight** (optional): weigh the dish after cooking, without the pot. Cooking drives off water, so this makes every gram you log exact. Leave it empty and the ingredients' weights are added up.
@@ -89,7 +93,7 @@ Updated with every release. **Latest: your deficit for every day, a − 1 + coun
   - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): scan and suggestions when adding recipe ingredients, a calendar of past days, water from drinks like milk, micronutrients / salt / caffeine, then the AI features (monthly adaptive targets, programs, pantry meal plans).
+- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): a calendar of past days, water from drinks like milk, micronutrients / salt / caffeine, then the AI features (monthly adaptive targets, programs, pantry meal plans).
 - Phase 13: loading skeletons, offline cache, and the installable APK.
 - A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
 - Vitamins and minerals (micronutrients) aren't tracked yet.

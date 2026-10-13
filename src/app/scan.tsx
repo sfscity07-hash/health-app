@@ -11,6 +11,7 @@ import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { Text } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
+import { useScannedIngredient } from '@/features/recipes/draft';
 import { useFoundFoods } from '@/features/search/api';
 import { barcodeProblem, lookupBarcode } from '@/features/search/barcode';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -63,7 +64,9 @@ function Corners() {
 export default function ScanScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ date?: string; meal?: string }>();
+  // `for: 'recipe'`: the scanned food goes into the recipe you're building, not your log.
+  const params = useLocalSearchParams<{ date?: string; meal?: string; for?: string }>();
+  const forRecipe = params.for === 'recipe';
   const focused = useIsFocused();
   const [permission, requestPermission] = useCameraPermissions();
   const keepFound = useFoundFoods((s) => s.keep);
@@ -94,11 +97,21 @@ export default function ScanScreen() {
       if (controller.signal.aborted) return;
       if (result.kind === 'saved') {
         success();
-        router.replace({ pathname: '/food/[id]', params: { id: result.foodId, date, meal } });
+        if (forRecipe) {
+          useScannedIngredient.getState().put({ kind: 'saved', id: result.foodId });
+          router.back();
+        } else {
+          router.replace({ pathname: '/food/[id]', params: { id: result.foodId, date, meal } });
+        }
       } else if (result.kind === 'found') {
         success();
-        keepFound(result.food);
-        router.replace({ pathname: '/food/preview', params: { key: result.food.key, date, meal } });
+        if (forRecipe) {
+          useScannedIngredient.getState().put({ kind: 'external', food: result.food });
+          router.back();
+        } else {
+          keepFound(result.food);
+          router.replace({ pathname: '/food/preview', params: { key: result.food.key, date, meal } });
+        }
       } else if (result.kind === 'incomplete') {
         setPhase({ kind: 'incomplete', code, name: result.name, brand: result.brand });
       } else {
@@ -130,7 +143,7 @@ export default function ScanScreen() {
   }
 
   function createFood(code: string, name?: string | null) {
-    router.replace({ pathname: '/food/new', params: { date, meal, barcode: code, name: name ?? '' } });
+    router.replace({ pathname: '/food/new', params: { date, meal, barcode: code, name: name ?? '', ...(forRecipe ? { for: 'recipe' } : {}) } });
   }
 
   const sheet = (() => {
@@ -283,7 +296,7 @@ export default function ScanScreen() {
           <View style={styles.row}>
             <Icon name="scan" size={18} color="accent" />
             <Text variant="small" color="textSecondary" style={styles.flex}>
-              Works with the barcodes on packaged food. Your own foods come up first.
+              {forRecipe ? 'Scan a pack to add it to your recipe. Your own foods come up first.' : 'Works with the barcodes on packaged food. Your own foods come up first.'}
             </Text>
           </View>
         ) : null}

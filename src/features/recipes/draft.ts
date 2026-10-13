@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { emptyDraft, type RecipeDraft, type RecipeItem } from '@/features/recipes/logic';
+import type { ExternalFood } from '@/features/search/types';
 
 /**
  * The recipe you're building or editing. It lives here (not in one screen) so
@@ -25,4 +26,13 @@ export const useRecipeDraft = create<DraftState>((set) => ({
   addItem: (item) => set((s) => ({ draft: { ...s.draft, items: [...s.draft.items, item] } })),
   replaceItem: (key, item) => set((s) => ({ draft: { ...s.draft, items: s.draft.items.map((i) => (i.key === key ? { ...item, key } : i)) } })),
   removeItem: (key) => set((s) => ({ draft: { ...s.draft, items: s.draft.items.filter((i) => i.key !== key) } })),
+}));
+
+/** A food scanned (or created from a scan) for the recipe, on its way back to the ingredient picker. */
+export type ScannedIngredient = { kind: 'saved'; id: string } | { kind: 'external'; food: ExternalFood };
+
+export const useScannedIngredient = create<{ scanned: ScannedIngredient | null; put: (s: ScannedIngredient) => void; clear: () => void }>((set) => ({
+  scanned: null,
+  put: (scanned) => set({ scanned }),
+  clear: () => set({ scanned: null }),
 }));

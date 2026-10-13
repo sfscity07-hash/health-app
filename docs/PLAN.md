@@ -310,13 +310,16 @@ In order. Each step ships on its own, with "what works" notes before you try it.
    - Each day's energy balance: what you burned (your expenditure estimate, plus logged exercise if you add exercise to your budget) minus what you ate. On the dashboard under the gauge ("Deficit so far" today), on the Food log's day card, and a 7-day chart on Progress (bars up for a deficit, down for a surplus, dashed line for what eating your budget gives) with the week's total and kg of fat. Past days use the expenditure from the check-in that reviewed them.
    - Bug: sheets (Water, Exercise, Copy) slid shut when you scrolled their list. The list now scrolls first; the sheet only moves once the list is at the top.
    - Bug: tapping + twice added twice silently. The + now turns into a − 1 + counter on that row; − takes the last one back out (logger, recipes, saved meals, recent workouts).
-2. **Recipe ingredients: scan + suggestions** (S)
-   - A barcode button in the ingredient search; the scanned food goes into the recipe instead of your log.
-   - Before you type, suggestions from the recipe's name ("Paneer tikka marinade" → paneer, yoghurt, ghee/oil, ginger-garlic paste, lemon), searched straight away so they are one tap.
+2. **Recipe ingredients: scan + suggestions** ✅ (S)
+   - A barcode button in the ingredient search; the scanned food goes into the recipe instead of your log (the scanner hands it back to the picker, which opens its amount). An unknown barcode → New food with the barcode → back into the recipe.
+   - Before you type, idea chips from the recipe's name (`features/recipes/suggest.ts`): foods the name mentions first, then what that kind of dish usually has (a small dictionary of dishes: tikka/marinade, curry, dal, biryani, smoothie, taco…), minus what's already in it; British/American spellings match. The first chip is searched straight away (your foods, recent and both databases).
+   - A saved recipe with a similar name gets the first chip: add the whole recipe, or its ingredients at the same amounts.
+   - Swapping suggests stand-ins (paneer → tofu, soya chaap…; ghee → olive oil…).
 3. **Calendar** (M)
    - A month view of the past year (and before): each day marked on budget / over / not logged / finished; tap a day to open its meals. Jump to any month; search your history ("when did I eat paneer").
 4. **Water from drinks** (S/M)
    - Milk, tea, coffee, juice, buttermilk / chaas, lassi, coconut water and soups count toward water automatically, using each food's water content (USDA lists it) or a drinks list when it isn't known. The Water tile shows "+0.4 L from drinks"; a switch turns it off.
+   - **Reduced / cooked down**: a toggle when you log a drink-like food (and on the entry afterwards) for liquid that was boiled down or cooked into something, like milk condensed into oats. It then doesn't count toward water. Fuel remembers your choice per food, so milk in your oats stays "reduced" next time while a glass of milk still counts. Liquid ingredients inside a recipe only count if you say the dish is a drink.
 5. **Micronutrients, salt and caffeine, every day** (L, new SQL)
    - Store sodium (and salt), potassium, calcium, iron, magnesium, vitamins A, C, D, B12, folate, saturated fat, sugar and caffeine per food (USDA has full profiles, Open Food Facts some, your own foods optional fields), copy them onto every log like the macros.
    - A daily Nutrients screen: % of daily value bars, sodium and caffeine against upper limits, and an honest "3 foods had no data for this" so a gap never looks like zero.

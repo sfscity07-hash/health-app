@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,14 +7,16 @@ import { EditorStatus } from '@/components/food/EditorStatus';
 import { FoodDetail, type PortionChoice } from '@/components/food/FoodDetail';
 import { FoodRow } from '@/components/food/FoodRow';
 import { RecipePortion } from '@/components/food/RecipePortion';
+import { Chip, ChipGroup } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { Text } from '@/components/ui/Text';
 import { useFood, useMyFoods, useRecentLogs, type FoodWithServings } from '@/features/food/api';
 import { matches } from '@/features/food/recents';
-import { useFoodsByIds, useRecipeIds } from '@/features/recipes/api';
-import { useRecipeDraft } from '@/features/recipes/draft';
-import { itemFromFood, swapItem, type RecipeItem } from '@/features/recipes/logic';
+import { useFoodsByIds, useRecipe, useRecipeIds, useRecipes } from '@/features/recipes/api';
+import { useRecipeDraft, useScannedIngredient } from '@/features/recipes/draft';
+import { describeItem, itemFromFood, quickItem, swapItem, type RecipeItem } from '@/features/recipes/logic';
+import { ideaLabel, ingredientIdeas, mentions, nameOverlap, swapIdeas } from '@/features/recipes/suggest';
 import { MIN_SEARCH_LENGTH, useFoodSearch } from '@/features/search/api';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
 import { formatInt } from '@/lib/format';
@@ -26,6 +28,8 @@ import { fonts, gutter, space } from '@/theme/tokens';
 
 type Mode = 'add' | 'swap' | 'amount';
 type Chosen = { kind: 'saved'; id: string } | { kind: 'external'; food: ExternalFood };
+/** The idea chip that lists a similar recipe's ingredients rather than searching. */
+const FROM_RECIPE = '\u0000recipe';
 const ZERO = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
 const macrosOf = (n: { protein_g: number; carbs_g: number; fat_g: number }) => ({ p: n.protein_g, c: n.carbs_g, f: n.fat_g });
 
@@ -76,26 +80,66 @@ function SavedAmount({ id, ...rest }: { id: string; mode: Mode; old: RecipeItem 
   return <AmountStep food={food.data} external={null} recipe={recipeIds.has(id)} {...rest} />;
 }
 
-/** Pick an ingredient for a recipe (your foods, recipes, recent foods or the food database), or a replacement for one. */
+/** A copy of an ingredient from another recipe, at the same amount. */
+const copyOf = (i: RecipeItem): RecipeItem => (i.food ? itemFromFood(i.food, i.quantity, i.unit, i.grams ?? 0) : quickItem(i.name, i.nutrients, i.grams));
+
+/**
+ * Pick an ingredient for a recipe (your foods, recipes, recent foods, the food
+ * database or a barcode), or a replacement for one. Before you type, ideas from
+ * the recipe's name are searched straight away, so the usual ingredients are
+ * one tap.
+ */
 export default function IngredientPicker() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ mode?: Mode; key?: string; exclude?: string }>();
   const mode: Mode = params.mode === 'swap' || params.mode === 'amount' ? params.mode : 'add';
-  const items = useRecipeDraft((s) => s.draft.items);
+  const draft = useRecipeDraft((s) => s.draft);
+  const items = draft.items;
   const addItem = useRecipeDraft((s) => s.addItem);
   const replaceItem = useRecipeDraft((s) => s.replaceItem);
+  const scanned = useScannedIngredient((s) => s.scanned);
   const showToast = useToast((s) => s.show);
   const old = params.key ? (items.find((i) => i.key === params.key) ?? null) : null;
   const [query, setQuery] = useState('');
   const [chosen, setChosen] = useState<Chosen | null>(null);
+  // undefined: the first idea is on by itself; null: you turned ideas off.
+  const [idea, setIdea] = useState<string | null | undefined>(undefined);
+
+  // A scan that's still waiting when the picker closes is dropped.
+  useEffect(() => () => useScannedIngredient.getState().clear(), []);
 
   const myFoods = useMyFoods();
+  const recipes = useRecipes();
   const recipeIds = useRecipeIds();
   const recentLogs = useRecentLogs();
-  const db = useFoodSearch(query);
-  const q = query.trim();
-  const searching = q.length > 0;
+
+  // A saved recipe with a similar name ("Paneer marinade" for "Paneer tikka marinade"): its ingredients are ideas too.
+  const similar = useMemo(() => {
+    if (mode !== 'add' || !draft.name.trim()) return null;
+    let best: { id: string; name: string; score: number } | null = null;
+    for (const r of recipes.data ?? []) {
+      if (r.id === params.exclude) continue;
+      const score = nameOverlap(draft.name, r.food.name);
+      if (score > 0 && (!best || score > best.score)) best = { id: r.id, name: r.food.name, score };
+    }
+    return best;
+  }, [mode, draft.name, recipes.data, params.exclude]);
+  const similarFood = (recipes.data ?? []).find((r) => r.id === similar?.id)?.food ?? null;
+  const similarRecipe = useRecipe(similar?.id);
+  const fromSimilar = (similarRecipe.data?.items ?? []).filter(
+    (i) => !items.some((x) => (x.food && i.food && x.food.id === i.food.id) || mentions(i.name, x.name) || mentions(x.name, i.name)),
+  );
+
+  const ideas = mode === 'swap' && old ? swapIdeas(old.name) : mode === 'add' ? ingredientIdeas(draft.name, items.map((i) => i.name)) : [];
+  const chips = [...(similarFood ? [FROM_RECIPE] : []), ...ideas];
+  const active = idea === undefined ? (chips[0] ?? null) : idea && chips.includes(idea) ? idea : null;
+  const typed = query.trim();
+  // What's searched: what you typed, or the idea that's on.
+  const term = typed || (active && active !== FROM_RECIPE ? active : '');
+  const searching = term.length > 0;
+  const fits = (name: string, brand: string | null) => (typed ? matches(typed, name, brand) : !term || mentions(term, `${name} ${brand ?? ''}`));
+  const db = useFoodSearch(term);
 
   const recentIds = useMemo(() => {
     const seen = new Set<string>();
@@ -106,13 +150,15 @@ export default function IngredientPicker() {
 
   // A recipe can't be its own ingredient.
   const allowed = (f: FoodRecord) => f.id !== params.exclude;
-  const mine = (myFoods.data ?? []).filter((f) => allowed(f) && matches(q, f.name, f.brand));
+  const mine = (myFoods.data ?? []).filter((f) => allowed(f) && fits(f.name, f.brand));
   const mineIds = new Set(mine.map((f) => f.id));
-  const recent = (recentFoods.data ?? []).filter((f) => allowed(f) && !mineIds.has(f.id) && f.source !== 'custom' && matches(q, f.name, f.brand)).slice(0, searching ? 10 : 8);
+  const recent = (recentFoods.data ?? []).filter((f) => allowed(f) && !mineIds.has(f.id) && f.source !== 'custom' && fits(f.name, f.brand)).slice(0, searching ? 10 : 8);
   const dbFoods = db.enabled ? (db.data?.results ?? []).slice(0, 20) : [];
+  const showingRecipe = !typed && active === FROM_RECIPE;
 
   function done(item: RecipeItem) {
     success();
+    useScannedIngredient.getState().clear();
     if (mode === 'add') {
       addItem(item);
       showToast(`Added ${item.name} · ${formatInt(item.nutrients.kcal)} kcal`);
@@ -136,8 +182,10 @@ export default function IngredientPicker() {
     if (old.food && !old.food.id.includes(':')) return <SavedAmount id={old.food.id} mode={mode} old={old} onDone={done} />;
     if (old.food) return <AmountStep food={old.food} external={null} mode={mode} old={old} onDone={done} />;
   }
-  if (chosen?.kind === 'saved') return <SavedAmount id={chosen.id} mode={mode} old={old} onDone={done} />;
-  if (chosen?.kind === 'external') return <AmountStep food={asFood(chosen.food)} external={chosen.food} mode={mode} old={old} onDone={done} />;
+  // A scanned food goes straight to its amount, like one you tapped.
+  const pick = scanned ?? chosen;
+  if (pick?.kind === 'saved') return <SavedAmount id={pick.id} mode={mode} old={old} onDone={done} />;
+  if (pick?.kind === 'external') return <AmountStep food={asFood(pick.food)} external={pick.food} mode={mode} old={old} onDone={done} />;
 
   const row = (f: FoodRecord, i: number, tag?: string, recipe?: boolean) => {
     const p = defaultPortion(f);
@@ -181,20 +229,80 @@ export default function IngredientPicker() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search foods and recipes"
+          placeholder={active && active !== FROM_RECIPE ? `Search, or see ${ideaLabel(active)} below` : 'Search foods and recipes'}
           placeholderTextColor={colors.textTertiary}
           selectionColor={colors.accent}
           cursorColor={colors.accent}
           autoCorrect={false}
-          autoFocus={Platform.OS !== 'web'}
+          autoFocus={Platform.OS !== 'web' && chips.length === 0}
           accessibilityLabel="Search foods and recipes"
           style={[styles.searchInput, { color: colors.text }, Platform.OS === 'web' && styles.noWebOutline]}
         />
-        {searching ? <IconButton icon="close" label="Clear search" size={30} onPress={() => setQuery('')} /> : null}
+        {typed ? (
+          <IconButton icon="close" label="Clear search" size={30} onPress={() => setQuery('')} />
+        ) : (
+          <IconButton icon="scan" label="Scan a barcode" size={34} onPress={() => router.push({ pathname: '/scan', params: { for: 'recipe' } })} />
+        )}
       </View>
 
+      {chips.length > 0 && !typed ? (
+        <View style={styles.ideas}>
+          <Text variant="caption" color="textSecondary" style={styles.ideasHead} numberOfLines={1}>
+            {mode === 'swap' && old ? `Instead of ${old.name.toLowerCase()}, try` : `Ideas for “${draft.name.trim()}”`}
+          </Text>
+          <ChipGroup scroll label="Ingredient ideas" inset={gutter}>
+            {chips.map((c) => (
+              <Chip
+                key={c}
+                label={c === FROM_RECIPE ? `From your ${similar?.name ?? 'recipe'}` : ideaLabel(c)}
+                icon={c === FROM_RECIPE ? 'pot' : undefined}
+                accessibilityLabel={c === FROM_RECIPE ? `Ingredients from your ${similar?.name ?? 'recipe'}` : `Show ${ideaLabel(c)}`}
+                selected={c === active}
+                onPress={() => setIdea(c === active ? null : c)}
+              />
+            ))}
+          </ChipGroup>
+        </View>
+      ) : null}
+
       <ScrollView style={styles.flex} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 48 }]} keyboardShouldPersistTaps="handled">
-        {mine.length > 0 ? (
+        {showingRecipe && similarFood ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">Your recipe</Text>
+              <Text variant="label">kcal</Text>
+            </View>
+            {row(similarFood, 0, undefined, true)}
+          </View>
+        ) : null}
+
+        {showingRecipe && fromSimilar.length > 0 ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">Or what went into it</Text>
+              <Text variant="label">kcal</Text>
+            </View>
+            {fromSimilar.map((i, n) => (
+              <FoodRow
+                key={i.key}
+                first={n === 0}
+                name={i.name}
+                recipe={Boolean(i.food && recipeIds.has(i.food.id))}
+                detail={describeItem(i)}
+                kcal={i.nutrients.kcal}
+                macros={macrosOf(i.nutrients)}
+                pressHint={i.food ? 'Pick how much.' : 'Adds it as it was.'}
+                onPress={() => (i.food && !i.food.id.includes(':') ? setChosen({ kind: 'saved', id: i.food.id }) : done(copyOf(i)))}
+                onAdd={() => done(copyOf(i))}
+              />
+            ))}
+            <Text variant="caption" color="textTertiary" style={styles.note}>
+              + adds the same amount as in {similar?.name}.
+            </Text>
+          </View>
+        ) : null}
+
+        {!showingRecipe && mine.length > 0 ? (
           <View>
             <View style={styles.sectionHead}>
               <Text variant="label">Your foods and recipes</Text>
@@ -204,7 +312,7 @@ export default function IngredientPicker() {
           </View>
         ) : null}
 
-        {recent.length > 0 ? (
+        {!showingRecipe && recent.length > 0 ? (
           <View>
             <View style={styles.sectionHead}>
               <Text variant="label">Recent</Text>
@@ -214,7 +322,7 @@ export default function IngredientPicker() {
           </View>
         ) : null}
 
-        {db.enabled ? (
+        {!showingRecipe && db.enabled ? (
           <View>
             <View style={styles.sectionHead}>
               <Text variant="label">Food database</Text>
@@ -241,13 +349,15 @@ export default function IngredientPicker() {
             })}
             {!db.searching && dbFoods.length === 0 ? (
               <Text variant="small" color="textSecondary">
-                Nothing in the databases for “{q}”. Add it as a quick ingredient with its numbers instead.
+                Nothing in the databases for “{ideaLabel(term)}”. Scan its barcode, or add it as a quick ingredient with its numbers.
               </Text>
             ) : null}
           </View>
-        ) : searching && q.length < MIN_SEARCH_LENGTH ? null : !searching ? (
+        ) : !showingRecipe && searching && term.length < MIN_SEARCH_LENGTH ? null : !showingRecipe && !searching ? (
           <Text variant="small" color="textSecondary">
-            Type to search USDA and Open Food Facts too: ghee, paneer, Greek yoghurt, soya chaap…
+            {mode === 'add' && !draft.name.trim()
+              ? 'Name the recipe and Fuel suggests what usually goes in. Or type to search USDA and Open Food Facts, or scan a barcode.'
+              : 'Type to search USDA and Open Food Facts too, or scan a barcode: ghee, paneer, Greek yoghurt, soya chaap…'}
           </Text>
         ) : null}
       </ScrollView>
@@ -273,6 +383,9 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, height: '100%', fontFamily: fonts.regular, fontSize: 15 },
   noWebOutline: { outlineWidth: 0 },
+  ideas: { gap: space.sm, marginTop: -space.xs },
+  ideasHead: { paddingHorizontal: gutter },
   list: { paddingHorizontal: gutter, gap: space.xl },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', paddingRight: 34 + space.sm, marginBottom: space.xs },
+  note: { marginTop: space.sm },
 });

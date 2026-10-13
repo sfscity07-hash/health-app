@@ -15,12 +15,14 @@ import { TextField } from '@/components/ui/TextField';
 import { authErrorMessage } from '@/features/auth/errors';
 import { useCreateFood } from '@/features/food/api';
 import { buildCustomFood, UNIT_SUGGESTIONS, type CustomFoodForm, type UnitDraft } from '@/features/food/forms';
+import { useScannedIngredient } from '@/features/recipes/draft';
 import { isMillilitres } from '@/lib/portion';
 import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
 import { gutter, radius, space } from '@/theme/tokens';
 
-type Params = { date?: string; meal?: string; name?: string; barcode?: string };
+/** `for: 'recipe'`: made from a recipe's barcode scan, so it goes into that recipe once saved. */
+type Params = { date?: string; meal?: string; name?: string; barcode?: string; for?: string };
 
 type Numbers = Pick<CustomFoodForm, 'kcal' | 'protein' | 'carbs' | 'fat' | 'fiber'>;
 
@@ -79,7 +81,13 @@ export default function NewFoodScreen() {
     try {
       const food = await createFood.mutateAsync({ food: built.food, servings: built.servings });
       showToast(`Saved ${food.name} to your foods`);
-      router.replace({ pathname: '/food/[id]', params: { id: food.id, date: params.date ?? '', meal: params.meal ?? '' } });
+      if (params.for === 'recipe') {
+        // Back to the ingredient picker, which opens it to pick the amount.
+        useScannedIngredient.getState().put({ kind: 'saved', id: food.id });
+        router.back();
+      } else {
+        router.replace({ pathname: '/food/[id]', params: { id: food.id, date: params.date ?? '', meal: params.meal ?? '' } });
+      }
     } catch (e) {
       setError(authErrorMessage(e));
     }
