@@ -11,13 +11,15 @@ import { Chip, ChipGroup } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
 import { Text } from '@/components/ui/Text';
-import { useFood, useMyFoods, useRecentLogs, type FoodWithServings } from '@/features/food/api';
+import { useFood, useMyFoods, type FoodWithServings } from '@/features/food/api';
 import { matches } from '@/features/food/recents';
-import { useFoodsByIds, useRecipe, useRecipeIds, useRecipes } from '@/features/recipes/api';
+import { usePantry, useRecipe, useRecipeIds, useRecipes } from '@/features/recipes/api';
 import { useRecipeDraft, useScannedIngredient } from '@/features/recipes/draft';
 import { describeItem, itemFromFood, quickItem, swapItem, type RecipeItem } from '@/features/recipes/logic';
+import { preferredFor, usualFor, type PantryFood } from '@/features/recipes/pantry';
 import { ideaLabel, ingredientIdeas, mentions, nameOverlap, swapIdeas } from '@/features/recipes/suggest';
 import { MIN_SEARCH_LENGTH, useFoodSearch } from '@/features/search/api';
+import { withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
 import { formatInt } from '@/lib/format';
 import { success } from '@/lib/haptics';
@@ -27,7 +29,9 @@ import { useTheme } from '@/theme/theme';
 import { fonts, gutter, space } from '@/theme/tokens';
 
 type Mode = 'add' | 'swap' | 'amount';
-type Chosen = { kind: 'saved'; id: string } | { kind: 'external'; food: ExternalFood };
+/** What you tapped; `start` opens its amount at the one you usually use. */
+type Start = { unit: string; qty: number };
+type Chosen = { kind: 'saved'; id: string; start?: Start } | { kind: 'external'; food: ExternalFood };
 /** The idea chip that lists a similar recipe's ingredients rather than searching. */
 const FROM_RECIPE = '\u0000recipe';
 const ZERO = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0 };
@@ -41,6 +45,7 @@ function AmountStep({
   old,
   onDone,
   recipe,
+  initial,
 }: {
   food: FoodWithServings;
   external: ExternalFood | null;
@@ -49,9 +54,12 @@ function AmountStep({
   onDone: (item: RecipeItem) => void;
   /** The food is itself a recipe: show what's in the amount. */
   recipe?: boolean;
+  /** Where the amount starts, e.g. what you usually use. */
+  initial?: Start;
 }) {
   // Swapping keeps the weight: 200 g of paneer becomes 200 g of the new food.
-  const start = mode === 'amount' && old ? { unit: old.unit, qty: old.quantity } : mode === 'swap' && old?.grams ? { unit: 'g', qty: Math.round(old.grams) } : null;
+  const start =
+    mode === 'amount' && old ? { unit: old.unit, qty: old.quantity } : mode === 'swap' && old?.grams ? { unit: 'g', qty: Math.round(old.grams) } : (initial ?? null);
   return (
     <FoodDetail
       food={food}
@@ -72,7 +80,7 @@ function AmountStep({
   );
 }
 
-function SavedAmount({ id, ...rest }: { id: string; mode: Mode; old: RecipeItem | null; onDone: (item: RecipeItem) => void }) {
+function SavedAmount({ id, ...rest }: { id: string; mode: Mode; old: RecipeItem | null; onDone: (item: RecipeItem) => void; initial?: Start }) {
   const food = useFood(id);
   const recipeIds = useRecipeIds();
   if (food.isPending) return <EditorStatus title="Ingredient" onClose={() => router.back()} />;
@@ -112,7 +120,12 @@ export default function IngredientPicker() {
   const myFoods = useMyFoods();
   const recipes = useRecipes();
   const recipeIds = useRecipeIds();
-  const recentLogs = useRecentLogs();
+  // What you actually use, learned from your logs and recipes.
+  const { pantry: fullPantry, recent: recentFoods } = usePantry();
+  // A recipe can't be its own ingredient.
+  const allowed = (f: FoodRecord) => f.id !== params.exclude;
+  // Your recipes aren't anyone's "usual paneer": they're listed under Your foods and recipes instead.
+  const pantry = fullPantry.filter((p) => allowed(p.food) && p.food.id !== old?.food?.id && !recipeIds.has(p.food.id));
 
   // A saved recipe with a similar name ("Paneer marinade" for "Paneer tikka marinade"): its ingredients are ideas too.
   const similar = useMemo(() => {
@@ -127,13 +140,17 @@ export default function IngredientPicker() {
   }, [mode, draft.name, recipes.data, params.exclude]);
   const similarFood = (recipes.data ?? []).find((r) => r.id === similar?.id)?.food ?? null;
   const similarRecipe = useRecipe(similar?.id);
-  const fromSimilar = (similarRecipe.data?.items ?? []).filter(
-    (i) => !items.some((x) => (x.food && i.food && x.food.id === i.food.id) || mentions(i.name, x.name) || mentions(x.name, i.name)),
-  );
+  // Each ingredient of it as you'd use it now: a generic one becomes the product you usually buy.
+  const inDraft = (foodId: string | null, name: string) => items.some((x) => (foodId && x.food?.id === foodId) || mentions(name, x.name) || mentions(x.name, name));
+  const fromSimilar = (similarRecipe.data?.items ?? [])
+    .map((i) => ({ item: i, usual: preferredFor({ name: i.name, foodId: i.food?.id ?? null }, pantry) }))
+    .filter(({ item, usual }) => !inDraft(item.food?.id ?? null, item.name) && !(usual && inDraft(usual.food.id, usual.food.name)));
 
   const ideas = mode === 'swap' && old ? swapIdeas(old.name) : mode === 'add' ? ingredientIdeas(draft.name, items.map((i) => i.name)) : [];
   const chips = [...(similarFood ? [FROM_RECIPE] : []), ...ideas];
   const active = idea === undefined ? (chips[0] ?? null) : idea && chips.includes(idea) ? idea : null;
+  /** Your top product for an idea, so a chip reads "yoghurt · Great Value". */
+  const usualOf = (c: string) => (c === FROM_RECIPE ? null : (usualFor(c, pantry, 1)[0] ?? null));
   const typed = query.trim();
   // What's searched: what you typed, or the idea that's on.
   const term = typed || (active && active !== FROM_RECIPE ? active : '');
@@ -141,19 +158,19 @@ export default function IngredientPicker() {
   const fits = (name: string, brand: string | null) => (typed ? matches(typed, name, brand) : !term || mentions(term, `${name} ${brand ?? ''}`));
   const db = useFoodSearch(term);
 
-  const recentIds = useMemo(() => {
-    const seen = new Set<string>();
-    for (const r of recentLogs.data ?? []) if (r.food_id && !seen.has(r.food_id)) seen.add(r.food_id);
-    return [...seen].slice(0, 30);
-  }, [recentLogs.data]);
-  const recentFoods = useFoodsByIds(recentIds);
-
-  // A recipe can't be its own ingredient.
-  const allowed = (f: FoodRecord) => f.id !== params.exclude;
-  const mine = (myFoods.data ?? []).filter((f) => allowed(f) && fits(f.name, f.brand));
+  // Your products for what's searched, the one you lean on most first; they're not repeated below.
+  // Typed text matches as you type ("yog"); an idea matches whole words ("yoghurt").
+  const usual = typed ? pantry.filter((p) => fits(p.food.name, p.food.brand)).slice(0, 3) : searching ? usualFor(term, pantry) : [];
+  const usualIds = new Set(usual.map((p) => p.food.id));
+  const mine = (myFoods.data ?? []).filter((f) => allowed(f) && !usualIds.has(f.id) && fits(f.name, f.brand));
   const mineIds = new Set(mine.map((f) => f.id));
-  const recent = (recentFoods.data ?? []).filter((f) => allowed(f) && !mineIds.has(f.id) && f.source !== 'custom' && fits(f.name, f.brand)).slice(0, searching ? 10 : 8);
-  const dbFoods = db.enabled ? (db.data?.results ?? []).slice(0, 20) : [];
+  const recent = recentFoods.filter((f) => allowed(f) && !mineIds.has(f.id) && !usualIds.has(f.id) && f.source !== 'custom' && fits(f.name, f.brand)).slice(0, searching ? 10 : 8);
+  // Database results you already have above (your usual, your foods, recent) aren't repeated.
+  // (Your recipes never hide a database food: a paneer marinade is not plain paneer, however close its numbers.)
+  const shownFoods = [...usual.map((p) => p.food), ...mine.filter((f) => !recipeIds.has(f.id)), ...recent];
+  const dbFoods = db.enabled ? withoutLocal(db.data?.results ?? [], new Set(), shownFoods).slice(0, 20) : [];
+  // Every database result is one of yours already: no section, rather than a misleading "nothing found".
+  const allShownAbove = !db.searching && (db.data?.results.length ?? 0) > 0 && dbFoods.length === 0;
   const showingRecipe = !typed && active === FROM_RECIPE;
 
   function done(item: RecipeItem) {
@@ -183,8 +200,8 @@ export default function IngredientPicker() {
     if (old.food) return <AmountStep food={old.food} external={null} mode={mode} old={old} onDone={done} />;
   }
   // A scanned food goes straight to its amount, like one you tapped.
-  const pick = scanned ?? chosen;
-  if (pick?.kind === 'saved') return <SavedAmount id={pick.id} mode={mode} old={old} onDone={done} />;
+  const pick: Chosen | null = scanned ?? chosen;
+  if (pick?.kind === 'saved') return <SavedAmount id={pick.id} mode={mode} old={old} onDone={done} initial={pick.start} />;
   if (pick?.kind === 'external') return <AmountStep food={asFood(pick.food)} external={pick.food} mode={mode} old={old} onDone={done} />;
 
   const row = (f: FoodRecord, i: number, tag?: string, recipe?: boolean) => {
@@ -203,6 +220,31 @@ export default function IngredientPicker() {
         pressHint="Pick how much."
         onPress={() => setChosen({ kind: 'saved', id: f.id })}
         onAdd={() => quick({ ...f, servings: [] }, null)}
+      />
+    );
+  };
+
+  /** One of your usual products: + adds the amount you usually use (or, swapping, the same weight). */
+  const usualRow = (p: PantryFood, i: number) => {
+    const f = p.food;
+    const amount = p.usual ?? defaultPortion(f);
+    const grams = 'grams' in amount ? amount.grams : 0;
+    const n = nutrientsFor(f, grams);
+    const qty = 'quantity' in amount ? amount.quantity : amount.qty;
+    return (
+      <FoodRow
+        key={f.id}
+        first={i === 0}
+        name={f.name}
+        recipe={recipeIds.has(f.id)}
+        detail={[f.brand, `usually ${describeLogged(qty, amount.unit, amount.unit === 'g' ? null : grams)}`, `used ${p.uses}×`].filter(Boolean).join(' · ')}
+        kcal={n.kcal}
+        macros={macrosOf(n)}
+        pressHint="Pick how much."
+        onPress={() => setChosen({ kind: 'saved', id: f.id, start: p.usual ? { unit: p.usual.unit, qty: p.usual.quantity } : undefined })}
+        onAdd={() =>
+          mode === 'swap' && old ? done(swapItem(old, { ...f, servings: [] })) : done(itemFromFood({ ...f, servings: [] }, qty, amount.unit, grams))
+        }
       />
     );
   };
@@ -251,16 +293,21 @@ export default function IngredientPicker() {
             {mode === 'swap' && old ? `Instead of ${old.name.toLowerCase()}, try` : `Ideas for “${draft.name.trim()}”`}
           </Text>
           <ChipGroup scroll label="Ingredient ideas" inset={gutter}>
-            {chips.map((c) => (
-              <Chip
-                key={c}
-                label={c === FROM_RECIPE ? `From your ${similar?.name ?? 'recipe'}` : ideaLabel(c)}
-                icon={c === FROM_RECIPE ? 'pot' : undefined}
-                accessibilityLabel={c === FROM_RECIPE ? `Ingredients from your ${similar?.name ?? 'recipe'}` : `Show ${ideaLabel(c)}`}
-                selected={c === active}
-                onPress={() => setIdea(c === active ? null : c)}
-              />
-            ))}
+            {chips.map((c) => {
+              // "yoghurt · Great Value": the brand you usually use for it.
+              const brand = usualOf(c)?.food.brand;
+              const label = c === FROM_RECIPE ? `From your ${similar?.name ?? 'recipe'}` : `${ideaLabel(c)}${brand ? ` · ${brand.length > 14 ? `${brand.slice(0, 13)}…` : brand}` : ''}`;
+              return (
+                <Chip
+                  key={c}
+                  label={label}
+                  icon={c === FROM_RECIPE ? 'pot' : undefined}
+                  accessibilityLabel={c === FROM_RECIPE ? `Ingredients from your ${similar?.name ?? 'recipe'}` : `Show ${label}`}
+                  selected={c === active}
+                  onPress={() => setIdea(c === active ? null : c)}
+                />
+              );
+            })}
           </ChipGroup>
         </View>
       ) : null}
@@ -282,23 +329,54 @@ export default function IngredientPicker() {
               <Text variant="label">Or what went into it</Text>
               <Text variant="label">kcal</Text>
             </View>
-            {fromSimilar.map((i, n) => (
-              <FoodRow
-                key={i.key}
-                first={n === 0}
-                name={i.name}
-                recipe={Boolean(i.food && recipeIds.has(i.food.id))}
-                detail={describeItem(i)}
-                kcal={i.nutrients.kcal}
-                macros={macrosOf(i.nutrients)}
-                pressHint={i.food ? 'Pick how much.' : 'Adds it as it was.'}
-                onPress={() => (i.food && !i.food.id.includes(':') ? setChosen({ kind: 'saved', id: i.food.id }) : done(copyOf(i)))}
-                onAdd={() => done(copyOf(i))}
-              />
-            ))}
+            {fromSimilar.map(({ item: i, usual: u }, n) => {
+              if (u) {
+                // The product you use now, at the amount this recipe had.
+                const grams = i.grams ?? u.usual?.grams ?? defaultPortion(u.food).grams;
+                const swapped = itemFromFood({ ...u.food, servings: [] }, grams, 'g', grams);
+                return (
+                  <FoodRow
+                    key={i.key}
+                    first={n === 0}
+                    name={u.food.name}
+                    recipe={recipeIds.has(u.food.id)}
+                    detail={[u.food.brand, `${Math.round(grams)} g`, `your usual, not ${i.name}`].filter(Boolean).join(' · ')}
+                    kcal={swapped.nutrients.kcal}
+                    macros={macrosOf(swapped.nutrients)}
+                    pressHint="Pick how much."
+                    onPress={() => setChosen({ kind: 'saved', id: u.food.id, start: { unit: 'g', qty: Math.round(grams) } })}
+                    onAdd={() => done(swapped)}
+                  />
+                );
+              }
+              return (
+                <FoodRow
+                  key={i.key}
+                  first={n === 0}
+                  name={i.name}
+                  recipe={Boolean(i.food && recipeIds.has(i.food.id))}
+                  detail={[i.brand, describeItem(i)].filter(Boolean).join(' · ')}
+                  kcal={i.nutrients.kcal}
+                  macros={macrosOf(i.nutrients)}
+                  pressHint={i.food ? 'Pick how much.' : 'Adds it as it was.'}
+                  onPress={() => (i.food && !i.food.id.includes(':') ? setChosen({ kind: 'saved', id: i.food.id }) : done(copyOf(i)))}
+                  onAdd={() => done(copyOf(i))}
+                />
+              );
+            })}
             <Text variant="caption" color="textTertiary" style={styles.note}>
               + adds the same amount as in {similar?.name}.
             </Text>
+          </View>
+        ) : null}
+
+        {!showingRecipe && usual.length > 0 ? (
+          <View>
+            <View style={styles.sectionHead}>
+              <Text variant="label">Your usual</Text>
+              <Text variant="label">kcal</Text>
+            </View>
+            {usual.map(usualRow)}
           </View>
         ) : null}
 
@@ -322,7 +400,7 @@ export default function IngredientPicker() {
           </View>
         ) : null}
 
-        {!showingRecipe && db.enabled ? (
+        {!showingRecipe && db.enabled && !allShownAbove ? (
           <View>
             <View style={styles.sectionHead}>
               <Text variant="label">Food database</Text>

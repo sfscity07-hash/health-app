@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
-import { foodKeys, num, numOrNull, toFood, type FoodWithServings } from '@/features/food/api';
+import { foodKeys, num, numOrNull, toFood, useRecentLogs, type FoodWithServings } from '@/features/food/api';
 import { recipeFood, recipeUnits, type RecipeDraft, type RecipeItem } from '@/features/recipes/logic';
+import { buildPantry, type Use } from '@/features/recipes/pantry';
 import { ensureFood } from '@/features/search/api';
+import { toISODate } from '@/lib/dates';
 import { nutrientsFor, WHOLE_BATCH, type FoodRecord } from '@/lib/portion';
 import { requireSupabase } from '@/lib/supabase';
 
-export const recipeKeys = { all: ['recipes'] as const, one: (id: string) => ['recipe', id] as const };
+export const recipeKeys = { all: ['recipes'] as const, one: (id: string) => ['recipe', id] as const, history: ['ingredientHistory'] as const };
 
 export type RecipeSummary = { id: string; food: FoodRecord; finalWeight: number | null; servings: number | null; itemCount: number };
 
@@ -168,6 +171,7 @@ export function useSaveRecipe() {
       }));
       queryClient.invalidateQueries({ queryKey: recipeKeys.all });
       queryClient.invalidateQueries({ queryKey: recipeKeys.one(id) });
+      queryClient.invalidateQueries({ queryKey: recipeKeys.history });
       queryClient.invalidateQueries({ queryKey: foodKeys.food(id) });
       queryClient.invalidateQueries({ queryKey: foodKeys.myFoods });
     },
@@ -205,4 +209,61 @@ export function useFoodsByIds(ids: string[]) {
       return ids.map((id) => byId.get(id)).filter((f): f is FoodRecord => Boolean(f));
     },
   });
+}
+
+/** Every food you've put in a recipe, with the amount and when that recipe was last saved: half of what your pantry learns from. */
+export function useIngredientHistory() {
+  const { session } = useAuth();
+  return useQuery({
+    queryKey: recipeKeys.history,
+    enabled: Boolean(session),
+    queryFn: async (): Promise<Use[]> => {
+      const { data, error } = await requireSupabase()
+        .from('recipe_items')
+        .select('food_id, quantity, unit, grams, recipes(updated_at)')
+        .not('food_id', 'is', null)
+        .limit(1000);
+      if (error) throw error;
+      return (data ?? [])
+        .filter((r) => r.food_id)
+        .map((r) => {
+          const saved = one<{ updated_at: string }>(r.recipes)?.updated_at;
+          return {
+            foodId: r.food_id as string,
+            quantity: num(r.quantity),
+            unit: r.unit as string,
+            grams: numOrNull(r.grams),
+            date: toISODate(saved ? new Date(saved) : new Date()),
+            inRecipe: true,
+          };
+        });
+    },
+  });
+}
+
+/**
+ * Your pantry: the products you use, from your last 60 days of logs and every
+ * recipe, ranked by how much you lean on them now. Also hands back the foods
+ * you logged lately, newest first.
+ */
+export function usePantry() {
+  const recentLogs = useRecentLogs();
+  const history = useIngredientHistory();
+  const today = toISODate(new Date());
+  const uses = useMemo<Use[]>(
+    () => [
+      ...(recentLogs.data ?? []).flatMap((r) =>
+        r.food_id ? [{ foodId: r.food_id, quantity: r.quantity, unit: r.unit, grams: r.grams, date: r.log_date, inRecipe: false }] : [],
+      ),
+      ...(history.data ?? []),
+    ],
+    [recentLogs.data, history.data],
+  );
+  const recentIds = useMemo(() => [...new Set((recentLogs.data ?? []).flatMap((r) => (r.food_id ? [r.food_id] : [])))].slice(0, 30), [recentLogs.data]);
+  const ids = useMemo(() => [...new Set([...recentIds, ...uses.map((u) => u.foodId)])].slice(0, 80), [recentIds, uses]);
+  const foods = useFoodsByIds(ids);
+  const pantry = useMemo(() => buildPantry(uses, foods.data ?? [], today), [uses, foods.data, today]);
+  const byId = useMemo(() => new Map((foods.data ?? []).map((f) => [f.id, f])), [foods.data]);
+  const recent = useMemo(() => recentIds.flatMap((id) => (byId.has(id) ? [byId.get(id) as FoodRecord] : [])), [recentIds, byId]);
+  return { pantry, recent };
 }

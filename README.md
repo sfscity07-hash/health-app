@@ -9,7 +9,7 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 ## What works right now
 
-Updated with every release. **Latest: adding recipe ingredients is faster: ideas from the recipe's name that search straight away, your similar recipes, and barcode scanning.** (Before that: deficit per day, the − 1 + counter, sheets that scroll.)
+Updated with every release. **Latest: Fuel learns your pantry. Recipe ingredients come up as the exact products you use (Great Value Greek yoghurt, not "Greek Yoghurt"), at your usual amounts. Also: tapping an ingredient no longer bounces.** (Before that: recipe ingredient ideas and scanning, deficit per day, the − 1 + counter.)
 
 **Before running this version:**
 1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages and no new SQL this time.
@@ -47,6 +47,11 @@ Updated with every release. **Latest: adding recipe ingredients is faster: ideas
   - **New recipe**: name it, then **Add ingredient** for everything that went in: your own foods, anything from USDA or Open Food Facts (search "ghee", "paneer", "greek yoghurt"), recent foods, or **another recipe**. Tap **+** for the usual amount, or tap the food to pick it in tbsp, grams, slices or any of its units.
   - **Ideas while you add**: Add ingredient opens with chips from the recipe's name ("Paneer tikka marinade" → paneer, yoghurt, ginger garlic paste, lemon juice, mustard oil, ghee), and the first one is already searched, so the usual ingredients are one tap. Ideas already in the recipe drop off. Tap another chip to search it, or type anything.
   - **From your recipes**: if you've saved a similar recipe ("Paneer marinade"), its chip comes first: add the whole recipe, or any of its ingredients at the same amount.
+  - **It learns your pantry**: every product you log or put in a recipe counts, recent use most, so a brand you've switched to wins within a few weeks.
+    - An idea or search shows **Your usual** first: the exact products you use, with brand, how much you usually put in, and how often ("Great Value · usually 1 container · 150 g · used 3×"); **+** adds your usual amount.
+    - Chips show your brand ("yoghurt · Great Value").
+    - In "From your Paneer marinade", a generic ingredient becomes the product you buy now, at the recipe's amount ("Greek Nonfat Yogurt, Plain · Great Value · 150 g · your usual, not Greek Yoghurt").
+    - Dishes never stand in for ingredients: your Paneer marinade is never your "usual paneer".
   - **Scan**: the barcode button in the ingredient search adds a pack straight to the recipe. A barcode nobody knows lets you copy the label once, and it goes into the recipe (and scans instantly next time).
   - **Swap ideas**: swapping an ingredient suggests stand-ins (paneer → tofu, soya chaap, chicken breast, cottage cheese; ghee → olive oil; cream → Greek yoghurt…).
   - **Quick ingredient (just the numbers)**: for a spice mix or anything that isn't a food in Fuel. Calories (or macros), weight optional.

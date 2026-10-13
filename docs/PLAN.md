@@ -315,6 +315,7 @@ In order. Each step ships on its own, with "what works" notes before you try it.
    - Before you type, idea chips from the recipe's name (`features/recipes/suggest.ts`): foods the name mentions first, then what that kind of dish usually has (a small dictionary of dishes: tikka/marinade, curry, dal, biryani, smoothie, taco…), minus what's already in it; British/American spellings match. The first chip is searched straight away (your foods, recent and both databases).
    - A saved recipe with a similar name gets the first chip: add the whole recipe, or its ingredients at the same amounts.
    - Swapping suggests stand-ins (paneer → tofu, soya chaap…; ghee → olive oil…).
+   - **Learns your pantry** (`features/recipes/pantry.ts`): every product you've logged (60 days) or put in a recipe (`recipe_items`, no new SQL), weighted 1.5× for recipes and halving every 45 days. "Your usual" leads every idea and search with your exact products and usual amounts; chips show your brand; a similar recipe's generic ingredient is replaced by your usual product of the same kind (e.g. "greek yogurt"), never by a dish that only mentions it. Your recipes never hide database foods (fixes plain paneer being hidden by a paneer marinade, in the logger too).
 3. **Calendar** (M)
    - A month view of the past year (and before): each day marked on budget / over / not logged / finished; tap a day to open its meals. Jump to any month; search your history ("when did I eat paneer").
 4. **Water from drinks** (S/M)

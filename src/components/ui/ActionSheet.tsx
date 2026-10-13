@@ -1,5 +1,5 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
+import Animated, { Easing, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -26,7 +26,8 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose }: Acti
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]} onPress={onClose} accessibilityLabel="Close menu" />
       <Animated.View
-        entering={SlideInDown.springify().damping(20).stiffness(220)}
+        // A smooth glide up that settles without overshooting (no bounce).
+        entering={SlideInDown.duration(220).easing(Easing.out(Easing.cubic))}
         style={[styles.panel, { backgroundColor: colors.surface1, paddingBottom: insets.bottom + space.md }]}>
         <View style={[styles.grabber, { backgroundColor: colors.hairlineStrong }]} />
         <View style={styles.head}>

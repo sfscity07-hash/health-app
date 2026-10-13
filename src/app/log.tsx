@@ -81,7 +81,8 @@ export default function LogSheet() {
   // While a new search loads, the last one's results stay up (dimmed), minus any that don't fit what you've typed since.
   const stale = db.typing || db.isPlaceholderData;
   const fromDb = (db.data?.results ?? []).filter((f) => !stale || relevance(q, f) > MIN_RELEVANCE);
-  const dbResults = dbActive ? withoutLocal(fromDb, loggedKeys, myFoods.data ?? []) : [];
+  // Your recipes don't hide database foods: a paneer marinade is not plain paneer, however close its numbers.
+  const dbResults = dbActive ? withoutLocal(fromDb, loggedKeys, (myFoods.data ?? []).filter((f) => !recipeIds.has(f.id))) : [];
   const dbSettled = dbActive && !db.searching && db.data !== undefined;
   const dbNote = dbSettled && db.data ? sourceNote(db.data) : null;
   const nothingFound = searching && mealMatches.length === 0 && recentMatches.length === 0 && foodMatches.length === 0 && (!dbActive || (dbSettled && dbResults.length === 0));

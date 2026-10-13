@@ -200,3 +200,36 @@ export function nameOverlap(a: string, b: string): number {
   const ta = new Set(terms(a));
   return terms(b).filter((t) => ta.has(t)).length;
 }
+
+/** Every food the ideas know, longest first, for telling what kind of food a product is. */
+const KINDS = [
+  ...new Set([
+    ...PHRASES,
+    ...Object.entries(DISHES)
+      .filter(([, d]) => d.food)
+      .map(([k]) => k),
+    ...Object.values(DISHES).flatMap((d) => d.ideas),
+    ...Object.keys(SWAPS),
+    ...Object.values(SWAPS).flat(),
+  ]),
+].sort((a, b) => b.split(' ').length - a.split(' ').length);
+
+/**
+ * What kind of food something is, in the ideas' words: "Greek Yoghurt" →
+ * "greek yogurt", "Ghee, clarified butter" → "ghee". The most specific kind
+ * wins, then the one named first. Null when it's nothing the ideas know.
+ */
+export function kindOf(name: string): string | null {
+  const n = ` ${normal(name)} `;
+  let best: { kind: string; words: number; at: number } | null = null;
+  for (const k of KINDS) {
+    if (!mentions(k, name)) continue;
+    const words = k.split(' ').length;
+    const at = n.indexOf(` ${k.split(' ')[0]}`);
+    if (!best || words > best.words || (words === best.words && at >= 0 && (best.at < 0 || at < best.at))) best = { kind: k, words, at };
+  }
+  return best?.kind ?? null;
+}
+
+/** Is this named as a dish ("Paneer marinade", "Chicken curry") rather than an ingredient? */
+export const isDish = (name: string) => terms(name).some((t) => DISHES[t] && !DISHES[t].food);

@@ -256,7 +256,7 @@ function EditorForm({ params, draftId, originalName }: { params: Params; draftId
                     key={i.key}
                     accessibilityRole="button"
                     accessibilityLabel={`${i.name}${nested ? ', a recipe' : ''}, ${describeItem(i)}, ${formatInt(i.nutrients.kcal)} calories. Tap to change, swap or remove.`}
-                    pressedScale={0.985}
+                    pressedScale={1}
                     onPress={() => {
                       tick();
                       setMenuFor(i);
