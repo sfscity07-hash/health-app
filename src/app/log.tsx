@@ -12,17 +12,18 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { useFoodLogs } from '@/features/dashboard/api';
-import { useFavorites, useLogEntries, useLogFood, useMyFoods, useRecentLogs } from '@/features/food/api';
+import { addedMessage, useFavorites, useLogEntries, useLogFood, useMyFoods, useRecentLogs, useUnlog, type NewEntry } from '@/features/food/api';
 import { matches, rankRecents, type RecentFood } from '@/features/food/recents';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { useSavedMeals } from '@/features/meals/api';
-import { entriesFromMeal } from '@/features/meals/logic';
+import { entriesFromMeal, type SavedMeal } from '@/features/meals/logic';
 import { useRecipeIds } from '@/features/recipes/api';
 import { MIN_SEARCH_LENGTH, sourceNote, useFoodSearch, useFoundFoods } from '@/features/search/api';
 import { MIN_RELEVANCE, relevance, withoutLocal } from '@/features/search/rank';
 import { asFood, SOURCE_TAG, type ExternalFood } from '@/features/search/types';
 import { fromISODate, toISODate } from '@/lib/dates';
 import { formatDayLabel, formatInt } from '@/lib/format';
+import { newId } from '@/lib/id';
 import { isMeal, MEAL_LABEL, MEALS, mealForTime, type Meal } from '@/lib/meals';
 import { defaultPortion, describeLogged, formatQty, nutrientsFor, type FoodRecord } from '@/lib/portion';
 import { useViewedDate } from '@/store/day';
@@ -51,6 +52,7 @@ export default function LogSheet() {
   const dayLogs = useFoodLogs(date);
   const logFood = useLogFood();
   const logEntries = useLogEntries();
+  const unlog = useUnlog();
   const savedMeals = useSavedMeals();
   const recipeIds = useRecipeIds();
   const showToast = useToast((s) => s.show);
@@ -105,20 +107,28 @@ export default function LogSheet() {
     setMeal((m) => MEALS[(MEALS.indexOf(m) + 1) % MEALS.length]);
   }
 
-  function logRecent(r: RecentFood) {
+  /** Logs one entry with an id made here, and returns how to take it back out. */
+  function logOne(entry: Omit<NewEntry, 'id' | 'date' | 'meal'>, count: number) {
+    const id = newId();
+    logFood.mutate({ ...entry, id, date, meal });
+    showToast(addedMessage(entry.name, entry.nutrients.kcal, count));
+    return () => unlog(date, [id], entry.name);
+  }
+
+  function logRecent(r: RecentFood, count: number) {
     const l = r.last;
-    logFood.mutate({
-      date,
-      meal,
-      foodId: r.foodId,
-      name: r.name,
-      brand: r.brand,
-      quantity: l.quantity,
-      unit: l.unit,
-      grams: l.grams,
-      nutrients: { kcal: l.kcal, protein_g: l.protein_g, carbs_g: l.carbs_g, fat_g: l.fat_g, fiber_g: l.fiber_g },
-    });
-    showToast(`Added ${r.name} · ${formatInt(l.kcal)} kcal`);
+    return logOne(
+      {
+        foodId: r.foodId,
+        name: r.name,
+        brand: r.brand,
+        quantity: l.quantity,
+        unit: l.unit,
+        grams: l.grams,
+        nutrients: { kcal: l.kcal, protein_g: l.protein_g, carbs_g: l.carbs_g, fat_g: l.fat_g, fiber_g: l.fiber_g },
+      },
+      count,
+    );
   }
 
   function openRecent(r: RecentFood) {
@@ -131,11 +141,9 @@ export default function LogSheet() {
     }
   }
 
-  function logFoodRecord(f: FoodRecord) {
+  function logFoodRecord(f: FoodRecord, count: number) {
     const p = defaultPortion(f);
-    const nutrients = nutrientsFor(f, p.grams);
-    logFood.mutate({ date, meal, foodId: f.id, name: f.name, brand: f.brand, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients });
-    showToast(`Added ${f.name} · ${formatInt(nutrients.kcal)} kcal`);
+    return logOne({ foodId: f.id, name: f.name, brand: f.brand, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients: nutrientsFor(f, p.grams) }, count);
   }
 
   const openFood = (f: FoodRecord) => router.push({ pathname: '/food/[id]', params: { id: f.id, date, meal } });
@@ -145,12 +153,17 @@ export default function LogSheet() {
     router.push({ pathname: '/food/preview', params: { key: f.key, date, meal } });
   }
 
-  function logFound(f: ExternalFood) {
+  function logFound(f: ExternalFood, count: number) {
     const food = asFood(f);
     const p = defaultPortion(food);
-    const nutrients = nutrientsFor(food, p.grams);
-    logFood.mutate({ date, meal, foodId: null, external: f, name: f.name, brand: f.brand, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients });
-    showToast(`Added ${f.name} · ${formatInt(nutrients.kcal)} kcal`);
+    return logOne({ foodId: null, external: f, name: f.name, brand: f.brand, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients: nutrientsFor(food, p.grams) }, count);
+  }
+
+  function logMeal(m: SavedMeal, count: number) {
+    const entries = entriesFromMeal(m, date, meal).map((e) => ({ ...e, id: newId() }));
+    logEntries.mutate(entries);
+    showToast(addedMessage(m.name, m.totals.kcal, count));
+    return () => unlog(date, entries.map((e) => e.id), m.name);
   }
 
   return (
@@ -268,10 +281,7 @@ export default function LogSheet() {
                 kcal={m.totals.kcal}
                 macros={macrosOf(m.totals)}
                 onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id, date, meal } })}
-                onAdd={() => {
-                  logEntries.mutate(entriesFromMeal(m, date, meal));
-                  showToast(`Added ${m.name} · ${formatInt(m.totals.kcal)} kcal`);
-                }}
+                onAdd={(count) => logMeal(m, count)}
               />
             ))}
           </View>
@@ -294,7 +304,7 @@ export default function LogSheet() {
                 favorite={r.foodId ? favs.has(r.foodId) : false}
                 recipe={Boolean(r.foodId && recipeIds.has(r.foodId))}
                 onPress={() => openRecent(r)}
-                onAdd={() => logRecent(r)}
+                onAdd={(count) => logRecent(r, count)}
               />
             ))}
           </View>
@@ -320,7 +330,7 @@ export default function LogSheet() {
                   favorite={favs.has(f.id)}
                   recipe={recipeIds.has(f.id)}
                   onPress={() => openFood(f)}
-                  onAdd={() => logFoodRecord(f)}
+                  onAdd={(count) => logFoodRecord(f, count)}
                 />
               );
             })}
@@ -357,7 +367,7 @@ export default function LogSheet() {
                     kcal={n.kcal}
                     macros={macrosOf(n)}
                     onPress={() => openFound(f)}
-                    onAdd={() => logFound(f)}
+                    onAdd={(count) => logFound(f, count)}
                   />
                 );
               })}

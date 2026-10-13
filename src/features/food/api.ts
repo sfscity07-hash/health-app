@@ -7,10 +7,13 @@ import type { LoggedRow } from '@/features/food/recents';
 import { ensureFood } from '@/features/search/api';
 import type { ExternalFood } from '@/features/search/types';
 import { addDays, toISODate } from '@/lib/dates';
+import { formatInt } from '@/lib/format';
 import { reportFailure } from '@/lib/failure';
+import { newId } from '@/lib/id';
 import type { Meal } from '@/lib/meals';
 import { roundNutrients, type FoodRecord, type Nutrients, type Serving } from '@/lib/portion';
 import { requireSupabase } from '@/lib/supabase';
+import { useToast } from '@/store/toast';
 
 export type FoodWithServings = FoodRecord & { servings: Serving[] };
 
@@ -143,6 +146,8 @@ export function useToggleFavorite() {
 }
 
 export type NewEntry = {
+  /** Set it to be able to remove the entry again straight away (the + / − on a row). */
+  id?: string;
   date: string;
   meal: Meal;
   foodId: string | null;
@@ -190,6 +195,8 @@ const pickNutrients = (e: Nutrients): Nutrients => ({
 const logRow = (e: NewEntry, foodId: string | null) => {
   const n = roundNutrients(e.nutrients);
   return {
+    // Every row gets an id from the phone, so a batch insert always sends the same columns.
+    id: e.id ?? newId(),
     log_date: e.date,
     meal: e.meal,
     food_id: foodId,
@@ -220,7 +227,7 @@ function showEntries(queryClient: ReturnType<typeof useQueryClient>, entries: Ne
   entries.forEach((e, i) => {
     const n = roundNutrients(e.nutrients);
     const temp: FoodLogEntry = {
-      id: `temp-${now}-${i}`,
+      id: e.id ?? `temp-${now}-${i}`,
       logged_at: new Date(now + i).toISOString(),
       meal: e.meal,
       food_id: e.foodId,
@@ -240,9 +247,13 @@ function showEntries(queryClient: ReturnType<typeof useQueryClient>, entries: Ne
  * Logs a food. The dashboard and Food log update before the server answers,
  * so the screen can close the moment you tap Add.
  */
+/** Log writes run one after another, so removing something you just added never overtakes the add. */
+const LOG_WRITES = { id: 'food-log-writes' };
+
 export function useLogFood() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: LOG_WRITES,
     mutationFn: (e: NewEntry) => insertEntries([e]),
     onMutate: (e) => showEntries(queryClient, [e]),
     onError: (e, v) => reportFailure(`add ${v.name}`, e),
@@ -254,6 +265,7 @@ export function useLogFood() {
 export function useLogEntries() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: LOG_WRITES,
     mutationFn: (entries: NewEntry[]) => insertEntries(entries),
     onMutate: (entries) => showEntries(queryClient, entries),
     onError: (e) => reportFailure('add those foods', e),
@@ -330,6 +342,7 @@ export function useUpdateEntry() {
 export function useDeleteEntry() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: LOG_WRITES,
     mutationFn: async ({ id }: { id: string; date: string }) => {
       const { error } = await requireSupabase().from('food_logs').delete().eq('id', id);
       if (error) throw error;
@@ -342,6 +355,20 @@ export function useDeleteEntry() {
     onError: (e) => reportFailure('delete that entry', e),
     onSettled: (_d, _e, v) => invalidateLogs(queryClient, v.date),
   });
+}
+
+/** "Added Paneer · 151 kcal", and "Added Paneer ×2 · 151 kcal each" when you tap + again. */
+export const addedMessage = (name: string, kcal: number, count = 1) =>
+  count > 1 ? `Added ${name} ×${count} · ${formatInt(kcal)} kcal each` : `Added ${name} · ${formatInt(kcal)} kcal`;
+
+/** Takes back entries you've just logged (the − on a row's counter), by the ids they were logged with. */
+export function useUnlog() {
+  const remove = useDeleteEntry();
+  const showToast = useToast((s) => s.show);
+  return (date: string, ids: string[], name: string) => {
+    for (const id of ids) remove.mutate({ id, date });
+    showToast(`Removed ${name}`, 'info');
+  };
 }
 
 /** Saves a food you created, with its extra units; returns it so it can be logged straight away. */

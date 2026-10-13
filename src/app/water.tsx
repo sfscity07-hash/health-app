@@ -99,7 +99,7 @@ export default function WaterSheet() {
         <IconButton icon="close" label="Close" size={36} onPress={() => router.back()} />
       </View>
 
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 96 }]}>
+      <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 96 }]}>
         <View
           style={styles.total}
           accessible

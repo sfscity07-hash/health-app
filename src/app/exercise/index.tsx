@@ -15,7 +15,7 @@ import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { estimateWorkout } from '@/features/exercise/energy';
-import { useActivities, useBody, useLogWorkout, useRecentWorkouts, useWorkouts } from '@/features/exercise/api';
+import { useActivities, useBody, useDeleteWorkout, useLogWorkout, useRecentWorkouts, useWorkouts } from '@/features/exercise/api';
 import {
   activityMatches,
   ADDBACK,
@@ -29,6 +29,7 @@ import {
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
 import { toISODate } from '@/lib/dates';
 import { formatInt } from '@/lib/format';
+import { newId } from '@/lib/id';
 import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
 import { fonts, gutter, space } from '@/theme/tokens';
@@ -47,6 +48,7 @@ export default function ExerciseSheet() {
   const recent = useRecentWorkouts();
   const activities = useActivities();
   const logWorkout = useLogWorkout();
+  const removeWorkout = useDeleteWorkout();
   const showToast = useToast((s) => s.show);
   const body = useBody();
 
@@ -62,10 +64,15 @@ export default function ExerciseSheet() {
     router.push({ pathname: '/exercise/new', params: { date, activity: String(id), ...(recentId ? { from: recentId } : {}) } });
   const openOwn = () => router.push({ pathname: '/exercise/new', params: { date } });
 
-  function repeat(w: Workout) {
+  function repeat(w: Workout, count: number) {
     const { exercise_id, name, duration_min, kcal_burned, speed_kmh, incline_pct, effort, avg_hr } = w;
-    logWorkout.mutate({ log_date: date, exercise_id, name, duration_min, kcal_burned, speed_kmh, incline_pct, effort, avg_hr });
-    showToast(`Logged ${w.name} · ${formatInt(w.kcal_burned)} kcal`);
+    const id = newId();
+    logWorkout.mutate({ id, log_date: date, exercise_id, name, duration_min, kcal_burned, speed_kmh, incline_pct, effort, avg_hr });
+    showToast(count > 1 ? `Logged ${w.name} ×${count} · ${formatInt(w.kcal_burned)} kcal each` : `Logged ${w.name} · ${formatInt(w.kcal_burned)} kcal`);
+    return () => {
+      removeWorkout.mutate({ id, date, kcal: w.kcal_burned });
+      showToast(`Removed ${w.name}`, 'info');
+    };
   }
 
   return (
@@ -103,6 +110,7 @@ export default function ExerciseSheet() {
       </View>
 
       <ScrollView
+        nestedScrollEnabled
         style={styles.list}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 96 }]}
         keyboardShouldPersistTaps="handled"
@@ -144,7 +152,7 @@ export default function ExerciseSheet() {
                 kcal={w.kcal_burned}
                 pressHint="Opens the workout."
                 onPress={() => (w.exercise_id !== null && w.duration_min ? openActivity(w.exercise_id, w.id) : openOwn())}
-                onAdd={() => repeat(w)}
+                onAdd={(count) => repeat(w, count)}
               />
             ))}
           </View>

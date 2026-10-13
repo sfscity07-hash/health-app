@@ -8,10 +8,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
-import { useLogEntries } from '@/features/food/api';
+import { addedMessage, useLogEntries, useUnlog } from '@/features/food/api';
 import { useSavedMeals } from '@/features/meals/api';
 import { entriesFromMeal, mealSummary, type SavedMeal } from '@/features/meals/logic';
-import { formatInt } from '@/lib/format';
+import { newId } from '@/lib/id';
 import { isMeal, MEAL_LABEL, mealForTime } from '@/lib/meals';
 import { useViewedDate } from '@/store/day';
 import { useToast } from '@/store/toast';
@@ -28,11 +28,14 @@ export default function SavedMealsScreen() {
   const slot = isMeal(params.meal) ? params.meal : mealForTime(new Date());
   const meals = useSavedMeals();
   const logEntries = useLogEntries();
+  const unlog = useUnlog();
   const showToast = useToast((s) => s.show);
 
-  function add(m: SavedMeal) {
-    logEntries.mutate(entriesFromMeal(m, date, slot));
-    showToast(`Added ${m.name} · ${formatInt(m.totals.kcal)} kcal`);
+  function add(m: SavedMeal, count: number) {
+    const entries = entriesFromMeal(m, date, slot).map((e) => ({ ...e, id: newId() }));
+    logEntries.mutate(entries);
+    showToast(addedMessage(m.name, m.totals.kcal, count));
+    return () => unlog(date, entries.map((e) => e.id), m.name);
   }
 
   return (
@@ -75,7 +78,7 @@ export default function SavedMealsScreen() {
               kcal={m.totals.kcal}
               macros={{ p: m.totals.protein_g, c: m.totals.carbs_g, f: m.totals.fat_g }}
               onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id, date, meal: slot } })}
-              onAdd={() => add(m)}
+              onAdd={(count) => add(m, count)}
             />
           ))}
         </View>

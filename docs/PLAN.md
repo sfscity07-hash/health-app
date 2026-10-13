@@ -302,6 +302,39 @@ Each phase ends in a working app you can try in Expo Go, committed to `claude/qu
 
 ---
 
+## Next: your list (October 13)
+
+In order. Each step ships on its own, with "what works" notes before you try it. Size: S (a session), M (one or two), L (several).
+
+1. **Deficit per day + two bugs** ✅ (S)
+   - Each day's energy balance: what you burned (your expenditure estimate, plus logged exercise if you add exercise to your budget) minus what you ate. On the dashboard under the gauge ("Deficit so far" today), on the Food log's day card, and a 7-day chart on Progress (bars up for a deficit, down for a surplus, dashed line for what eating your budget gives) with the week's total and kg of fat. Past days use the expenditure from the check-in that reviewed them.
+   - Bug: sheets (Water, Exercise, Copy) slid shut when you scrolled their list. The list now scrolls first; the sheet only moves once the list is at the top.
+   - Bug: tapping + twice added twice silently. The + now turns into a − 1 + counter on that row; − takes the last one back out (logger, recipes, saved meals, recent workouts).
+2. **Recipe ingredients: scan + suggestions** (S)
+   - A barcode button in the ingredient search; the scanned food goes into the recipe instead of your log.
+   - Before you type, suggestions from the recipe's name ("Paneer tikka marinade" → paneer, yoghurt, ghee/oil, ginger-garlic paste, lemon), searched straight away so they are one tap.
+3. **Calendar** (M)
+   - A month view of the past year (and before): each day marked on budget / over / not logged / finished; tap a day to open its meals. Jump to any month; search your history ("when did I eat paneer").
+4. **Water from drinks** (S/M)
+   - Milk, tea, coffee, juice, buttermilk / chaas, lassi, coconut water and soups count toward water automatically, using each food's water content (USDA lists it) or a drinks list when it isn't known. The Water tile shows "+0.4 L from drinks"; a switch turns it off.
+5. **Micronutrients, salt and caffeine, every day** (L, new SQL)
+   - Store sodium (and salt), potassium, calcium, iron, magnesium, vitamins A, C, D, B12, folate, saturated fat, sugar and caffeine per food (USDA has full profiles, Open Food Facts some, your own foods optional fields), copy them onto every log like the macros.
+   - A daily Nutrients screen: % of daily value bars, sodium and caffeine against upper limits, and an honest "3 foods had no data for this" so a gap never looks like zero.
+6. **AI groundwork** (S/M) — decision needed first
+   - AI runs in a Supabase Edge Function (free tier) that holds the AI key, so no key is ever in the app or the public repo; it checks you're signed in and caps calls per day.
+   - Rule for every AI feature: the AI suggests meals and writes explanations; Fuel's own food data and maths compute every calorie and gram, so numbers are never made up.
+   - **Your call:** Claude's API is pay-per-use, not free. A meal plan is a few thousand tokens: about $0.001–0.002 on Claude Haiku 5.5 ($0.10 / $0.50 per million tokens in / out), about $0.05 on Claude Opus 5.5 ($4 / $20). That breaks the $0 rule unless you're fine with cents a month. Free tiers from other AI providers exist, with daily limits and data-use terms to read. We pick before step 7.
+7. **Adaptive calories & macros, weekly and monthly** (M)
+   - Builds on the weekly check-in: a monthly review (trend vs plan, how many days you logged, protein days, the month's deficit) with an adjusted budget and macros, and an AI-written summary of what changed and why (optional).
+8. **Programs** (L)
+   - Lose fat, lose fat + build muscle (recomp), or your own goal, over a period you choose. Generates a day-by-day regimen: each day's calories and macros (higher on training days, lower on rest days, optional diet breaks / refeeds), where you are in the program, and AI meal ideas for each day.
+9. **Pantry → meal plan** (L)
+   - Keep an inventory of what's at home (type it, scan barcodes, or tick foods you log). Choose the days and meals ("just breakfast for 3 days", "breakfast and lunch for 2"); AI drafts meals using only what you have, Fuel scales the portions to hit your targets, and each meal logs in one tap or saves as a meal.
+
+**Phase 13 (installable APK + over-the-air updates, skeletons, offline)** can slot in anywhere; before step 6 is best, since the installed app then gets every later step without a reinstall.
+
+---
+
 ## What you'll need to set up (all free)
 1. A **Supabase** account → new project → copy its URL and anon key into `.env`.
 2. Optional: a free **USDA FoodData Central** API key (api.data.gov signup) → `EXPO_PUBLIC_USDA_API_KEY` in `.env`. Without it, search uses USDA's shared demo key (about 30 searches an hour).

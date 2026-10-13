@@ -104,7 +104,10 @@ export function useBodyWeightKg(): number | null {
   }, [weighIns.data]);
 }
 
-export type NewWorkout = Pick<Workout, 'log_date' | 'exercise_id' | 'name' | 'duration_min' | 'kcal_burned' | 'speed_kmh' | 'incline_pct' | 'effort' | 'avg_hr'>;
+export type NewWorkout = Pick<Workout, 'log_date' | 'exercise_id' | 'name' | 'duration_min' | 'kcal_burned' | 'speed_kmh' | 'incline_pct' | 'effort' | 'avg_hr'> & {
+  /** Set it to be able to remove the workout again straight away. */
+  id?: string;
+};
 
 /** Leaves out details that weren't given, so a database without those columns still accepts the workout. */
 function row<T extends Partial<NewWorkout>>(w: T) {
@@ -125,16 +128,20 @@ function settle(queryClient: ReturnType<typeof useQueryClient>) {
 const shiftBurned = (queryClient: ReturnType<typeof useQueryClient>, date: string, kcal: number) =>
   patchSummaries(queryClient, date, (d) => ({ ...d, kcal_out: Math.max(0, d.kcal_out + kcal) }));
 
+/** Workout writes run one after another, so removing one you just added never overtakes the add. */
+const WORKOUT_WRITES = { id: 'workout-writes' };
+
 export function useLogWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: WORKOUT_WRITES,
     mutationFn: async (w: NewWorkout) => {
       const { error } = await requireSupabase().from('exercise_logs').insert(row(w));
       if (error) throw error;
     },
     onMutate: (w) => {
       shiftBurned(queryClient, w.log_date, w.kcal_burned);
-      const temp: Workout = { ...w, id: `temp-${Date.now()}`, created_at: new Date().toISOString() };
+      const temp: Workout = { ...w, id: w.id ?? `temp-${Date.now()}`, created_at: new Date().toISOString() };
       queryClient.setQueryData<Workout[]>(exerciseKeys.day(w.log_date), (old) => (old ? [...old, temp] : old));
     },
     onError: (e, w) => reportFailure(`log ${w.name}`, e),
@@ -162,6 +169,7 @@ export function useUpdateWorkout() {
 export function useDeleteWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
+    scope: WORKOUT_WRITES,
     mutationFn: async ({ id }: { id: string; date: string; kcal: number }) => {
       const { error } = await requireSupabase().from('exercise_logs').delete().eq('id', id);
       if (error) throw error;

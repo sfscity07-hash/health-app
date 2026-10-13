@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 
 import { FoodRow } from '@/components/food/FoodRow';
 import { MealCard } from '@/components/foodlog/MealCard';
@@ -48,5 +48,34 @@ describe('recipes stand out', () => {
     expect(screen.getByRole('button', { name: /^Paneer marinade, recipe, 151 calories/ })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: /^Rolled oats, 227 calories/ })).toBeOnTheScreen();
     expect(screen.getAllByText(/^Recipe ·/)).toHaveLength(1);
+  });
+});
+
+describe('adding the same food twice', () => {
+  it('turns + into a − n + counter, and − takes the last one back out', async () => {
+    const undo = jest.fn();
+    const onAdd = jest.fn(() => undo);
+    const user = userEvent.setup();
+    await render(<FoodRow name="Rolled oats" detail="60 g" kcal={227} onPress={() => {}} onAdd={onAdd} />);
+    await user.press(screen.getByRole('button', { name: 'Add Rolled oats' }));
+    expect(onAdd).toHaveBeenLastCalledWith(1);
+    expect(screen.getByLabelText('1 added')).toBeOnTheScreen();
+    await user.press(screen.getByRole('button', { name: 'Add another Rolled oats' }));
+    expect(onAdd).toHaveBeenLastCalledWith(2);
+    expect(screen.getByLabelText('2 added')).toBeOnTheScreen();
+    await user.press(screen.getByRole('button', { name: 'Remove one Rolled oats' }));
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('1 added')).toBeOnTheScreen();
+    await user.press(screen.getByRole('button', { name: 'Remove one Rolled oats' }));
+    expect(undo).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Add Rolled oats' })).toBeOnTheScreen();
+  });
+
+  it('keeps the plain + where adding can’t be taken back', async () => {
+    const onAdd = jest.fn();
+    await render(<FoodRow name="Ghee" detail="1 tbsp" kcal={112} onPress={() => {}} onAdd={onAdd} />);
+    await userEvent.setup().press(screen.getByRole('button', { name: 'Add Ghee' }));
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /Remove one/ })).toBeNull();
   });
 });

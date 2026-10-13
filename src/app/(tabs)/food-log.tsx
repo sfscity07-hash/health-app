@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { DeficitLine } from '@/components/DeficitLine';
 import { DayNav, relativeDay } from '@/components/foodlog/DayNav';
 import { ExerciseCard } from '@/components/foodlog/ExerciseCard';
 import { MealCard } from '@/components/foodlog/MealCard';
@@ -16,6 +17,7 @@ import { loadErrorMessage } from '@/features/auth/errors';
 import { useFoodLogs, useRefreshDashboard, type FoodLogEntry } from '@/features/dashboard/api';
 import { useWorkouts } from '@/features/exercise/api';
 import { useLogEntries } from '@/features/food/api';
+import { useDayDeficit } from '@/features/deficit/useDayDeficit';
 import { useDayBudget } from '@/features/food/useDayBudget';
 import { copyEntries } from '@/features/meals/logic';
 import { useProfile } from '@/features/profile/api';
@@ -47,6 +49,7 @@ export default function FoodLogScreen() {
   const workouts = useWorkouts(date);
   const { data: profile } = useProfile();
   const { eaten, targets } = useDayBudget(date);
+  const deficit = useDayDeficit(date);
   const refresh = useRefreshDashboard();
   const entries = logs.data ?? [];
   const left = targets.kcal - eaten.kcal;
@@ -127,6 +130,9 @@ export default function FoodLogScreen() {
             </View>
           ))}
         </View>
+        <View style={[styles.balance, { borderTopColor: colors.hairline }]}>
+          <DeficitLine day={deficit} />
+        </View>
       </Card>
 
       {logs.isPending ? (
@@ -187,6 +193,7 @@ const styles = StyleSheet.create({
   kcalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   leftCol: { alignItems: 'flex-end' },
   macros: { flexDirection: 'row', gap: space.md },
+  balance: { borderTopWidth: StyleSheet.hairlineWidth * 2, paddingTop: space.md, marginTop: space.xs },
   macro: { flex: 1, gap: 3 },
   loading: { marginTop: space.xl },
   dayActions: { gap: space.xs },

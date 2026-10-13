@@ -30,6 +30,9 @@ const dark = {
   /** Recipes (dishes made of other foods): orchid, a hue no macro or state uses. */
   recipe: '#D08BFF',
   recipeSoft: 'rgba(208,139,255,0.14)',
+  /** The deficit chart's two arms (cool below what you burn, warm above), checked for colour-blind separation. */
+  deficit: '#6E7AE8',
+  surplus: '#D9772B',
   glass: 'rgba(24,27,37,0.94)',
   segmentOn: '#2A2E3D',
   scrim: 'rgba(0,0,0,0.5)',
@@ -65,6 +68,8 @@ const light: ThemeColors = {
   water: '#2E8FE0',
   recipe: '#9A3FD6',
   recipeSoft: 'rgba(154,63,214,0.10)',
+  deficit: '#4F5BE0',
+  surplus: '#C2621A',
   glass: 'rgba(255,255,255,0.96)',
   segmentOn: '#FFFFFF',
   scrim: 'rgba(16,18,30,0.28)',

@@ -8,7 +8,7 @@ import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
 import { formatInt } from '@/lib/format';
-import { success } from '@/lib/haptics';
+import { success, tap } from '@/lib/haptics';
 import { useTheme } from '@/theme/theme';
 import { radius, space } from '@/theme/tokens';
 
@@ -25,17 +25,43 @@ type FoodRowProps = {
   favorite?: boolean;
   /** Opens the food so you can change the amount. */
   onPress: () => void;
-  /** Logs it straight away with the amount shown. */
-  onAdd: () => void;
+  /**
+   * Logs it straight away with the amount shown; `count` is how many you've
+   * added from this row now. Return a way to take it back out and the + turns
+   * into a − 1 + counter, so a second tap never adds silently.
+   */
+  onAdd: (count: number) => Undo | void;
   first?: boolean;
   /** Read out after the row; it's a food unless you say otherwise. */
   pressHint?: string;
 };
 
+type Undo = () => void;
+
 /** One food in the logger: tap the row to adjust, tap + to log it as shown. */
 export function FoodRow({ name, detail, kcal, macros, tag, recipe, favorite, onPress, onAdd, first, pressHint = 'Opens the food.' }: FoodRowProps) {
   const { colors } = useTheme();
+  // Rows that can't take an add back just flash a check.
   const [added, setAdded] = useState(0);
+  // One undo per add from this row, newest last.
+  const [undos, setUndos] = useState<Undo[]>([]);
+  const count = undos.length;
+  const tint = recipe ? 'recipe' : 'accent';
+
+  function add() {
+    success();
+    const undo = onAdd(count + 1);
+    if (undo) setUndos((u) => [...u, undo]);
+    else setAdded((n) => n + 1);
+  }
+
+  function remove() {
+    const last = undos[undos.length - 1];
+    if (!last) return;
+    tap();
+    last();
+    setUndos(undos.slice(0, -1));
+  }
 
   useEffect(() => {
     if (!added) return;
@@ -80,26 +106,38 @@ export function FoodRow({ name, detail, kcal, macros, tag, recipe, favorite, onP
           {macros ? <MacroMix p={macros.p} c={macros.c} f={macros.f} width={24} /> : null}
         </View>
       </PressableScale>
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel={`Add ${name}`}
-        hitSlop={8}
-        pressedScale={0.88}
-        ripple={null}
-        onPress={() => {
-          success();
-          setAdded((n) => n + 1);
-          onAdd();
-        }}
-        style={[styles.add, { backgroundColor: added ? colors.good : recipe ? colors.recipeSoft : colors.accentSoft }]}>
-        {added ? (
-          <Animated.View key={added} entering={ZoomIn.springify().damping(14)}>
-            <Icon name="check" size={17} color="bg" strokeWidth={2.6} />
+      {count > 0 ? (
+        <Animated.View entering={ZoomIn.springify().damping(16)} style={[styles.stepper, { backgroundColor: recipe ? colors.recipeSoft : colors.accentSoft }]}>
+          <PressableScale accessibilityRole="button" accessibilityLabel={`Remove one ${name}`} hitSlop={6} pressedScale={0.85} ripple={null} onPress={remove} style={styles.step}>
+            <Icon name="minus" size={16} color={tint} strokeWidth={2.4} />
+          </PressableScale>
+          <Animated.View key={count} entering={ZoomIn.duration(160)}>
+            <Text variant="smallStrong" color={tint} tabular style={styles.count} accessibilityLabel={`${count} added`}>
+              {count}
+            </Text>
           </Animated.View>
-        ) : (
-          <Icon name="plus" size={17} color={recipe ? 'recipe' : 'accent'} strokeWidth={2.4} />
-        )}
-      </PressableScale>
+          <PressableScale accessibilityRole="button" accessibilityLabel={`Add another ${name}`} hitSlop={6} pressedScale={0.85} ripple={null} onPress={add} style={styles.step}>
+            <Icon name="plus" size={16} color={tint} strokeWidth={2.4} />
+          </PressableScale>
+        </Animated.View>
+      ) : (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={`Add ${name}`}
+          hitSlop={8}
+          pressedScale={0.88}
+          ripple={null}
+          onPress={add}
+          style={[styles.add, { backgroundColor: added ? colors.good : recipe ? colors.recipeSoft : colors.accentSoft }]}>
+          {added ? (
+            <Animated.View key={added} entering={ZoomIn.springify().damping(14)}>
+              <Icon name="check" size={17} color="bg" strokeWidth={2.6} />
+            </Animated.View>
+          ) : (
+            <Icon name="plus" size={17} color={tint} strokeWidth={2.4} />
+          )}
+        </PressableScale>
+      )}
     </View>
   );
 }
@@ -116,4 +154,7 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 8.5, lineHeight: 11, letterSpacing: 0.5 },
   kcal: { alignItems: 'flex-end', gap: 5 },
   add: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  stepper: { height: 34, borderRadius: 17, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 2 },
+  step: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  count: { minWidth: 18, textAlign: 'center' },
 });

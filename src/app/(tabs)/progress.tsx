@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { Confetti, type Burst } from '@/components/dashboard/Confetti';
 import { Tile } from '@/components/dashboard/MetricTiles';
 import { CalorieBars } from '@/components/progress/CalorieBars';
+import { DeficitBars } from '@/components/progress/DeficitBars';
 import { GoalJourney } from '@/components/progress/GoalJourney';
 import { Heatmap } from '@/components/progress/Heatmap';
 import { MacroSplitBar } from '@/components/progress/MacroSplitBar';
@@ -19,8 +20,9 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
-import { useCheckins } from '@/features/checkin/api';
+import { useCheckins, useExpenditure } from '@/features/checkin/api';
 import { budgetOn } from '@/features/checkin/logic';
+import { balanceText, deficitTotal, deficitWeek, expenditureOn } from '@/features/deficit/logic';
 import { useClosures, useDaySummaries, useRefreshDashboard, useWeighIns } from '@/features/dashboard/api';
 import {
   badges as buildBadges,
@@ -96,6 +98,7 @@ export default function ProgressScreen() {
   const summaries = useDaySummaries(heatStart, today);
   const closures = useClosures();
   const checkins = useCheckins();
+  const expenditure = useExpenditure();
   const refresh = useRefreshDashboard();
   const [range, setRange] = useState<RangeKey>('1m');
   const [showAll, setShowAll] = useState(false);
@@ -145,6 +148,14 @@ export default function ProgressScreen() {
   const days = summaries.data ?? {};
   const budgetFor = (date: string) => budgetOn(date, checkins.data ?? [], profile?.calorie_target ?? 2000);
   const week = calorieWeek(today, days, budgetFor);
+  const balance = deficitWeek({
+    today,
+    summaries: days,
+    expenditureFor: (date) => expenditureOn(date, checkins.data ?? [], expenditure.result.kcal),
+    budgetFor,
+    addback: Boolean(profile?.exercise_addback),
+  });
+  const balanceTotal = deficitTotal(balance);
   const pastWeek = week.filter((d) => !d.isToday).map((d) => days[d.date]).filter(Boolean);
   const avgKcal = week.filter((d) => !d.isToday && d.logged);
   const split = macroSplit(pastWeek);
@@ -314,6 +325,23 @@ export default function ProgressScreen() {
             note={avgKcal.length ? `Avg ${formatInt(avgKcal.reduce((s, d) => s + d.kcal, 0) / avgKcal.length)} kcal` : undefined}
           />
           <CalorieBars days={week} />
+        </Card>
+
+        <Card style={styles.section}>
+          <SectionHead
+            title="Deficit"
+            note={
+              balanceTotal
+                ? `${balanceText(balanceTotal.total)} · ≈ ${Math.abs(balanceTotal.kg).toFixed(2)} kg`
+                : undefined
+            }
+          />
+          <DeficitBars days={balance} />
+          <Text variant="caption" color="textSecondary">
+            {balanceTotal
+              ? `Over ${balanceTotal.days} finished day${balanceTotal.days === 1 ? '' : 's'}: ${balanceText(balanceTotal.average)} a day on average. What you burn is your expenditure estimate${profile?.exercise_addback ? ' plus logged exercise' : ''}, so it gets sharper as you log and weigh in.`
+              : 'Log a full day to see your deficit. What you burn is your expenditure estimate, which gets sharper as you log and weigh in.'}
+          </Text>
         </Card>
 
         {split ? (

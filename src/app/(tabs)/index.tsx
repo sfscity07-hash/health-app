@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { CalorieGauge } from '@/components/CalorieGauge';
+import { DeficitLine } from '@/components/DeficitLine';
 import { Confetti, type Burst } from '@/components/dashboard/Confetti';
 import { FinishDayButton } from '@/components/dashboard/FinishDayButton';
 import { FoodTimeline } from '@/components/dashboard/FoodTimeline';
@@ -24,6 +25,7 @@ import { buildInsights } from '@/features/dashboard/insights';
 import { useWorkouts } from '@/features/exercise/api';
 import { workoutSummary } from '@/features/exercise/logic';
 import { goodDirection } from '@/features/weight/logic';
+import { useDayDeficit } from '@/features/deficit/useDayDeficit';
 import { useProfile } from '@/features/profile/api';
 import { useRecipeIds } from '@/features/recipes/api';
 import { useAddWater } from '@/features/water/api';
@@ -103,6 +105,7 @@ export default function DashboardScreen() {
   const units = profile?.units ?? 'metric';
   const current = profile?.calorie_target ?? 2000;
   const expenditure = useExpenditure();
+  const deficit = useDayDeficit(selected);
   // Each day is judged against the budget it had; budgets change at check-ins.
   const budgetFor = (date: string) => budgetOn(date, expenditure.checkins, current);
   const budget = budgetFor(selected);
@@ -220,6 +223,7 @@ export default function DashboardScreen() {
             </Text>
           </CalorieGauge>
         </View>
+        <DeficitLine day={deficit} />
 
         {summaries.isError || logs.isError ? (
           <Text variant="small" color="warn">

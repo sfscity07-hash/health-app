@@ -9,9 +9,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
-import { useLogFood } from '@/features/food/api';
+import { addedMessage, useLogFood, useUnlog } from '@/features/food/api';
 import { useRecipes } from '@/features/recipes/api';
 import { formatInt } from '@/lib/format';
+import { newId } from '@/lib/id';
 import { isMeal, MEAL_LABEL, mealForTime } from '@/lib/meals';
 import { defaultPortion, describeLogged, nutrientsFor } from '@/lib/portion';
 import { useViewedDate } from '@/store/day';
@@ -29,6 +30,7 @@ export default function RecipesScreen() {
   const meal = isMeal(params.meal) ? params.meal : mealForTime(new Date());
   const recipes = useRecipes();
   const logFood = useLogFood();
+  const unlog = useUnlog();
   const showToast = useToast((s) => s.show);
 
   return (
@@ -76,9 +78,11 @@ export default function RecipesScreen() {
                 macros={{ p: n.protein_g, c: n.carbs_g, f: n.fat_g }}
                 pressHint="Opens the recipe."
                 onPress={() => router.push({ pathname: '/food/[id]', params: { id: r.id, date, meal } })}
-                onAdd={() => {
-                  logFood.mutate({ date, meal, foodId: r.id, name: r.food.name, brand: null, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients: n });
-                  showToast(`Added ${r.food.name} · ${formatInt(n.kcal)} kcal`);
+                onAdd={(count) => {
+                  const id = newId();
+                  logFood.mutate({ id, date, meal, foodId: r.id, name: r.food.name, brand: null, quantity: p.qty, unit: p.unit, grams: p.grams, nutrients: n });
+                  showToast(addedMessage(r.food.name, n.kcal, count));
+                  return () => unlog(date, [id], r.food.name);
                 }}
               />
             );

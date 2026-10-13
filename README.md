@@ -5,21 +5,21 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done, plus recipes (13, polish and the installable app, is next). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes and step 1 of your new list (deficit per day). The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: Recipes (build a dish from its ingredients, log it by the gram, swap an ingredient, use it inside another recipe), now with their own color and a "what's in this portion" breakdown.**
+Updated with every release. **Latest: your deficit for every day, a − 1 + counter when you add the same food twice, and sheets that scroll properly.**
 
 **Before running this version:**
-1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages this time.
-2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261010090000_recipes.sql` once. It adds the two tables recipes are kept in. Until you run it, Recipes shows "Your database is missing an update"; everything else works. (Skipped Phase 12's `20261009090000_account_and_workouts.sql`? Run that too, first.)
+1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages and no new SQL this time.
+2. Haven't run `supabase/migrations/20261010090000_recipes.sql` yet? Run it once in Supabase's SQL Editor; until then Recipes shows "Your database is missing an update".
 
 ✅ **Works**
 - Create an account, sign in, sign out.
 - Setup: goal (lose weight, **recomp**, maintain, build muscle), body stats in kg/cm or lb/ft, activity, goal weight and pace, then your animated daily budget.
 - **Logging food** (the **+** button, or "Add …" on the dashboard and Food log):
-  - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap.
+  - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap. The **+** then turns into a **− 1 +** counter, so a second tap shows "2" instead of adding silently, and **−** takes the last one back out. Works the same for your foods, search results, saved meals, recipes and recent workouts.
   - **Search**: type a food and you get your own foods first, then results from **USDA** (whole foods like "bananas, raw") and **Open Food Facts** (packaged products, worldwide). Tap a result to pick the amount (servings like "1 medium" or "1 slice", or grams), or tap **+** to log one serving straight away. Each food shows once: the same food from several databases or shops is merged, entries with impossible numbers are dropped, and anything already in Recent or Your foods isn't repeated. British and American spellings both work ("yoghurt" finds "yogurt"), entries named only after their brand get a description or are skipped, and results from what you typed a moment ago fade out while the new ones load.
   - **Quick add**: just calories, or macros and it works the calories out. Fibre is optional.
   - **New food**: copy a nutrition label, including **fibre**. Choose how you measure it (grams, scoop, cup, tbsp, tsp, slice, piece, bar, ml, or your own word) and whether the label's numbers are per scoop or per 100 g, then add more units if you like (1 scoop = 30 g, 1 tbsp = 10 g). It's saved for next time.
@@ -56,6 +56,10 @@ Updated with every release. **Latest: Recipes (build a dish from its ingredients
   - **Save as a new recipe** keeps the original and saves your changed one under a new name, so you can have a paneer and a soya chaap version.
   - **Recipes inside recipes**: a taco with 50 g of the marinade, a slice of cheddar and a tortilla.
   - What you already logged keeps its numbers when you change or delete a recipe.
+- **Deficit per day**: what you burned (your expenditure estimate, plus logged exercise if you add exercise to your budget) minus what you ate.
+  - On the dashboard under the gauge: "Deficit so far" today (it shrinks as you eat), with what eating exactly your budget would give.
+  - On the Food log's day card for any day: the deficit (or surplus), what it's made of, and roughly how much fat that is.
+  - On Progress, a **Deficit** chart for the last 7 days: bars go up for a deficit and down for a surplus, the dashed line is what eating your budget gives, and the week's total with kg of fat. Tap a day to read it. Today joins the chart once you finish the day.
 - Dashboard:
   - calorie gauge
   - protein/carbs/fat bars
@@ -85,7 +89,8 @@ Updated with every release. **Latest: Recipes (build a dish from its ingredients
   - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Phase 13: loading skeletons, offline cache, the app icon and splash, and the installable APK.
+- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): scan and suggestions when adding recipe ingredients, a calendar of past days, water from drinks like milk, micronutrients / salt / caffeine, then the AI features (monthly adaptive targets, programs, pantry meal plans).
+- Phase 13: loading skeletons, offline cache, and the installable APK.
 - A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
 - Vitamins and minerals (micronutrients) aren't tracked yet.
 - Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).

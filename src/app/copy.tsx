@@ -65,7 +65,7 @@ export default function CopySheet() {
         <IconButton icon="close" label="Close" size={36} onPress={() => router.back()} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView nestedScrollEnabled contentContainerStyle={styles.body}>
         <View style={styles.group}>
           <Text variant="caption" color="textSecondary">
             To
