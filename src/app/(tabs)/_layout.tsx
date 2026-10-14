@@ -1,4 +1,4 @@
-import { TabList, TabSlot, TabTrigger, Tabs, type ExpoTabsScreenOptions } from 'expo-router/ui';
+import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,9 +10,11 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   useReminderPlanner();
   return (
-    // All four tabs are built up front (lazy: false) so switching never waits on
-    // a first render; hidden tabs are frozen so they cost nothing while away.
-    <Tabs style={styles.root} options={{ screenOptions: TAB_SCREEN_OPTIONS }}>
+    // Each tab is built the first time you open it and then stays built, so
+    // switching back is instant. (Building all four up front and freezing the
+    // hidden ones left them blank on Android: a tab frozen before it was ever
+    // shown never drew its content.)
+    <Tabs style={styles.root}>
       <TabSlot style={styles.root} />
       <TabList asChild>
         <FloatingTabBar>
@@ -34,9 +36,6 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-// The published type wrongly requires per-trigger fields (title, action) here.
-const TAB_SCREEN_OPTIONS = { lazy: false, freezeOnBlur: true } as Partial<ExpoTabsScreenOptions> as ExpoTabsScreenOptions;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
