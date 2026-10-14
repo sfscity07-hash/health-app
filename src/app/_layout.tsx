@@ -175,6 +175,7 @@ function RootStack() {
           <Stack.Screen name="recipe/pick" options={EDITOR} />
           <Stack.Screen name="recipe/quick" options={EDITOR} />
           <Stack.Screen name="recipe/from-log" options={EDITOR} />
+          <Stack.Screen name="nutrients" options={EDITOR} />
           <Stack.Screen name="goals" options={EDITOR} />
           <Stack.Screen name="export" options={EDITOR} />
           <Stack.Screen name="delete-account" options={EDITOR} />

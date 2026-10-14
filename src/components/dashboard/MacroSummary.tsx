@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AnimatedBar } from '@/components/ui/AnimatedBar';
@@ -10,8 +11,8 @@ import { space, type ColorName } from '@/theme/tokens';
 
 type Macro = { label: string; eaten: number; target: number; color: ColorName };
 
-/** Protein, carbs and fat: eaten vs target, and how much is left. Fibre runs along the bottom. */
-export function MacroSummary({ macros, fiber }: { macros: Macro[]; fiber: { eaten: number; target: number } }) {
+/** Protein, carbs and fat: eaten vs target, and how much is left. Fibre runs along the bottom, then anything in `footer` (salt and caffeine). */
+export function MacroSummary({ macros, fiber, footer }: { macros: Macro[]; fiber: { eaten: number; target: number }; footer?: ReactNode }) {
   const { colors } = useTheme();
   const fiberLeft = Math.round(fiber.target - fiber.eaten);
   return (
@@ -72,6 +73,7 @@ export function MacroSummary({ macros, fiber }: { macros: Macro[]; fiber: { eate
           {Math.round(fiber.eaten)} / {fiber.target} g
         </Text>
       </View>
+      {footer ? <View style={[styles.footer, { borderTopColor: colors.hairline }]}>{footer}</View> : null}
     </Card>
   );
 }
@@ -89,6 +91,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth * 2,
   },
   fiberBar: { flex: 1 },
+  footer: { paddingHorizontal: space.md + 2, paddingVertical: space.md, borderTopWidth: StyleSheet.hairlineWidth * 2 },
   col: { flex: 1, paddingHorizontal: space.md + 2, gap: space.xs + 3 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 2 },

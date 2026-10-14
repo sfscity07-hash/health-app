@@ -27,6 +27,20 @@ values ('10000000-0000-0000-0000-000000000001', 'usda', '175168', 'Salmon, Atlan
 insert into public.food_servings (food_id, label, grams)
 values ('10000000-0000-0000-0000-000000000001', '1 fillet', 150);
 
+-- Micronutrients: an object per 100 g, plus estimates; anything else is refused.
+update public.foods set micros = '{"sodium_mg": 59, "potassium_mg": 384, "vitamin_d_ug": 11}'::jsonb,
+  micros_est = '{"by": "none", "from": "", "values": {}}'::jsonb
+  where id = '10000000-0000-0000-0000-000000000001';
+do $$
+begin
+  begin
+    update public.foods set micros = '[59, 384]'::jsonb where id = '10000000-0000-0000-0000-000000000001';
+    raise exception 'saved micronutrients that aren''t an object';
+  exception when check_violation then null;
+  end;
+  assert (select (micros ->> 'potassium_mg')::numeric from public.foods where id = '10000000-0000-0000-0000-000000000001') = 384, 'micronutrients saved';
+end $$;
+
 insert into public.food_logs (log_date, meal, food_id, name, quantity, unit, grams, kcal, protein_g, carbs_g, fat_g, fiber_g) values
   ('2026-10-06', 'breakfast', null, 'Greek yogurt with oats', 200, 'g', 200, 118, 20.6, 7.2, 0.8, 2.5),
   ('2026-10-06', 'dinner', '10000000-0000-0000-0000-000000000001', 'Salmon, Atlantic, cooked', 1, 'fillet', 150, 309, 33.2, 0, 18.6, null);

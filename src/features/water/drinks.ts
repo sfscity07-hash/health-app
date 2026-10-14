@@ -128,8 +128,8 @@ const clean = (s: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-/** What the food is, from its name: the part before any comma or "with", minus sizes. */
-function head(name: string): string {
+/** What the food is, from its name: the part before any comma or "with", minus sizes ("Tea with milk" → "tea"). */
+export function nameHead(name: string): string {
   const parts = name
     .toLowerCase()
     .replace(/\([^)]*\)/g, ' ')
@@ -149,7 +149,7 @@ function head(name: string): string {
 export function waterShare(name: string): number | null {
   const all = clean(name).split(' ');
   if (all.some((w) => NOT_DRINK.has(w))) return null;
-  const h = head(name);
+  const h = nameHead(name);
   const padded = ` ${h} `;
   for (const [brand, share] of Object.entries(BRANDS)) if (padded.includes(` ${brand} `)) return share;
   if (NOT_HEADS.some((x) => h === x || h.endsWith(` ${x}`))) return null;

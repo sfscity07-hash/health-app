@@ -6,11 +6,13 @@ import type { CustomFoodInsert } from '@/features/food/forms';
 import type { LoggedRow } from '@/features/food/recents';
 import { ensureFood } from '@/features/search/api';
 import type { ExternalFood } from '@/features/search/types';
+import type { MicroEstimate, Micros } from '@/features/nutrients/micros';
 import { drinkWater, rememberedCounts } from '@/features/water/drinks';
 import { addDays, toISODate } from '@/lib/dates';
 import { formatInt } from '@/lib/format';
 import { reportFailure } from '@/lib/failure';
 import { newId } from '@/lib/id';
+import { hasColumn, MICRO_COLUMNS, tolerantWrite } from '@/lib/optionalColumns';
 import type { Meal } from '@/lib/meals';
 import { roundNutrients, type FoodRecord, type Nutrients, type Serving } from '@/lib/portion';
 import { requireSupabase } from '@/lib/supabase';
@@ -28,6 +30,7 @@ export function toFood(r: Record<string, unknown>): FoodRecord {
     name: r.name as string,
     brand: (r.brand as string | null) ?? null,
     barcode: (r.barcode as string | null) ?? null,
+    external_id: (r.external_id as string | null) ?? null,
     kcal_100g: num(r.kcal_100g),
     protein_100g: num(r.protein_100g),
     carbs_100g: num(r.carbs_100g),
@@ -35,6 +38,10 @@ export function toFood(r: Record<string, unknown>): FoodRecord {
     fiber_100g: numOrNull(r.fiber_100g),
     default_serving_g: numOrNull(r.default_serving_g),
     default_serving_label: (r.default_serving_label as string | null) ?? null,
+    sugar_100g: numOrNull(r.sugar_100g),
+    sodium_mg_100g: numOrNull(r.sodium_mg_100g),
+    // Left out when the database doesn't have the columns yet, so screens can tell.
+    ...('micros' in r ? { micros: (r.micros as Micros | null) ?? null, micros_est: (r.micros_est as MicroEstimate | null) ?? null } : {}),
   };
 }
 
@@ -225,29 +232,15 @@ const logRow = (e: NewEntry, foodId: string | null, recent: Recent) => {
   };
 };
 
-/**
- * Whether food_logs has its water column yet. Until you run the
- * water-from-drinks SQL it doesn't, and logging carries on without it.
- */
-let waterColumn = true;
-const missingWater = (e: { code?: string; message?: string }) => e.code === 'PGRST204' && /water_ml/.test(e.message ?? '');
-const dropWater = <T extends { water_ml?: unknown }>({ water_ml, ...row }: T) => row;
-
-/** Runs a food_logs write, again without the water column if the database doesn't have it yet. */
-async function writeLogs(write: (withWater: boolean) => PromiseLike<{ error: { code?: string; message?: string } | null }>) {
-  let { error } = await write(waterColumn);
-  if (error && waterColumn && missingWater(error)) {
-    waterColumn = false;
-    ({ error } = await write(false));
-  }
-  if (error) throw error;
-}
+/** Logged before the water-from-drinks SQL is run, entries go in without their water. */
+const LOG_COLUMNS = ['water_ml'] as const;
 
 /** Saves log entries in one request (search results are saved as foods first). */
 async function insertEntries(entries: NewEntry[], recent: Recent) {
   const rows: ReturnType<typeof logRow>[] = [];
   for (const e of entries) rows.push(logRow(e, e.external ? await ensureFood(e.external) : e.foodId, recent));
-  await writeLogs((withWater) => requireSupabase().from('food_logs').insert(withWater ? rows : rows.map(dropWater)));
+  const { error } = await tolerantWrite(LOG_COLUMNS, (drop) => requireSupabase().from('food_logs').insert(drop(rows)));
+  if (error) throw error;
 }
 
 /** Shows new entries on the dashboard and Food log straight away, before the server answers. */
@@ -256,7 +249,7 @@ function showEntries(queryClient: ReturnType<typeof useQueryClient>, entries: Ne
   const recent = recentOf(queryClient);
   entries.forEach((e, i) => {
     const n = roundNutrients(e.nutrients);
-    const water = waterColumn ? waterOf(e, recent) : null;
+    const water = hasColumn('water_ml') ? waterOf(e, recent) : null;
     const temp: FoodLogEntry = {
       id: e.id ?? `temp-${now}-${i}`,
       logged_at: new Date(now + i).toISOString(),
@@ -355,11 +348,12 @@ export function useUpdateEntry() {
         fiber_g: n.fiber_g,
         water_ml: drinkWater(e.name, e.grams, e.countsAsWater ?? true),
       };
-      await writeLogs((withWater) => requireSupabase().from('food_logs').update(withWater ? row : dropWater(row)).eq('id', id));
+      const { error } = await tolerantWrite(LOG_COLUMNS, (drop) => requireSupabase().from('food_logs').update(drop(row)).eq('id', id));
+      if (error) throw error;
     },
     onMutate: (c) => {
       const n = roundNutrients(c.nutrients);
-      const water = waterColumn ? drinkWater(c.name, c.grams, c.countsAsWater ?? true) : null;
+      const water = hasColumn('water_ml') ? drinkWater(c.name, c.grams, c.countsAsWater ?? true) : null;
       const previous = queryClient.getQueryData<FoodLogEntry[]>(['foodLogs', c.date])?.find((e) => e.id === c.id);
       queryClient.setQueryData<FoodLogEntry[]>(['foodLogs', c.date], (old) =>
         old?.map((e) => (e.id === c.id ? { ...e, meal: c.meal, name: c.name, quantity: c.quantity, unit: c.unit, grams: c.grams, ...n, water_ml: water } : e)),
@@ -435,7 +429,7 @@ export function useCreateFood() {
   return useMutation({
     mutationFn: async ({ food, servings }: { food: CustomFoodInsert; servings: Serving[] }): Promise<FoodWithServings> => {
       const sb = requireSupabase();
-      const { data, error } = await sb.from('foods').insert(food).select('*').single();
+      const { data, error } = await tolerantWrite(MICRO_COLUMNS, (drop) => sb.from('foods').insert(drop(food)).select('*').single());
       if (error) throw error;
       const saved = toFood(data);
       if (servings.length > 0) {

@@ -8,6 +8,7 @@ import type { ExternalFood } from '@/features/search/types';
 import { SearchKeyError, SearchLimitError, searchUsda } from '@/features/search/usda';
 import { useDebounced } from '@/hooks/useDebounced';
 import { usdaApiKey, usingUsdaDemoKey } from '@/lib/env';
+import { MICRO_COLUMNS, tolerantWrite } from '@/lib/optionalColumns';
 import { requireSupabase } from '@/lib/supabase';
 
 export type SourceStatus = 'ok' | 'failed' | 'limited' | 'rejected';
@@ -92,26 +93,26 @@ export async function ensureFood(f: ExternalFood): Promise<string> {
   if (existing.error) throw existing.error;
   if (existing.data?.[0]) return existing.data[0].id as string;
 
-  const inserted = await sb
-    .from('foods')
-    .insert({
-      source: f.source,
-      external_id: f.externalId,
-      barcode: f.barcode,
-      name: f.name,
-      brand: f.brand,
-      kcal_100g: cap(f.kcal_100g, 1000),
-      protein_100g: cap(f.protein_100g, 100),
-      carbs_100g: cap(f.carbs_100g, 100),
-      fat_100g: cap(f.fat_100g, 100),
-      fiber_100g: cap(f.fiber_100g, 100),
-      sugar_100g: cap(f.sugar_100g, 100),
-      sodium_mg_100g: cap(f.sodium_mg_100g, 100000),
-      default_serving_g: f.serving?.grams ?? null,
-      default_serving_label: f.serving?.label ?? null,
-    })
-    .select('id')
-    .single();
+  const row = {
+    source: f.source,
+    external_id: f.externalId,
+    barcode: f.barcode,
+    name: f.name,
+    brand: f.brand,
+    kcal_100g: cap(f.kcal_100g, 1000),
+    protein_100g: cap(f.protein_100g, 100),
+    carbs_100g: cap(f.carbs_100g, 100),
+    fat_100g: cap(f.fat_100g, 100),
+    fiber_100g: cap(f.fiber_100g, 100),
+    sugar_100g: cap(f.sugar_100g, 100),
+    sodium_mg_100g: cap(f.sodium_mg_100g, 100000),
+    default_serving_g: f.serving?.grams ?? null,
+    default_serving_label: f.serving?.label ?? null,
+    // Vitamins, minerals and caffeine; null means look them up later.
+    micros: f.micros ?? null,
+    micros_est: null,
+  };
+  const inserted = await tolerantWrite(MICRO_COLUMNS, (drop) => sb.from('foods').insert(drop(row)).select('id').single());
   if (inserted.error) {
     // Saved a moment ago by another tap: use that one.
     if (inserted.error.code === '23505') {

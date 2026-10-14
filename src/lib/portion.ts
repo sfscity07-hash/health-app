@@ -3,12 +3,16 @@
  * amount. Foods store nutrients per 100 g; servings map a name to grams.
  */
 
+import type { MicroEstimate, Micros } from '@/features/nutrients/micros';
+
 export type FoodRecord = {
   id: string;
   source: 'custom' | 'usda' | 'off';
   name: string;
   brand: string | null;
   barcode?: string | null;
+  /** The USDA id or Open Food Facts barcode it was saved from. */
+  external_id?: string | null;
   kcal_100g: number;
   protein_100g: number;
   carbs_100g: number;
@@ -17,6 +21,12 @@ export type FoodRecord = {
   fiber_100g: number | null;
   default_serving_g: number | null;
   default_serving_label: string | null;
+  /** Vitamins, minerals, salt and caffeine per 100 g from the label or database: null until looked up; missing before the micronutrients SQL. */
+  micros?: Micros | null;
+  /** Estimates for what the label doesn't list (null until tried). */
+  micros_est?: MicroEstimate | null;
+  sugar_100g?: number | null;
+  sodium_mg_100g?: number | null;
 };
 
 export type Serving = { label: string; grams: number };

@@ -1,3 +1,4 @@
+import { microsFromOff } from '@/features/nutrients/micros';
 import { measureToServing } from '@/features/search/measures';
 import type { ExternalFood } from '@/features/search/types';
 
@@ -151,6 +152,7 @@ export function mapOffProduct(p: OffProduct): ExternalFood | null {
     fiber_100g: num(n.fiber_100g),
     sugar_100g: num(n.sugars_100g),
     sodium_mg_100g: Number.isFinite(sodiumG) ? round2(sodiumG * 1000) : null,
+    micros: microsFromOff(n),
     serving,
     servings: tiny && listed ? [listed] : [],
     generic: false,
@@ -184,6 +186,15 @@ export async function searchOff(query: string, signal?: AbortSignal): Promise<Ex
 export const OFF_PRODUCT_URL = 'https://world.openfoodfacts.org/api/v2/product';
 
 export type OffLookup = { kind: 'found'; food: ExternalFood } | { kind: 'incomplete'; name: string | null; brand: string | null } | { kind: 'missing' };
+
+/** Just a product's nutrition, for filling in the vitamins and minerals of a food saved before they were kept. Null if it's gone. */
+export async function fetchOffNutriments(code: string, signal?: AbortSignal): Promise<Record<string, unknown> | null> {
+  const res = await fetch(`${OFF_PRODUCT_URL}/${encodeURIComponent(code)}.json?fields=nutriments`, { headers: HEADERS, signal });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Open Food Facts lookup failed (${res.status})`);
+  const body = (await res.json()) as { status?: number; product?: OffProduct };
+  return body.status === 1 ? (body.product?.nutriments ?? {}) : null;
+}
 
 /** Looks up one product by its barcode. "incomplete" means it's listed but without usable nutrition. */
 export async function fetchOffProduct(code: string, signal?: AbortSignal): Promise<OffLookup> {

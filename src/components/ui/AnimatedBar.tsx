@@ -7,7 +7,7 @@ import { useTheme } from '@/theme/theme';
 import { motion } from '@/theme/tokens';
 
 /** A thin progress bar whose fill slides to its new length on the UI thread. */
-export function AnimatedBar({ fraction, color, height = 4 }: { fraction: number; color: string; height?: number }) {
+export function AnimatedBar({ fraction, color, height = 4, track }: { fraction: number; color: string; height?: number; track?: string }) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const width = useSharedValue(0);
@@ -20,7 +20,7 @@ export function AnimatedBar({ fraction, color, height = 4 }: { fraction: number;
   const fill = useAnimatedStyle(() => ({ width: `${width.get()}%` }));
 
   return (
-    <View style={[styles.track, { height, borderRadius: height, backgroundColor: colors.surface3 }]}>
+    <View style={[styles.track, { height, borderRadius: height, backgroundColor: track ?? colors.surface3 }]}>
       <Animated.View style={[styles.fill, { borderRadius: height, backgroundColor: color }, fill]} />
     </View>
   );

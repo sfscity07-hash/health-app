@@ -1,4 +1,5 @@
 import type { FoodWithServings } from '@/features/food/api';
+import type { Micros } from '@/features/nutrients/micros';
 import type { Serving } from '@/lib/portion';
 
 export type FoodSource = 'usda' | 'off';
@@ -19,6 +20,8 @@ export type ExternalFood = {
   fiber_100g: number | null;
   sugar_100g: number | null;
   sodium_mg_100g: number | null;
+  /** Vitamins, minerals, salt and caffeine per 100 g; null when the result didn't include them (looked up later). */
+  micros?: Micros | null;
   /** The serving the food opens on, e.g. 1 medium banana = 118 g. */
   serving: Serving | null;
   /** Other ways to measure it (cup, slice…). */
@@ -47,5 +50,9 @@ export function asFood(f: ExternalFood): FoodWithServings {
     default_serving_g: f.serving?.grams ?? null,
     default_serving_label: f.serving?.label ?? null,
     servings: f.servings,
+    micros: f.micros ?? null,
+    micros_est: null,
+    sugar_100g: f.sugar_100g,
+    sodium_mg_100g: f.sodium_mg_100g,
   };
 }

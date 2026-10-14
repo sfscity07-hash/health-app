@@ -10,6 +10,7 @@ import { FinishDayButton } from '@/components/dashboard/FinishDayButton';
 import { FoodTimeline } from '@/components/dashboard/FoodTimeline';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { MacroSummary } from '@/components/dashboard/MacroSummary';
+import { NutrientsLine } from '@/components/nutrients/NutrientsLine';
 import { Sparkline, Tile, WaterTile } from '@/components/dashboard/MetricTiles';
 import { CheckinBanner } from '@/components/dashboard/CheckinBanner';
 import { WeekRings, type WeekDay } from '@/components/dashboard/WeekRings';
@@ -242,6 +243,7 @@ export default function DashboardScreen() {
             { label: 'Fat', eaten: day.fat_g, target: profile?.fat_g ?? 0, color: 'fat' },
           ]}
           fiber={{ eaten: day.fiber_g, target: fiberTarget(budget) }}
+          footer={<NutrientsLine date={selected} />}
         />
 
         <InsightCard insights={insights} />

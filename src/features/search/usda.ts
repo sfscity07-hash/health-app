@@ -1,3 +1,4 @@
+import { microsFromUsda } from '@/features/nutrients/micros';
 import { measureToServing } from '@/features/search/measures';
 import type { ExternalFood } from '@/features/search/types';
 import type { Serving } from '@/lib/portion';
@@ -105,6 +106,7 @@ export function mapUsdaFood(f: UsdaFood): ExternalFood | null {
 
   const brand = f.brandName || f.brandOwner || null;
   const sodium = pick(nutrients, IDS.sodium, 'MG');
+  const micros = microsFromUsda(nutrients);
   return {
     key: `usda:${f.fdcId}`,
     source: 'usda',
@@ -119,6 +121,8 @@ export function mapUsdaFood(f: UsdaFood): ExternalFood | null {
     fiber_100g: pick(nutrients, IDS.fiber),
     sugar_100g: pick(nutrients, IDS.sugar),
     sodium_mg_100g: sodium,
+    // Search results normally carry the full list; if not, it's looked up when you open the day's nutrients.
+    micros: Object.keys(micros).length > 2 ? micros : null,
     serving,
     servings: servings.filter((s) => s.label !== serving?.label),
     generic: f.dataType !== 'Branded',
@@ -154,6 +158,24 @@ export async function searchUsda(query: string, apiKey: string, signal?: AbortSi
   checkUsda(res, 'search');
   const body = (await res.json()) as { foods?: UsdaFood[] };
   return (body.foods ?? []).map(mapUsdaFood).filter((f): f is ExternalFood => f !== null);
+}
+
+export const USDA_FOODS_URL = 'https://api.nal.usda.gov/fdc/v1/foods';
+
+/** Full nutrient lists for USDA foods by id (20 at a time), for foods saved before vitamins and minerals were kept. */
+export async function fetchUsdaDetails(ids: string[], apiKey: string, signal?: AbortSignal): Promise<UsdaFood[]> {
+  const out: UsdaFood[] = [];
+  for (let i = 0; i < ids.length; i += 20) {
+    const res = await fetch(`${USDA_FOODS_URL}?api_key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ fdcIds: ids.slice(i, i + 20).map(Number), format: 'full' }),
+      signal,
+    });
+    checkUsda(res, 'lookup');
+    out.push(...((await res.json()) as UsdaFood[]));
+  }
+  return out;
 }
 
 const withoutLeadingZeros = (s: string) => s.replace(/^0+/, '');

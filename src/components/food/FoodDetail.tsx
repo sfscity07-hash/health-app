@@ -15,6 +15,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Text } from '@/components/ui/Text';
 import type { FoodWithServings } from '@/features/food/api';
+import { foodMicros, saltFromSodium } from '@/features/nutrients/micros';
 import { parseNumber } from '@/features/onboarding/draft';
 import { drinkWater } from '@/features/water/drinks';
 import { formatInt } from '@/lib/format';
@@ -85,6 +86,20 @@ export function FoodDetail(p: FoodDetailProps) {
   const n = nutrientsFor(p.food, grams);
   const counts = waterChoice ?? p.countsAsWater?.(meal) ?? true;
   const drinkMl = p.countsAsWater && p.purpose !== 'ingredient' ? drinkWater(p.food.name, grams) : null;
+  // Salt, sugar, saturated fat and caffeine in this amount, as far as the food says (≈ for estimates).
+  const micros = foodMicros(p.food);
+  const extras = (
+    [
+      ['Salt', 'sodium_mg', (v: number) => `${saltFromSodium(v).toFixed(v < 400 ? 2 : 1)} g`],
+      ['Sugar', 'sugar_g', (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)} g`],
+      ['Saturated fat', 'saturated_fat_g', (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)} g`],
+      ['Caffeine', 'caffeine_mg', (v: number) => `${Math.round(v)} mg`],
+    ] as const
+  ).flatMap(([label, key, fmt]) => {
+    const per100 = micros.values[key];
+    if (per100 === undefined || (key === 'caffeine_mg' && per100 === 0)) return [];
+    return [`${label} ${micros.estimated[key] ? '≈' : ''}${fmt((per100 * grams) / 100)}`];
+  });
   const pk = n.protein_g * 4;
   const ck = n.carbs_g * 4;
   const fk = n.fat_g * 9;
@@ -259,6 +274,12 @@ export function FoodDetail(p: FoodDetailProps) {
 
         {p.extra?.({ grams, kcal: n.kcal })}
 
+        {extras.length ? (
+          <Text variant="caption" color="textSecondary" style={styles.extras}>
+            {extras.join(' · ')}
+          </Text>
+        ) : null}
+
         {drinkMl !== null ? <DrinkWater ml={drinkMl} counts={counts} onChange={setWaterChoice} /> : null}
 
         {p.purpose !== 'ingredient' ? (
@@ -311,4 +332,5 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   group: { gap: space.sm },
+  extras: { marginTop: -space.md, paddingHorizontal: space.xs },
 });

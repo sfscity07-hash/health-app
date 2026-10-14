@@ -1,3 +1,4 @@
+import { NUTRIENT, type MicroKey, type Micros } from '@/features/nutrients/micros';
 import { parseNumber } from '@/features/onboarding/draft';
 import { BUILT_IN_UNITS, isMillilitres, kcalFromMacros, roundTo, type Nutrients, type Serving } from '@/lib/portion';
 
@@ -47,9 +48,15 @@ export type CustomFoodForm = {
   fiber: string;
   /** Other ways to measure it, e.g. 1 tbsp = 10 g. */
   extraUnits: UnitDraft[];
+  /** Optional extras from the label (salt, sugar, caffeine…), on the same basis as the macros. */
+  label?: Partial<Record<LabelField, string>>;
   /** From a scan that found nothing, so the next scan finds this food. */
   barcode?: string;
 };
+
+/** What the New food form asks for beyond the macros: what labels usually list. */
+export const LABEL_FIELDS = ['saturated_fat_g', 'sugar_g', 'sodium_mg', 'cholesterol_mg', 'caffeine_mg', 'calcium_mg', 'iron_mg', 'potassium_mg'] as const;
+export type LabelField = (typeof LABEL_FIELDS)[number];
 
 export type CustomFoodInsert = {
   source: 'custom';
@@ -63,6 +70,10 @@ export type CustomFoodInsert = {
   default_serving_g: number;
   default_serving_label: string | null;
   barcode: string | null;
+  sugar_100g: number | null;
+  sodium_mg_100g: number | null;
+  /** Per 100 g; {} when the label extras were left empty. */
+  micros: Micros;
 };
 
 export type CustomFoodResult = { ok: true; food: CustomFoodInsert; servings: Serving[] } | { ok: false; error: string };
@@ -119,6 +130,21 @@ export function buildCustomFood(f: CustomFoodForm): CustomFoodResult {
   const kcal_100g = per100(kcal);
   if (kcal_100g > 900) return { ok: false, error: "That's more than 900 kcal per 100 g. Check the calories and serving size." };
 
+  // Label extras: each optional, on the same basis as the macros.
+  const micros: Micros = {};
+  for (const key of LABEL_FIELDS) {
+    const raw = f.label?.[key]?.trim() ?? '';
+    if (raw === '') continue;
+    const v = parseNumber(raw);
+    const what = NUTRIENT[key as MicroKey].label === 'Salt' ? 'Sodium' : NUTRIENT[key as MicroKey].label;
+    if (v === null || v < 0) return { ok: false, error: `${what} must be a plain number.` };
+    const value = per100(v);
+    if (value > NUTRIENT[key as MicroKey].max100) return { ok: false, error: `That’s more ${what.toLowerCase()} than a food can have. Check the number and its unit.` };
+    micros[key] = value;
+  }
+  if ((micros.saturated_fat_g ?? 0) > per100(fat) + 0.1) return { ok: false, error: 'Saturated fat is part of fat, so it can’t be more. Check the numbers.' };
+  if ((micros.sugar_g ?? 0) > per100(carbs) + 0.1) return { ok: false, error: 'Sugar is part of carbs, so it can’t be more. Check the numbers.' };
+
   const servings: Serving[] = [];
   const taken = main ? [main.label] : [];
   for (const draft of f.extraUnits) {
@@ -142,6 +168,9 @@ export function buildCustomFood(f: CustomFoodForm): CustomFoodResult {
       default_serving_g: main?.grams ?? 100,
       default_serving_label: main?.label ?? null,
       barcode: f.barcode && /^\d{6,14}$/.test(f.barcode) ? f.barcode : null,
+      sugar_100g: micros.sugar_g ?? null,
+      sodium_mg_100g: micros.sodium_mg ?? null,
+      micros,
     },
     servings,
   };

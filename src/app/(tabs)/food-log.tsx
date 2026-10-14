@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { DeficitLine } from '@/components/DeficitLine';
+import { NutrientsLine } from '@/components/nutrients/NutrientsLine';
 import { DayNav, relativeDay } from '@/components/foodlog/DayNav';
 import { ExerciseCard } from '@/components/foodlog/ExerciseCard';
 import { MealCard } from '@/components/foodlog/MealCard';
@@ -135,6 +136,9 @@ export default function FoodLogScreen() {
               <AnimatedBar fraction={targets[m.key] ? eaten[m.key] / targets[m.key] : 0} color={colors[m.color]} height={3} />
             </View>
           ))}
+        </View>
+        <View style={[styles.balance, { borderTopColor: colors.hairline }]}>
+          <NutrientsLine date={date} />
         </View>
         <View style={[styles.balance, { borderTopColor: colors.hairline }]}>
           <DeficitLine day={deficit} />

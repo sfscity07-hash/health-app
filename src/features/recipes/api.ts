@@ -3,11 +3,13 @@ import { useMemo } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { foodKeys, num, numOrNull, toFood, useRecentLogs, type FoodWithServings } from '@/features/food/api';
-import { recipeFood, recipeUnits, type RecipeDraft, type RecipeItem } from '@/features/recipes/logic';
+import { NO_ESTIMATE, recipeMicros } from '@/features/nutrients/micros';
+import { finishedWeight, recipeFood, recipeUnits, type RecipeDraft, type RecipeItem } from '@/features/recipes/logic';
 import { buildPantry, type Use } from '@/features/recipes/pantry';
 import { ensureFood } from '@/features/search/api';
 import { toISODate } from '@/lib/dates';
 import { nutrientsFor, WHOLE_BATCH, type FoodRecord } from '@/lib/portion';
+import { MICRO_COLUMNS, tolerantWrite } from '@/lib/optionalColumns';
 import { requireSupabase } from '@/lib/supabase';
 
 export const recipeKeys = { all: ['recipes'] as const, one: (id: string) => ['recipe', id] as const, history: ['ingredientHistory'] as const };
@@ -96,6 +98,16 @@ export function useRecipe(id: string | undefined) {
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
+/** A recipe's vitamins, minerals, salt and caffeine, added up from its ingredients. */
+function recipeNutrients(d: RecipeDraft) {
+  const { micros, est } = recipeMicros(
+    d.items.map((i) => ({ name: i.name, grams: i.grams, food: i.food ?? i.external ?? null })),
+    finishedWeight(d),
+  );
+  // Recipes never borrow from USDA, so "nothing to estimate" is stored as tried.
+  return { micros, micros_est: est ?? NO_ESTIMATE };
+}
+
 /** Saves a recipe (new or changed) and returns its food id. Database foods used in it are saved to your foods first. */
 export function useSaveRecipe() {
   const queryClient = useQueryClient();
@@ -105,14 +117,14 @@ export function useSaveRecipe() {
       // Ingredients picked from USDA / Open Food Facts become your foods, so the recipe can point at them.
       const foodIds = await Promise.all(d.items.map(async (i) => (i.external ? ensureFood(i.external) : (i.food?.id ?? null))));
 
-      const foodRow = recipeFood(d);
+      const foodRow = { ...recipeFood(d), ...recipeNutrients(d) };
       let id = d.id;
       let created = false;
       if (id) {
-        const { error } = await sb.from('foods').update(foodRow).eq('id', id);
+        const { error } = await tolerantWrite(MICRO_COLUMNS, (drop) => sb.from('foods').update(drop(foodRow)).eq('id', id as string));
         if (error) throw error;
       } else {
-        const { data, error } = await sb.from('foods').insert({ source: 'custom', ...foodRow }).select('id').single();
+        const { data, error } = await tolerantWrite(MICRO_COLUMNS, (drop) => sb.from('foods').insert(drop({ source: 'custom', ...foodRow })).select('id').single());
         if (error) throw error;
         id = data.id as string;
         created = true;
@@ -167,6 +179,7 @@ export function useSaveRecipe() {
         brand: null,
         barcode: null,
         ...recipeFood(d),
+        ...recipeNutrients(d),
         servings: [...(old?.servings ?? []).filter((s) => s.label !== WHOLE_BATCH), ...recipeUnits(d)],
       }));
       queryClient.invalidateQueries({ queryKey: recipeKeys.all });

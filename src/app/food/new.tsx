@@ -14,7 +14,7 @@ import { Text } from '@/components/ui/Text';
 import { TextField } from '@/components/ui/TextField';
 import { authErrorMessage } from '@/features/auth/errors';
 import { useCreateFood } from '@/features/food/api';
-import { buildCustomFood, UNIT_SUGGESTIONS, type CustomFoodForm, type UnitDraft } from '@/features/food/forms';
+import { buildCustomFood, UNIT_SUGGESTIONS, type CustomFoodForm, type LabelField, type UnitDraft } from '@/features/food/forms';
 import { useScannedIngredient } from '@/features/recipes/draft';
 import { isMillilitres } from '@/lib/portion';
 import { useToast } from '@/store/toast';
@@ -25,6 +25,26 @@ import { gutter, radius, space } from '@/theme/tokens';
 type Params = { date?: string; meal?: string; name?: string; barcode?: string; for?: string };
 
 type Numbers = Pick<CustomFoodForm, 'kcal' | 'protein' | 'carbs' | 'fat' | 'fiber'>;
+
+/** The label extras, two to a row, in the order labels list them. */
+const LABEL_ROWS: { key: LabelField; label: string; unit: string }[][] = [
+  [
+    { key: 'saturated_fat_g', label: 'Saturated fat', unit: 'g' },
+    { key: 'sugar_g', label: 'Sugar', unit: 'g' },
+  ],
+  [
+    { key: 'sodium_mg', label: 'Sodium', unit: 'mg' },
+    { key: 'cholesterol_mg', label: 'Cholesterol', unit: 'mg' },
+  ],
+  [
+    { key: 'caffeine_mg', label: 'Caffeine', unit: 'mg' },
+    { key: 'calcium_mg', label: 'Calcium', unit: 'mg' },
+  ],
+  [
+    { key: 'iron_mg', label: 'Iron', unit: 'mg' },
+    { key: 'potassium_mg', label: 'Potassium', unit: 'mg' },
+  ],
+];
 
 /** Create a food from its nutrition label, measured however you like (scoop, cup, ml…), then pick how much you had. */
 export default function NewFoodScreen() {
@@ -42,6 +62,8 @@ export default function NewFoodScreen() {
   const [basis, setBasis] = useState<'unit' | '100'>('unit');
   const [numbers, setNumbers] = useState<Numbers>({ kcal: '', protein: '', carbs: '', fat: '', fiber: '' });
   const [extraUnits, setExtraUnits] = useState<UnitDraft[]>([]);
+  const [label, setLabel] = useState<Partial<Record<LabelField, string>>>({});
+  const [showLabel, setShowLabel] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const unit = choice === 'other' ? customUnit.trim().toLowerCase() : choice;
@@ -73,7 +95,7 @@ export default function NewFoodScreen() {
   };
 
   async function save() {
-    const built = buildCustomFood({ name, brand, unit, unitGrams, basis, extraUnits, barcode: params.barcode, ...numbers });
+    const built = buildCustomFood({ name, brand, unit, unitGrams, basis, extraUnits, label, barcode: params.barcode, ...numbers });
     if (!built.ok) {
       setError(built.error);
       return;
@@ -189,6 +211,34 @@ export default function NewFoodScreen() {
             <TextField label="Fat" suffix="g" flex value={numbers.fat} onChangeText={setNumber('fat')} keyboardType="decimal-pad" placeholder="0" />
             <TextField label="Fibre" suffix="g" flex value={numbers.fiber} onChangeText={setNumber('fiber')} keyboardType="decimal-pad" placeholder="0" />
           </View>
+          {showLabel ? (
+            <>
+              <Text variant="caption" color="textTertiary">
+                Fill in what the label lists ({per}); leave the rest empty. Salt in grams? Sodium is salt × 400 in mg (1.2 g salt = 480 mg).
+              </Text>
+              {LABEL_ROWS.map((row) => (
+                <View key={row[0].key} style={styles.row}>
+                  {row.map((f) => (
+                    <TextField
+                      key={f.key}
+                      label={`${f.label} (${f.unit})`}
+                      suffix={f.unit}
+                      flex
+                      value={label[f.key] ?? ''}
+                      onChangeText={(v) => {
+                        setLabel((l) => ({ ...l, [f.key]: v }));
+                        setError(null);
+                      }}
+                      keyboardType="decimal-pad"
+                      placeholder="–"
+                    />
+                  ))}
+                </View>
+              ))}
+            </>
+          ) : (
+            <Button label="Add salt, sugar, caffeine and more" icon="plus" variant="ghost" onPress={() => setShowLabel(true)} />
+          )}
         </Card>
 
         <Card style={styles.card}>

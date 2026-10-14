@@ -5,16 +5,16 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done, plus recipes and the first four steps of your new list (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks). The calendar is on hold. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes and your new list up to micronutrients (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks; vitamins, minerals, salt and caffeine). The calendar is on hold; AI estimates are next. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: build a recipe from foods you logged (tick them on the Food log), and water from drinks: milk, tea, coffee, juice, buttermilk and soup count toward your water, with a switch for anything cooked down (milk in oats) that Fuel remembers.** (Before that: Fuel learns your pantry, recipe ingredient ideas and scanning, deficit per day, the − 1 + counter.)
+Updated with every release. **Latest: vitamins, minerals, salt and caffeine every day. A line under your macros shows the day's salt and caffeine; tap it for the Nutrients screen.** (Before that: a recipe from foods you logged, water from drinks, Fuel learns your pantry, recipe ingredient ideas and scanning, deficit per day.)
 
 **Before running this version:**
 1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages.
-2. **New SQL:** open Supabase's SQL Editor and run `supabase/migrations/20261013090000_water_from_drinks.sql` once. It's safe to run again. Until you do, logging works as before but drinks don't count toward water (the Water screen reminds you).
-3. Haven't run `supabase/migrations/20261010090000_recipes.sql` yet? Run it first; until then Recipes shows "Your database is missing an update".
+2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261014090000_micronutrients.sql` once (safe to run again). Until you do, salt, sugar and caffeine still show, but vitamins and minerals don't (the Nutrients screen tells you).
+3. Haven't run `20261013090000_water_from_drinks.sql` (or `20261010090000_recipes.sql`) yet? Run those first, oldest first.
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -29,6 +29,14 @@ Updated with every release. **Latest: build a recipe from foods you logged (tick
   - Tap the meal name at the top of the logger to switch meal.
   - Tap anything you've logged (dashboard or Food log) to change the amount or meal, or delete it.
 - **Fibre**: tracked on everything you log, with a daily target of 14 g per 1,000 kcal (shown on the dashboard, Food log, food screen and Profile).
+- **Vitamins, minerals, salt and caffeine** (needs the new SQL for vitamins and minerals):
+  - Under the macros on the dashboard and the Food log: the day's **salt** and **caffeine** ("over" when you pass the limit). Tap it for the **Nutrients** screen.
+  - **Nutrients**: *Keep under* (salt, caffeine, sugar, saturated fat, cholesterol) against upper limits (2,300 mg sodium ≈ 5.8 g salt, 400 mg caffeine, 10% of your calories for sugar and saturated fat), then **minerals** (potassium, calcium, iron, magnesium, zinc) and **vitamins** (A, C, D, B12, folate) against what's recommended for your sex and age. Step back through days.
+  - Every row says which foods had **no data** (never counted as zero) and marks estimates with **≈**. Tap a row to see which foods it came from and where each estimate came from.
+  - Where the numbers come from: the food's label (Open Food Facts, USDA, or what you typed). Foods you saved before this update are looked up again by their USDA id or barcode the first time you open a day with them.
+  - **Filling gaps honestly**: for simple foods (Greek yoghurt, milk, paneer, oats, dal…), whatever the label leaves out is borrowed from USDA's plain version of the same food, closest in calories (so your Great Value Greek yoghurt gets potassium and B12 from USDA's nonfat Greek yoghurt, marked "≈ from USDA"). Never for a dish or a packaged snack. Recipes add up their ingredients. Caffeine for coffee, tea, chai, cola, energy drinks and chocolate uses typical amounts unless the label says; everything else has none.
+  - **New food** has **Add salt, sugar, caffeine and more**: saturated fat, sugar, sodium, cholesterol, caffeine, calcium, iron and potassium from the label, all optional.
+  - The food screen shows the salt, sugar, saturated fat and caffeine in the amount you're about to log.
 - **Weight** (tap the Trend weight tile on the dashboard, or **Weigh in** on Progress): drag the ruler or tap the number to type, in kg or lb; step back to log a day you missed; open an old weigh-in to change or delete it. Mornings without a weigh-in get a gentle nudge on the dashboard.
 - **Progress tab**, top to bottom:
   - **Goal journey**: your trend weight on a track from where you started to your goal, with a notch every 2.5 kg, how much you've lost (or gained) and the percentage, the next milestone with how many days away it is at your pace, and when you'll reach your goal.
@@ -105,11 +113,11 @@ Updated with every release. **Latest: build a recipe from foods you logged (tick
   - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): micronutrients / salt / caffeine, then the AI features (monthly adaptive targets, programs, pantry meal plans). The calendar of past days is on hold.
+- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): AI estimates (marked AI) for foods that still have no vitamin, mineral or caffeine data, then the other AI features (monthly adaptive targets, programs, pantry meal plans). The calendar of past days is on hold.
+- Packaged foods whose label lists only the basics (many Indian snacks) still show "no data" for vitamins and minerals until AI estimates arrive. Recipes saved before this update add up their ingredients the first time you open a day with them; a recipe inside another recipe needs a re-save to pick up its ingredients' new numbers.
 - Water from drinks goes by a list of drinks, not each food's own water value, so an unusual drink may not count (log it on the Water screen instead). Drinks you logged before running the new SQL don't count until you switch them on in the Water screen.
 - Phase 13: loading skeletons, offline cache, and the installable APK.
 - A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
-- Vitamins and minerals (micronutrients) aren't tracked yet.
 - Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
 - Reminders can't be tried on the web version, only in Expo Go or the installed app.
 
@@ -148,6 +156,7 @@ You only need to do this once.
    6. `20261009090000_account_and_workouts.sql` (delete account, workout details)
    7. `20261010090000_recipes.sql` (recipes)
    8. `20261013090000_water_from_drinks.sql` (water from drinks; safe to run again)
+   9. `20261014090000_micronutrients.sql` (vitamins, minerals, salt and caffeine on foods; safe to run again)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 

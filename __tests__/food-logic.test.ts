@@ -98,6 +98,10 @@ describe('custom foods', () => {
         default_serving_g: 60,
         default_serving_label: 'bar',
         barcode: null,
+        // Nothing extra from the label.
+        sugar_100g: null,
+        sodium_mg_100g: null,
+        micros: {},
       },
       servings: [],
     });
