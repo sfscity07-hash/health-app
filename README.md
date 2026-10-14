@@ -11,9 +11,17 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 Updated with every release. **Latest: ready to install as a real app. Everything for the APK is set up: it updates itself over the air, opens offline with your saved data, and shows placeholders in the shape of what's loading instead of spinners.** (Before that: AI estimates for nutrients no label lists; vitamins, minerals, salt and caffeine every day; a recipe from foods you logged; water from drinks; the blank-tabs fix.)
 
+**Your Expo project is linked** (October 14): its ID and update address are now in `app.json` here, so Steps 1–6 of the APK guide are done.
+
 **Before running this version:**
-1. `git pull`, then `npm ci` (new packages: over-the-air updates, network status and the offline cache), then `npx expo start --clear`. No new SQL.
-2. **To get the installable app:** follow [Install Fuel on your phone (APK)](#install-fuel-on-your-phone-apk) step by step. It takes about 10 minutes of setup, then the build runs on Expo's computers.
+1. Swap your `app.json` and `eas.json` for the repo's, then pull (once):
+   ```
+   git checkout -- app.json eas.json
+   git pull
+   npm ci
+   ```
+   (`npm ci` installs the new packages: over-the-air updates, network status and the offline cache.) No new SQL.
+2. **Build the installable app:** carry on from [Step 7](#part-2-build-the-apk-5-minutes-of-typing-then-a-wait) of the APK guide.
 3. Not done the AI setup yet? It's in [AI estimates (optional)](#ai-estimates-optional); it works the same in the installed app.
 
 ✅ **Works**
@@ -223,15 +231,15 @@ You'll see `Configured updates.url to "https://u.expo.dev/…"`. It may also say
 
 > Do this **before** your first build. The APK learns where to look for updates when it's built; an APK built without this step never gets updates.
 
-**Step 6. Send me the lines Expo added**
+**Step 6. Send me the lines Expo added** ✅ done for your project (October 14)
 
 Steps 4 and 5 changed `app.json` (and maybe `eas.json`) on your computer. Run:
 
 ```
-git diff app.json eas.json
+git --no-pager diff app.json eas.json
 ```
 
-Paste what it prints into our chat. It's your Expo username, the project ID and the update address, nothing secret. I'll add the same lines to the repo and tell you when they're in.
+Paste what it prints into our chat. It's your Expo username, the project ID and the update address, nothing secret. I'll add the project ID and update address to the repo and tell you when they're in. (Without `--no-pager`, a long diff stops at a `:`; press space for more, or `q` to quit.) Expo also writes a couple of lines the app doesn't need, such as the camera permission twice and an empty `"router"`; I leave those out.
 
 **Until I say they're in, don't `git pull`.** After that, the next update starts with one extra command, which swaps your copy of those files for the repo's identical one:
 

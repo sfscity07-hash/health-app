@@ -11,6 +11,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "updates": {
+      "url": "https://u.expo.dev/b1af05b0-9c89-44da-9806-d3d5cd41a21f"
+    },
     "android": {
       "package": "com.fuelapp.tracker",
       "adaptiveIcon": {
@@ -60,6 +63,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b1af05b0-9c89-44da-9806-d3d5cd41a21f"
+      }
     }
   }
 }
