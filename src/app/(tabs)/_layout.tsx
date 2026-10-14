@@ -1,5 +1,5 @@
-import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
-import { StyleSheet } from 'react-native';
+import { TabList, TabSlot, TabTrigger, Tabs, type TabsDescriptor, type TabsSlotRenderOptions } from 'expo-router/ui';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingTabBar, TabButton } from '@/components/navigation/FloatingTabBar';
@@ -10,12 +10,8 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   useReminderPlanner();
   return (
-    // Each tab is built the first time you open it and then stays built, so
-    // switching back is instant. (Building all four up front and freezing the
-    // hidden ones left them blank on Android: a tab frozen before it was ever
-    // shown never drew its content.)
     <Tabs style={styles.root}>
-      <TabSlot style={styles.root} />
+      <TabSlot style={styles.root} detachInactiveScreens={false} renderFn={renderTab} />
       <TabList asChild>
         <FloatingTabBar>
           <TabTrigger name="index" href="/" asChild>
@@ -37,6 +33,24 @@ export default function TabLayout() {
   );
 }
 
+/**
+ * Each tab in a plain view, shown or hidden by focus: built the first time
+ * you open it, then kept, so switching back is instant. Not native screens:
+ * Android's native screen container ignores the display switch and detaches
+ * hidden tabs, so every tab but the first came back with no size (a blank,
+ * dark screen); and with native screens off, the web version drops the style
+ * that hides a tab.
+ */
+function renderTab(descriptor: TabsDescriptor, { isFocused, loaded }: TabsSlotRenderOptions) {
+  if (!loaded && !isFocused) return null;
+  return (
+    <View key={descriptor.route.key} style={[styles.root, !isFocused && styles.hidden]}>
+      {descriptor.render()}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  hidden: { display: 'none' },
 });

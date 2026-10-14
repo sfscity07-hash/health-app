@@ -11,7 +11,7 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 Updated with every release. **Latest: AI estimates. When a food's label and USDA don't list a vitamin, mineral or its caffeine, Claude estimates it once, and the number carries a small AI label.** (Before that: vitamins, minerals, salt and caffeine every day; a recipe from foods you logged; water from drinks; Fuel learns your pantry.)
 
-**Fix in this version:** the Food log, Progress and Profile tabs were blank on Android (only the dashboard showed). Each tab now builds the first time you open it, then stays ready.
+**Fix in this version:** the Food log, Progress and Profile tabs were blank (dark) on Android; only the dashboard showed. The tabs used Android's native screen container, which left every tab except the first with no size. They're now plain views: each builds the first time you open it, then stays ready.
 
 **Before running this version:**
 1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new app packages.
