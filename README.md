@@ -5,21 +5,22 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done, plus recipes and your new list up to AI estimates (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks; vitamins, minerals, salt and caffeine; AI estimates for what no label lists). The calendar is on hold. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes and your new list up to AI estimates (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks; vitamins, minerals, salt and caffeine; AI estimates for what no label lists). Phase 13 is ready on my side: the app is set up to be built as an APK, update itself over the air, open offline and show loading placeholders. Building and installing it needs your Expo account: [Install Fuel on your phone (APK)](#install-fuel-on-your-phone-apk) walks you through it. The calendar is on hold. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: AI estimates. When a food's label and USDA don't list a vitamin, mineral or its caffeine, Claude estimates it once, and the number carries a small AI label.** (Before that: vitamins, minerals, salt and caffeine every day; a recipe from foods you logged; water from drinks; Fuel learns your pantry.)
-
-**Fix in this version:** the Food log, Progress and Profile tabs were blank (dark) on Android; only the dashboard showed. The tabs used Android's native screen container, which left every tab except the first with no size. They're now plain views: each builds the first time you open it, then stays ready.
+Updated with every release. **Latest: ready to install as a real app. Everything for the APK is set up: it updates itself over the air, opens offline with your saved data, and shows placeholders in the shape of what's loading instead of spinners.** (Before that: AI estimates for nutrients no label lists; vitamins, minerals, salt and caffeine every day; a recipe from foods you logged; water from drinks; the blank-tabs fix.)
 
 **Before running this version:**
-1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new app packages.
-2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261014120000_ai_estimates.sql` once (safe to run again). Haven't run `20261014090000_micronutrients.sql` yet? Run that first.
-3. **For AI estimates**, do the one-time setup in [AI estimates (optional)](#ai-estimates-optional) below: your Claude key goes into Supabase, **never into `.env`**. Without it the app works as before and the Nutrients screen says AI isn't set up.
+1. `git pull`, then `npm ci` (new packages: over-the-air updates, network status and the offline cache), then `npx expo start --clear`. No new SQL.
+2. **To get the installable app:** follow [Install Fuel on your phone (APK)](#install-fuel-on-your-phone-apk) step by step. It takes about 10 minutes of setup, then the build runs on Expo's computers.
+3. Not done the AI setup yet? It's in [AI estimates (optional)](#ai-estimates-optional); it works the same in the installed app.
 
 ✅ **Works**
 - Create an account, sign in, sign out.
+- **Opens offline** (new; in Expo Go your phone still needs your computer, so try it in the installed app): everything you've looked at is saved on the phone, so with no signal the app still opens on your day, Food log, weight, Progress, recipes and foods, with **Offline · saved data** at the top. It refreshes by itself when you're back online. Logging needs a connection (you'll see "Couldn't save… Check your connection"). Each account's saved data is kept separately and deleted when you sign out. If you open the app offline more than an hour after you last used it, you stay signed in (Supabase renews the sign-in once you're online).
+- **Loading placeholders** (new): grey shapes of what's coming (the day's food, meal cards, the weight chart, nutrient rows, recipes, saved meals, a food) instead of spinners. They hold still with your phone's *Remove animations* setting on.
+- **Updates itself** (new, installed app only): a new version downloads in the background; **New version ready · Restart** appears at the top when it's ready (or it opens next time you start the app). Profile → bottom shows the version and update date, with **Check for updates**.
 - Setup: goal (lose weight, **recomp**, maintain, build muscle), body stats in kg/cm or lb/ft, activity, goal weight and pace, then your animated daily budget.
 - **Logging food** (the **+** button, or "Add …" on the dashboard and Food log):
   - Recent foods for the meal you're logging, most-eaten first; tap **+** to log the same amount again in one tap. The **+** then turns into a **− 1 +** counter, so a second tap shows "2" instead of adding silently, and **−** takes the last one back out. Works the same for your foods, search results, saved meals, recipes and recent workouts.
@@ -119,9 +120,10 @@ Updated with every release. **Latest: AI estimates. When a food's label and USDA
 - Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): monthly adaptive targets, programs, pantry meal plans (they'll use the same AI setup). The calendar of past days is on hold.
 - Quick adds (just calories, no food behind them) can't get vitamins, minerals or AI estimates; only their caffeine is guessed from the name. A recipe adds up its ingredients rather than asking AI. Recipes saved before this update add up their ingredients the first time you open a day with them; a recipe inside another recipe needs a re-save to pick up its ingredients' new numbers.
 - Water from drinks goes by a list of drinks, not each food's own water value, so an unusual drink may not count (log it on the Water screen instead). Drinks you logged before running the new SQL don't count until you switch them on in the Water screen.
-- Phase 13: loading skeletons, offline cache, and the installable APK.
+- The APK itself: building and installing it needs your Expo account, so those steps are yours ([Install Fuel on your phone (APK)](#install-fuel-on-your-phone-apk)). I couldn't build it here, so the first build is also its first real test; if it fails, send me the error from the build page.
+- Logging while offline: reading works offline, saving doesn't yet.
 - A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
-- Steps from your phone or watch aren't read (Expo Go can't reach Health Connect).
+- Steps from your phone or watch aren't read. That needs Health Connect, which is native code, so it would come with a new APK later (not over the air).
 - Reminders can't be tried on the web version, only in Expo Go or the installed app.
 
 ## Run it on your Android phone (free)
@@ -133,7 +135,7 @@ Updated with every release. **Latest: AI estimates. When a food's label and USDA
 
 The app opens on the welcome screen. Create an account, answer the setup questions, and you'll land on the dashboard with your daily budget.
 
-> **Feels slow?** `npx expo start` runs a development build with debugging switched on, which makes every tap and animation slower. To try the app at real speed, use `npx expo start --no-dev --minify` instead. The installable app built in Phase 13 runs at full speed.
+> **Feels slow?** `npx expo start` runs a development build with debugging switched on, which makes every tap and animation slower. To try the app at real speed, use `npx expo start --no-dev --minify` instead. The [installed app (APK)](#install-fuel-on-your-phone-apk) runs at full speed.
 
 ### Getting a new version
 
@@ -144,6 +146,187 @@ npx expo start --clear
 ```
 
 Use `npm ci` rather than `npm install` for updates: it installs exactly what's in `package-lock.json` and never rewrites it. If `git pull` says *"Your local changes to package-lock.json would be overwritten"*, an earlier `npm install` rewrote that file; run `git checkout -- package-lock.json`, then pull again. If `npm ci` fails with "EPERM" on Windows, stop `npx expo start` (Ctrl+C) or close your editor and run it again.
+
+If `git pull` says the same about **`app.json`** or **`eas.json`**, that's from linking your Expo project ([Step 6](#install-fuel-on-your-phone-apk) below explains it).
+
+Once the APK is installed, getting a new version onto your phone is [Part 4](#part-4-getting-my-changes-later-no-reinstall) below, with no reinstall.
+
+## Install Fuel on your phone (APK)
+
+This turns Fuel into a real app on your phone: its own icon, full speed, no computer or Expo Go needed, opens offline with your saved data, and gets my later changes **over the air**, without reinstalling. It's free: Expo builds the APK on their computers (no Android Studio), and Supabase stays exactly as it is.
+
+**Already done (by me):**
+- The build settings (`eas.json`: an installable APK on the `preview` update channel).
+- Over-the-air updates.
+- Your `.env` going up with the build. That's how the APK knows your Supabase project, so `.env` is no longer hidden from it.
+- The notification icon for reminders.
+- The offline cache and the loading placeholders.
+
+**Left for you:** the parts that need your Expo account. Type everything below in **Command Prompt**, in `C:\Users\Manny\health-app`. A line in a grey box is one command: type it (or paste with right-click) and press Enter.
+
+### Part 1: one-time setup (about 10 minutes)
+
+**Step 1. Get this version**
+
+```
+cd C:\Users\Manny\health-app
+git pull
+npm ci
+```
+
+Then check your `.env` is there:
+
+```
+type .env
+```
+
+It should show three lines starting with `EXPO_PUBLIC_SUPABASE_URL=`, `EXPO_PUBLIC_SUPABASE_KEY=` and `EXPO_PUBLIC_USDA_API_KEY=`. Whatever is in `.env` goes into the app, so it must never hold a secret key (no `sb_secret_…`, no Claude key).
+
+Optional: run `npx expo start --clear` once and check the app works in Expo Go, then stop it with Ctrl+C.
+
+**Step 2. Make a free Expo account**
+
+Go to [expo.dev/signup](https://expo.dev/signup) and sign up with an email, a username and a password. Confirm the email they send you. Remember your **username**: it's in every link later.
+
+**Step 3. Sign in from Command Prompt**
+
+```
+npx eas-cli@latest login
+```
+
+1. The first time, it asks `Need to install the following packages: eas-cli@… Ok to proceed? (y)`. Type `y`, then Enter. (You'll see this question again now and then; the answer is always `y`.)
+2. Type your Expo **email or username**, Enter.
+3. Type your **password**, Enter. Nothing appears on screen while you type it; that's normal.
+4. It says `Logged in as your-username`.
+
+To check later: `npx eas-cli@latest whoami` prints your username.
+
+**Step 4. Create the project on Expo and link this folder**
+
+```
+npx eas-cli@latest init
+```
+
+- It asks `Would you like to create a project for @your-username/fuel?`. Answer `Y`.
+- It ends with `Project successfully linked`.
+- If it asks which account should own it (only if you're in an Expo team), pick your own username.
+
+This added two things to `app.json`: `"owner": "your-username"` and an `"extra": { "eas": { "projectId": "…" } }` block. Leave them as they are.
+
+**Step 5. Switch on over-the-air updates**
+
+```
+npx eas-cli@latest update:configure
+```
+
+You'll see `Configured updates.url to "https://u.expo.dev/…"`. It may also say it configured `eas.json`; that's fine.
+
+> Do this **before** your first build. The APK learns where to look for updates when it's built; an APK built without this step never gets updates.
+
+**Step 6. Send me the lines Expo added**
+
+Steps 4 and 5 changed `app.json` (and maybe `eas.json`) on your computer. Run:
+
+```
+git diff app.json eas.json
+```
+
+Paste what it prints into our chat. It's your Expo username, the project ID and the update address, nothing secret. I'll add the same lines to the repo and tell you when they're in.
+
+**Until I say they're in, don't `git pull`.** After that, the next update starts with one extra command, which swaps your copy of those files for the repo's identical one:
+
+```
+git checkout -- app.json eas.json
+git pull
+```
+
+You only need that once. If you pull too early and lose the lines, run Steps 4 and 5 again: `init` finds the existing project and offers to link it (answer `Y`).
+
+### Part 2: build the APK (5 minutes of typing, then a wait)
+
+**Step 7. Start the build**
+
+```
+npx eas-cli@latest build --platform android --profile preview
+```
+
+It asks:
+- `Generate a new Android Keystore?` Answer `Y`. This is the app's signing key. Expo keeps it for you and signs every future build with it, which is what lets a newer APK install over the old one with you still signed in. Never delete it on expo.dev.
+
+It may also print `versionCode will be initialized…`. That's fine: Expo numbers the builds for you.
+
+Then:
+1. It uploads the project: `Compressing project files and uploading to EAS Build`, a few MB.
+2. It prints a link like `https://expo.dev/accounts/your-username/projects/fuel/builds/…`.
+3. The build runs on Expo's computers. On the free plan it waits in a queue first (often 5–30 minutes, longer at busy times), then builds for about 10–20 minutes.
+
+You can close Command Prompt or turn the computer off; the build carries on. The link shows progress, and expo.dev → **Projects → fuel → Builds** lists every build.
+
+**Step 8. When it's finished**
+
+The build page shows **Build finished** with an **Install** button. If Command Prompt is still open, it shows a QR code and a link ending in `.apk`.
+
+### Part 3: install it on your phone
+
+**Step 9. Download the APK on the phone**
+
+Either:
+- scan the QR code with the phone's camera, or
+- on the phone, sign in at [expo.dev](https://expo.dev) → **Projects → fuel → Builds** → the newest build → **Install**.
+
+The `.apk` file downloads (tens of MB).
+
+**Step 10. Allow the install**
+
+Tap the downloaded file (in the browser's downloads, or **Files → Downloads**).
+
+- Android may say *"For your security, your phone isn't allowed to install unknown apps from this source"*. Tap **Settings**, turn on **Allow from this source**, go back, and tap **Install**.
+- **Google Play Protect** may say *"Unsafe app blocked"* or *"Unrecognised app"*, because the app isn't from the Play Store. Tap **More details → Install anyway** (or **Scan app**, then **Install**). It's your own app; nobody else has it.
+
+**Step 11. Open Fuel and sign in**
+
+Fuel is the ring icon in your app drawer. Sign in with the **same email and password** you use in Expo Go. Everything lives in Supabase, so your log, weight, recipes and settings are all there.
+
+- To get reminders: Profile → **Reminders**, turn one on, and allow notifications when Android asks.
+- Expo Go can stay installed next to it. Use the installed app day to day; Expo Go is still handy for trying a version before you publish it.
+
+### Part 4: getting my changes later (no reinstall)
+
+Most of what I make (screens, features, fixes) reaches the installed app over the air. When I say a version is ready:
+
+```
+cd C:\Users\Manny\health-app
+git pull
+npm ci
+npx eas-cli@latest update --channel preview --platform android --message "what changed"
+```
+
+- If it asks `Select environment:`, pick **preview** (arrow keys, then Enter).
+- **Never add `--environment` to the command.** With it, EAS leaves out your `.env`, and the update would arrive with no Supabase connection.
+- It packs the app on your computer for a minute or two, uploads it, and ends with `Published!`.
+
+On the phone, just open Fuel:
+1. It downloads the update in the background.
+2. When it's ready, **New version ready · Restart** appears at the top.
+3. Tap **Restart**, or ignore it: the new version opens next time you start the app.
+
+Profile → bottom shows `Fuel 1.0.0 · update of …` with the update's date, and **Check for updates** checks straight away.
+
+**When you need a new APK instead:** my release notes will say either **Over the air** (the commands above) or **New APK needed**. A new APK is only needed when I add something with native code, like reading steps from Health Connect. I'll raise the version number; you then repeat Steps 7–10, and the new APK installs over the old one with you still signed in.
+
+> An update only reaches APKs with the same version (all `1.0.0` builds, for example). After a new APK, updates go to the new version only, so install the new APK first.
+
+### If something goes wrong
+
+- **`'npx' is not recognized`**: install Node.js LTS (see [Run it on your Android phone](#run-it-on-your-android-phone-free)) and open a new Command Prompt.
+- **`init` talks about "dynamic app configuration"**: there's an `app.config.js` or `app.config.ts` in the folder. There shouldn't be; tell me.
+- **The build fails**: open the build link, find the first red error in the log (often under *Install dependencies* or *Run gradlew*), and paste it to me. I'll fix it, and you run Step 7 again.
+- **The installed app shows "Connect Supabase first"**: the build didn't get your `.env`. Check that `type .env` shows the three lines, and that you've pulled this version (older versions hid `.env` from the build). Then build again (Step 7).
+- **"App not installed" when installing a newer APK**: it was signed with a different key (for example after the keystore was deleted on expo.dev). Uninstall Fuel first, then install. Your data is safe in Supabase.
+- **No "New version ready"**: check you published with `--channel preview`, that you pulled before publishing, and that your phone is online. Then open Profile → **Check for updates**.
+- **The update opens but can't load anything**: it was published with `--environment`, or without a `.env`. Publish again with the command above.
+- **`git pull` complains about `app.json`**: see Step 6.
+- **Limits**: Expo's free plan has a monthly allowance of builds and update downloads, far more than one person's app needs.
 
 ## Connect your free Supabase backend
 
@@ -254,6 +437,8 @@ If something's off, the Nutrients screen says what: function not deployed, key m
 | `npm run typecheck` | TypeScript check |
 | `npm run lint` | ESLint (Expo config) |
 | `npm run db:verify` | Applies the migrations to a throwaway local Postgres and checks that every user only sees their own data (needs Postgres 15+ installed) |
+| `npx eas-cli@latest build --platform android --profile preview` | Builds the installable APK on Expo's servers ([steps](#install-fuel-on-your-phone-apk)) |
+| `npx eas-cli@latest update --channel preview --platform android --message "…"` | Sends a new version to the installed app, over the air |
 
 ```
 src/
@@ -261,14 +446,15 @@ src/
                   food-log, progress, profile · log (the logger sheet) · quick-add · food/new · food/[id] · food/preview ·
                   entry/[id]. _layout.tsx routes you by sign-in and setup state.
   components/ui/  PressableScale (instant touch feedback), Button, TextField, OptionCard, SegmentedControl,
-                  StepProgress, Text, Card, Icon, AnimatedNumber, EmptyState, Screen, ToastHost
+                  StepProgress, Text, Card, Icon, AnimatedNumber, EmptyState, Screen, ToastHost, Skeleton
   components/     CalorieGauge, BrandMark, navigation/FloatingTabBar, dashboard/ (gauge, rings, tiles,
                   timeline), food/ (FoodDetail, PortionRuler, QuickAddForm, FoodRow), foodlog/ (MealCard, DayNav)
   features/       auth, onboarding, profile, dashboard (day queries, insights), food (logging queries,
                   label/quick-add parsing, Recent ranking), search (USDA + Open Food Facts, ranking)
   theme/          design tokens (colors, type, spacing) and the theme provider
   lib/            nutrition maths, portions, trend weight, streaks, supabase client, env, units, dates,
-                  formatting, meals, haptics
+                  formatting, meals, haptics, queryCache (saved data for offline, per account)
+  features/updates/ over-the-air updates (the "New version ready" banner, Check for updates)
   store/          small Zustand stores (theme, the day you're viewing, toasts)
 supabase/
   migrations/     database schema, privacy rules (RLS) and reference data

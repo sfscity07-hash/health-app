@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { RemindersCard } from '@/components/profile/RemindersCard';
@@ -12,6 +13,7 @@ import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { ADDBACK } from '@/features/exercise/logic';
 import { useProfile, useUpdateProfile } from '@/features/profile/api';
+import { checkForUpdate, restart, updatesEnabled, versionLabel, type UpdateCheck } from '@/features/updates/ota';
 import { useDrinkWaterSetting } from '@/features/water/api';
 import { formatInt } from '@/lib/format';
 import { fiberTarget } from '@/lib/nutrition';
@@ -33,6 +35,7 @@ export default function ProfileScreen() {
   const theme = usePreferences((s) => s.theme);
   const setTheme = usePreferences((s) => s.setTheme);
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const [update, setUpdate] = useState<UpdateCheck>('idle');
 
   const targets = profile
     ? [
@@ -134,9 +137,34 @@ export default function ProfileScreen() {
         <Button label="Delete account" variant="ghost" icon="trash" onPress={() => router.push('/delete-account')} />
       </Card>
 
-      <Text variant="label" align="center">
-        Fuel {version}
-      </Text>
+      <View style={styles.about}>
+        <Text variant="label" align="center">
+          Fuel {versionLabel(version)}
+        </Text>
+        {updatesEnabled ? (
+          update === 'ready' ? (
+            <Button label="Restart to update" icon="refresh" onPress={restart} />
+          ) : (
+            <>
+              <Button
+                label="Check for updates"
+                variant="ghost"
+                icon="refresh"
+                loading={update === 'checking'}
+                onPress={async () => {
+                  setUpdate('checking');
+                  setUpdate(await checkForUpdate());
+                }}
+              />
+              {update === 'latest' || update === 'offline' ? (
+                <Text variant="caption" align="center" accessibilityLiveRegion="polite">
+                  {update === 'latest' ? 'You have the newest version.' : 'Couldn’t check. Are you online?'}
+                </Text>
+              ) : null}
+            </>
+          )
+        ) : null}
+      </View>
     </Screen>
   );
 }
@@ -145,4 +173,5 @@ const styles = StyleSheet.create({
   section: { padding: space.lg, gap: space.md },
   targets: { flexDirection: 'row', justifyContent: 'space-between' },
   target: { gap: 2 },
+  about: { gap: space.sm },
 });

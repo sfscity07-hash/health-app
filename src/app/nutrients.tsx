@@ -10,6 +10,7 @@ import { AnimatedBar } from '@/components/ui/AnimatedBar';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
+import { Bone, SkeletonGroup } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { aiMessage } from '@/features/nutrients/ai';
@@ -91,7 +92,26 @@ export default function NutrientsScreen() {
           </Card>
         ) : null}
 
-        {n.pending ? <ActivityIndicator color={colors.accent} accessibilityLabel="Loading" /> : null}
+        {n.pending ? (
+          <SkeletonGroup label="Loading nutrients">
+            {SECTIONS.map((sec) => (
+              <View key={sec.group} style={styles.section}>
+                <Bone width="28%" height={11} />
+                <Card style={[styles.card, styles.skeletonCard]}>
+                  {[0, 1, 2].map((i) => (
+                    <View key={i} style={styles.skeletonRow}>
+                      <View style={styles.rowHead}>
+                        <Bone width="36%" height={13} style={styles.flex} />
+                        <Bone width={70} height={13} />
+                      </View>
+                      <Bone height={6} round={3} />
+                    </View>
+                  ))}
+                </Card>
+              </View>
+            ))}
+          </SkeletonGroup>
+        ) : null}
 
         {!n.pending && n.entries > 0
           ? SECTIONS.map((s) => (
@@ -267,4 +287,6 @@ const styles = StyleSheet.create({
   status: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   detail: { gap: space.sm, paddingTop: space.sm, borderTopWidth: StyleSheet.hairlineWidth * 2 },
   fromRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  skeletonCard: { paddingVertical: space.md, gap: space.lg },
+  skeletonRow: { gap: space.sm },
 });

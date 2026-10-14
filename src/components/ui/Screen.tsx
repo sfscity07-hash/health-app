@@ -2,9 +2,11 @@ import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/ui/Icon';
 import { Text } from '@/components/ui/Text';
+import { useOnline } from '@/lib/online';
 import { useTheme } from '@/theme/theme';
-import { gutter, space } from '@/theme/tokens';
+import { gutter, radius, space } from '@/theme/tokens';
 
 /** Room left under scrolling content so the floating tab bar never covers it. */
 export const TAB_BAR_CLEARANCE = 120;
@@ -23,6 +25,7 @@ export function Screen({ eyebrow, title, accessory, onRefresh, children }: Scree
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
+  const online = useOnline();
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
       <ScrollView
@@ -35,6 +38,8 @@ export function Screen({ eyebrow, title, accessory, onRefresh, children }: Scree
               colors={[colors.accent]}
               progressBackgroundColor={colors.surface2}
               onRefresh={() => {
+                // Offline, a refresh would wait for the connection; the Offline tag says why nothing changed.
+                if (!online) return;
                 setRefreshing(true);
                 onRefresh().finally(() => setRefreshing(false));
               }}
@@ -48,7 +53,23 @@ export function Screen({ eyebrow, title, accessory, onRefresh, children }: Scree
         {title ? (
           <View style={styles.header}>
             <View style={styles.headerText}>
-              {eyebrow ? <Text variant="label">{eyebrow}</Text> : null}
+              {eyebrow || !online ? (
+                <View style={styles.eyebrow}>
+                  {eyebrow ? <Text variant="label">{eyebrow}</Text> : null}
+                  {online ? null : (
+                    <View
+                      style={[styles.offline, { backgroundColor: colors.surface2 }]}
+                      accessible
+                      accessibilityLabel="Offline. Showing what's saved on your phone; it refreshes when you're back online."
+                      accessibilityLiveRegion="polite">
+                      <Icon name="offline" size={12} color="textSecondary" strokeWidth={2.2} />
+                      <Text variant="caption" color="textSecondary">
+                        Offline · saved data
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
               <Text variant="title" accessibilityRole="header">
                 {title}
               </Text>
@@ -67,4 +88,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: gutter, gap: space.lg },
   header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   headerText: { gap: 3, flexShrink: 1 },
+  eyebrow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
+  offline: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.pill },
 });

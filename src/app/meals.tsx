@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FoodRow } from '@/components/food/FoodRow';
 import { ModalHeader } from '@/components/food/ModalHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
@@ -50,7 +51,7 @@ export default function SavedMealsScreen() {
             Tap + to add everything to {MEAL_LABEL[slot].toLowerCase()}.
           </Text>
         </View>
-        {meals.isPending ? <ActivityIndicator color={colors.accent} /> : null}
+        {meals.isPending ? <ListSkeleton rows={4} /> : null}
         {meals.error ? (
           <EmptyState
             icon="bookmark"

@@ -8,6 +8,9 @@
     "scheme": "fuel",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#07080C",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "android": {
       "package": "com.fuelapp.tracker",
       "adaptiveIcon": {
@@ -45,7 +48,14 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#4F5BE0"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

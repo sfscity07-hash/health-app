@@ -3,8 +3,15 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 
 describe('UI components', () => {
+  it('a loading skeleton reads as one busy "Loading", not a pile of empty shapes', async () => {
+    await render(<ListSkeleton rows={3} />);
+    const loading = screen.getByRole('progressbar', { name: 'Loading' });
+    expect(loading).toBeBusy();
+  });
+
   it('Button shows its label and trailing value and responds to presses', async () => {
     const onPress = jest.fn();
     await render(<Button label="Add to Dinner" trailing="309 kcal" onPress={onPress} />);

@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Screen } from '@/components/ui/Screen';
+import { Bone, SkeletonGroup } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useCheckins, useExpenditure } from '@/features/checkin/api';
@@ -210,7 +211,35 @@ export default function ProgressScreen() {
   const history = [...all].reverse();
   const listed = showAll ? history : history.slice(0, LIST_PREVIEW);
 
-  if (!weighIns.isPending && all.length === 0) {
+  if (weighIns.isPending) {
+    return (
+      <Screen eyebrow="Weight" title="Progress" onRefresh={refresh}>
+        <SkeletonGroup label="Loading your progress">
+          <Card style={styles.skeletonCard}>
+            <Bone width="40%" height={14} />
+            <Bone height={10} round={5} />
+            <Bone width="60%" height={11} />
+          </Card>
+          <Card style={styles.skeletonCard}>
+            <Bone width="30%" height={14} />
+            <Bone height={180} round={12} />
+          </Card>
+          <View style={styles.tiles}>
+            <Card style={[styles.skeletonCard, styles.skeletonTile]}>
+              <Bone width="60%" height={11} />
+              <Bone width="45%" height={20} />
+            </Card>
+            <Card style={[styles.skeletonCard, styles.skeletonTile]}>
+              <Bone width="60%" height={11} />
+              <Bone width="30%" height={20} />
+            </Card>
+          </View>
+        </SkeletonGroup>
+      </Screen>
+    );
+  }
+
+  if (all.length === 0) {
     return (
       <Screen eyebrow="Weight" title="Progress" onRefresh={refresh}>
         <EmptyState
@@ -435,6 +464,8 @@ const styles = StyleSheet.create({
   dotKey: { width: 7, height: 7, borderRadius: 4 },
   noRange: { paddingVertical: space.xl },
   tiles: { flexDirection: 'row', gap: 10 },
+  skeletonCard: { padding: space.lg, gap: space.md },
+  skeletonTile: { flex: 1 },
   section: { padding: space.lg, gap: space.md },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   proteinRow: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start', paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth * 2 },

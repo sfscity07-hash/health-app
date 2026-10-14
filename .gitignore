@@ -42,8 +42,9 @@ example
 /ios
 /android
 
-# local secrets (copy .env.example to .env)
-.env
+# .env is committed on purpose and not ignored: it holds only public values (the Supabase URL,
+# the publishable key and the USDA key), and EAS cloud builds upload only files git doesn't ignore.
+# Never put a secret in it (no sb_secret_ / service_role key, no Claude key).
 
 # Supabase CLI
 supabase/.temp/

@@ -296,7 +296,12 @@ health-app/
     - **Smarter exercise calories:** see Exercise above.
     - Profile is reorganised into targets, exercise, reminders, appearance, your data and account.
     **Recipe builder** ✅ (added after Phase 12, migration `20261010090000_recipes.sql`): a recipe is a custom `foods` row, so logging, Recent, search, favorites and saved meals work with it unchanged. `recipes` (food_id, final_weight_g, servings) and `recipe_items` (position, food_id → foods on delete set null, name, quantity, unit, grams, nutrient snapshot) with own-rows RLS plus restrictive policies that only allow your own foods as the recipe and its ingredients. Per 100 g = ingredient totals ÷ finished weight (or the ingredients' summed weight); the default portion is one serving, else 100 g; a "whole batch" unit is stored in `food_servings` and listed last. Database ingredients are saved to your foods when the recipe is saved, and a new recipe is removed again if any later step fails. Editor: live totals card, ingredient menu (change amount, swap at the same grams, remove), quick ingredients, finished weight, servings, "Save as a new recipe", delete. The ingredient picker searches your foods and recipes (minus the recipe itself), Recent and both databases.
-13. **Polish + release**: skeletons, empty states, app icon and splash screen, offline cache, EAS build of the APK, install on your phone.
+13. **Polish + release** ✅ prepared (October 14); you build and install the APK (README, "Install Fuel on your phone"):
+    - **EAS build** (`eas.json`): profile `preview` makes an installable APK (`buildType: apk`, internal distribution) on channel `preview`; version codes are kept by EAS (`appVersionSource: remote`, `autoIncrement`). `.env` holds only public values and is no longer git-ignored, because EAS uploads only what git doesn't ignore.
+    - **Over-the-air updates** (`expo-updates`, `runtimeVersion` = the app version): the installed app downloads new JavaScript at launch and when it comes back after an hour; a "New version ready · Restart" banner appears once it's downloaded, and Profile shows the version and update date with **Check for updates**. A new APK is only needed for new native code (then the version goes up).
+    - **Offline** (`lib/queryCache.tsx`): everything the app reads is saved on the phone per account (TanStack Query persisted to expo-sqlite's localStorage, 14 days, dropped on a new version or update); queries wait for the connection (`expo-network` → `onlineManager`) instead of failing, and screens show "Offline · saved data". Saving offline fails at once with a clear message. A sign-in more than an hour old can't be renewed offline, so the app opens on the saved sign-in after 2.5 s and renews it once online. Signing out deletes that account's saved data; another account never sees it.
+    - **Skeletons** (`components/ui/Skeleton.tsx`) instead of spinners on the dashboard timeline, Food log, Progress, Nutrients, Recipes, Saved meals and food screens; still with Reduce motion on.
+    - Notification icon for reminders (white ring logo); the app icon and splash were done earlier.
 
 Each phase ends in a working app you can try in Expo Go, committed to `claude/quirky-carson-ybf2zv`.
 
@@ -341,7 +346,7 @@ In order. Each step ships on its own, with "what works" notes before you try it.
 10. **Pantry → meal plan** (L)
    - Keep an inventory of what's at home (type it, scan barcodes, or tick foods you log). Choose the days and meals ("just breakfast for 3 days", "breakfast and lunch for 2"); AI drafts meals using only what you have, Fuel scales the portions to hit your targets, and each meal logs in one tap or saves as a meal.
 
-**Phase 13 (installable APK + over-the-air updates, skeletons, offline)** can slot in anywhere; before step 7 is best, since the installed app then gets every later step without a reinstall.
+**Phase 13 (installable APK + over-the-air updates, skeletons, offline)** ✅ prepared on October 14, after step 7; once you've installed the APK, steps 8–10 arrive as over-the-air updates. Reading your steps from Health Connect needs native code, so it would come with a new APK.
 
 ---
 

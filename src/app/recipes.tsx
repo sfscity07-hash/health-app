@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FoodRow } from '@/components/food/FoodRow';
 import { ModalHeader } from '@/components/food/ModalHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
@@ -50,7 +51,7 @@ export default function RecipesScreen() {
           <Button label="Build one from foods you logged" variant="ghost" onPress={() => router.push({ pathname: '/recipe/from-log', params: { date } })} />
         </View>
 
-        {recipes.isPending ? <ActivityIndicator color={colors.accent} /> : null}
+        {recipes.isPending ? <ListSkeleton rows={4} /> : null}
         {recipes.isError ? (
           <EmptyState icon="pot" title="Couldn’t load your recipes" body={loadErrorMessage(recipes.error, 'Check your internet connection, then close this and open it again.')} />
         ) : null}

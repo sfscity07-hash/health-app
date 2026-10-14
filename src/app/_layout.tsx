@@ -6,19 +6,20 @@ import {
   useFonts,
 } from '@expo-google-fonts/geist';
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { UpdateBanner } from '@/components/UpdateBanner';
 import { AccountProblem } from '@/features/auth/AccountProblem';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { useProfile } from '@/features/profile/api';
+import { QueryProvider } from '@/lib/queryCache';
 import { usePreferences } from '@/store/preferences';
 import { ThemeProvider, useTheme } from '@/theme/theme';
 import { radius } from '@/theme/tokens';
@@ -36,20 +37,19 @@ export default function RootLayout() {
     GeistMono_400Regular,
     GeistMono_500Medium,
   });
-  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1 } } }));
 
   if (!fontsLoaded && !fontError) return null;
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
+        <AuthProvider>
+          <QueryProvider>
             <ThemeProvider>
               <RootStack />
             </ThemeProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+          </QueryProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -62,8 +62,10 @@ function RootStack() {
   const setTheme = usePreferences((s) => s.setTheme);
 
   const signedIn = Boolean(session);
+  // Offline, with nothing saved on the phone yet: the profile waits for a connection.
+  const waitingOffline = signedIn && profile.isPending && profile.fetchStatus === 'paused';
   // Keep the splash screen up until we know which screen to show.
-  const ready = !initializing && (!signedIn || !profile.isPending);
+  const ready = !initializing && (!signedIn || !profile.isPending || waitingOffline);
   const onboarded = Boolean(profile.data?.onboarded_at);
   const savedTheme = profile.data?.theme;
 
@@ -88,6 +90,7 @@ function RootStack() {
   }, [scheme, colors]);
 
   if (!ready) return null;
+  if (waitingOffline) return <AccountProblem offline onRetry={() => profile.refetch()} missingProfile={false} />;
   if (signedIn && (profile.isError || profile.data === null)) {
     return <AccountProblem onRetry={() => profile.refetch()} missingProfile={profile.data === null} />;
   }
@@ -183,6 +186,7 @@ function RootStack() {
           <Stack.Screen name="exercise/[id]" options={EDITOR} />
         </Stack.Protected>
       </Stack>
+      <UpdateBanner />
     </NavigationThemeProvider>
   );
 }

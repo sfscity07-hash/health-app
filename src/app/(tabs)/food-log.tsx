@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { DeficitLine } from '@/components/DeficitLine';
 import { NutrientsLine } from '@/components/nutrients/NutrientsLine';
@@ -13,6 +13,7 @@ import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
+import { CardSkeleton, SkeletonGroup } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { useFoodLogs, useRefreshDashboard, type FoodLogEntry } from '@/features/dashboard/api';
@@ -146,7 +147,11 @@ export default function FoodLogScreen() {
       </Card>
 
       {logs.isPending ? (
-        <ActivityIndicator color={colors.accent} accessibilityLabel="Loading" style={styles.loading} />
+        <SkeletonGroup label="Loading your meals">
+          {MEALS.map((meal, i) => (
+            <CardSkeleton key={meal} rows={i === 3 ? 1 : 2} />
+          ))}
+        </SkeletonGroup>
       ) : logs.isError ? (
         <Text variant="small" color="warn">
           {loadErrorMessage(logs.error)}
@@ -206,6 +211,5 @@ const styles = StyleSheet.create({
   macros: { flexDirection: 'row', gap: space.md },
   balance: { borderTopWidth: StyleSheet.hairlineWidth * 2, paddingTop: space.md, marginTop: space.xs },
   macro: { flex: 1, gap: 3 },
-  loading: { marginTop: space.xl },
   dayActions: { gap: space.xs },
 });

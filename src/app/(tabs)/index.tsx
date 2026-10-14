@@ -17,6 +17,7 @@ import { WeekRings, type WeekDay } from '@/components/dashboard/WeekRings';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { Icon } from '@/components/ui/Icon';
 import { Screen } from '@/components/ui/Screen';
+import { Bone, SkeletonGroup } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { emptyDay, useClosures, useCloseDay, useDaySummaries, useFoodLogs, useRefreshDashboard, useWeighIns } from '@/features/dashboard/api';
@@ -320,14 +321,28 @@ export default function DashboardScreen() {
             {formatInt(day.kcal_in)} kcal
           </Text>
         </View>
-        <FoodTimeline
-          entries={entries}
-          nextMeal={nextMeal}
-          kcalLeft={left}
-          onAdd={(meal) => router.push({ pathname: '/log', params: { date: selected, meal } })}
-          onPressEntry={openEntry}
-          recipeIds={recipeIds}
-        />
+        {logs.isPending ? (
+          <SkeletonGroup label="Loading the day’s food">
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.skeletonRow}>
+                <Bone width={36} height={12} />
+                <View style={styles.skeletonText}>
+                  <Bone width={i === 1 ? '46%' : '62%'} height={13} />
+                  <Bone width="28%" height={10} />
+                </View>
+              </View>
+            ))}
+          </SkeletonGroup>
+        ) : (
+          <FoodTimeline
+            entries={entries}
+            nextMeal={nextMeal}
+            kcalLeft={left}
+            onAdd={(meal) => router.push({ pathname: '/log', params: { date: selected, meal } })}
+            onPressEntry={openEntry}
+            recipeIds={recipeIds}
+          />
+        )}
 
         {canFinish || closed ? (
           <FinishDayButton
@@ -362,4 +377,6 @@ const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', gap: 10 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: space.xs },
   burnRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  skeletonRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, paddingVertical: space.xs },
+  skeletonText: { flex: 1, gap: 6 },
 });

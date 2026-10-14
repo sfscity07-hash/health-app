@@ -7,19 +7,21 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/theme/theme';
 import { gutter, space } from '@/theme/tokens';
 
-/** Shown when you're signed in but your profile can't be loaded. */
-export function AccountProblem({ onRetry, missingProfile }: { onRetry: () => void; missingProfile: boolean }) {
+/** Shown when you're signed in but your profile can't be loaded (or hasn't been, and you're offline). */
+export function AccountProblem({ onRetry, missingProfile, offline }: { onRetry: () => void; missingProfile: boolean; offline?: boolean }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.root, { backgroundColor: colors.bg, paddingTop: insets.top + space.huge, paddingBottom: insets.bottom + space.xl }]}>
       <EmptyState
-        icon="user"
-        title={missingProfile ? 'Your profile is missing' : "Can't load your account"}
+        icon={offline ? 'offline' : 'user'}
+        title={offline ? 'You’re offline' : missingProfile ? 'Your profile is missing' : "Can't load your account"}
         body={
-          missingProfile
-            ? 'Your account exists but has no profile row. Check that the database setup ran (README, step 2), then try again.'
-            : 'Check your internet connection. If your Supabase project was paused, restore it in the Supabase dashboard.'
+          offline
+            ? 'Fuel needs a connection once to load your account onto this phone. After that it opens offline with your saved data. It carries on by itself when you’re back online.'
+            : missingProfile
+              ? 'Your account exists but has no profile row. Check that the database setup ran (README, step 2), then try again.'
+              : 'Check your internet connection. If your Supabase project was paused, restore it in the Supabase dashboard.'
         }
       />
       <View style={styles.actions}>
