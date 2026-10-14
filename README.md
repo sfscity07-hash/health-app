@@ -5,16 +5,16 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 - **Plan:** [docs/PLAN.md](docs/PLAN.md) has every feature, the screen layout, the data model and the 13 build phases.
 - **Approved design:** the [interactive design preview](https://claude.ai/artifact/BivetwmmHb2Ly4xxUkjqMq) is the visual reference for every screen.
-- **Status:** Phases 1–12 are done, plus recipes and your new list up to micronutrients (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks; vitamins, minerals, salt and caffeine). The calendar is on hold; AI estimates are next. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
+- **Status:** Phases 1–12 are done, plus recipes and your new list up to AI estimates (deficit per day; recipe ingredient ideas and scanning; a recipe from foods you logged; water from drinks; vitamins, minerals, salt and caffeine; AI estimates for what no label lists). The calendar is on hold. The rest of the list is in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13). See [What works right now](#what-works-right-now) before you try a new version.
 
 ## What works right now
 
-Updated with every release. **Latest: vitamins, minerals, salt and caffeine every day. A line under your macros shows the day's salt and caffeine; tap it for the Nutrients screen.** (Before that: a recipe from foods you logged, water from drinks, Fuel learns your pantry, recipe ingredient ideas and scanning, deficit per day.)
+Updated with every release. **Latest: AI estimates. When a food's label and USDA don't list a vitamin, mineral or its caffeine, Claude estimates it once, and the number carries a small AI label.** (Before that: vitamins, minerals, salt and caffeine every day; a recipe from foods you logged; water from drinks; Fuel learns your pantry.)
 
 **Before running this version:**
-1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new packages.
-2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261014090000_micronutrients.sql` once (safe to run again). Until you do, salt, sugar and caffeine still show, but vitamins and minerals don't (the Nutrients screen tells you).
-3. Haven't run `20261013090000_water_from_drinks.sql` (or `20261010090000_recipes.sql`) yet? Run those first, oldest first.
+1. `git pull`, then `npm ci`, then `npx expo start --clear`. No new app packages.
+2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261014120000_ai_estimates.sql` once (safe to run again). Haven't run `20261014090000_micronutrients.sql` yet? Run that first.
+3. **For AI estimates**, do the one-time setup in [AI estimates (optional)](#ai-estimates-optional) below: your Claude key goes into Supabase, **never into `.env`**. Without it the app works as before and the Nutrients screen says AI isn't set up.
 
 ✅ **Works**
 - Create an account, sign in, sign out.
@@ -37,6 +37,7 @@ Updated with every release. **Latest: vitamins, minerals, salt and caffeine ever
   - **Filling gaps honestly**: for simple foods (Greek yoghurt, milk, paneer, oats, dal…), whatever the label leaves out is borrowed from USDA's plain version of the same food, closest in calories (so your Great Value Greek yoghurt gets potassium and B12 from USDA's nonfat Greek yoghurt, marked "≈ from USDA"). Never for a dish or a packaged snack. Recipes add up their ingredients. Caffeine for coffee, tea, chai, cola, energy drinks and chocolate uses typical amounts unless the label says; everything else has none.
   - **New food** has **Add salt, sugar, caffeine and more**: saturated fat, sugar, sodium, cholesterol, caffeine, calcium, iron and potassium from the label, all optional.
   - The food screen shows the salt, sugar, saturated fat and caffeine in the amount you're about to log.
+  - **AI estimates** (after the one-time setup below): when a food's label, USDA and the caffeine list still leave a nutrient unknown (often an Indian packaged snack or a café drink), Claude estimates it per 100 g from the food's name, brand and macros, based on food-composition tables (USDA, India's IFCT). Each food is asked about once and the answer is saved with it. Every number that includes an AI estimate shows a small **AI** label, on the Nutrients screen, the salt and caffeine line and the food screen; tap a row to see which food it was and what Claude based it on ("AI estimate, based on IFCT: bhujia"), with "(rough)" when Claude wasn't sure. Label and USDA numbers always win. Turn it off in Profile → **AI estimates for missing nutrients**.
 - **Weight** (tap the Trend weight tile on the dashboard, or **Weigh in** on Progress): drag the ruler or tap the number to type, in kg or lb; step back to log a day you missed; open an old weigh-in to change or delete it. Mornings without a weigh-in get a gentle nudge on the dashboard.
 - **Progress tab**, top to bottom:
   - **Goal journey**: your trend weight on a track from where you started to your goal, with a notch every 2.5 kg, how much you've lost (or gained) and the percentage, the next milestone with how many days away it is at your pace, and when you'll reach your goal.
@@ -113,8 +114,8 @@ Updated with every release. **Latest: vitamins, minerals, salt and caffeine ever
   - Theme (system, dark or light), saved to your account.
 
 🚧 **Not yet** (shows a placeholder or "Soon")
-- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): AI estimates (marked AI) for foods that still have no vitamin, mineral or caffeine data, then the other AI features (monthly adaptive targets, programs, pantry meal plans). The calendar of past days is on hold.
-- Packaged foods whose label lists only the basics (many Indian snacks) still show "no data" for vitamins and minerals until AI estimates arrive. Recipes saved before this update add up their ingredients the first time you open a day with them; a recipe inside another recipe needs a re-save to pick up its ingredients' new numbers.
+- Next from your list, in order (details in [docs/PLAN.md](docs/PLAN.md#next-your-list-october-13)): monthly adaptive targets, programs, pantry meal plans (they'll use the same AI setup). The calendar of past days is on hold.
+- Quick adds (just calories, no food behind them) can't get vitamins, minerals or AI estimates; only their caffeine is guessed from the name. A recipe adds up its ingredients rather than asking AI. Recipes saved before this update add up their ingredients the first time you open a day with them; a recipe inside another recipe needs a re-save to pick up its ingredients' new numbers.
 - Water from drinks goes by a list of drinks, not each food's own water value, so an unusual drink may not count (log it on the Water screen instead). Drinks you logged before running the new SQL don't count until you switch them on in the Water screen.
 - Phase 13: loading skeletons, offline cache, and the installable APK.
 - A recipe inside another recipe doesn't update by itself: after changing the marinade, open the taco, tap **Edit** and **Save recipe** to pick up the new numbers.
@@ -157,6 +158,7 @@ You only need to do this once.
    7. `20261010090000_recipes.sql` (recipes)
    8. `20261013090000_water_from_drinks.sql` (water from drinks; safe to run again)
    9. `20261014090000_micronutrients.sql` (vitamins, minerals, salt and caffeine on foods; safe to run again)
+   10. `20261014120000_ai_estimates.sql` (AI estimate limits and switch; safe to run again)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 
@@ -170,7 +172,7 @@ You only need to do this once.
      (select count(*) from public.exercises) as exercises;
    ```
 
-   You should see **15** tables, **22** privacy rules and **29** exercises.
+   You should see **16** tables, **23** privacy rules and **29** exercises.
 3. Turn off email confirmation: go to **Authentication → Sign In / Providers → Email**, switch off **Confirm email**, and save.
 
    Fuel signs you in with an email and password. With confirmation on, every new account waits for an emailed link, and the free plan only sends a few emails an hour. If you leave it on, open the link from the email (the page it opens may not load, but your account is confirmed anyway), then sign in.
@@ -207,6 +209,39 @@ You only need to do this once.
 6. Restart the app with `npx expo start --clear`. The welcome screen's **Create account** button should be active. If it says **Connect Supabase first**, the app isn't reading your `.env`; check the common mistakes above.
 
 > Free Supabase projects pause after 7 days without use. Logging every day keeps yours awake. If it does pause, press **Restore** in the Supabase dashboard.
+
+## AI estimates (optional)
+
+Claude fills in the vitamins, minerals and caffeine that no label or USDA lists, marked **AI** in the app. Your Claude key lives in a Supabase **Edge Function secret**, so it never goes in the app, the APK or this public repo. Don't put it in `.env`: everything in `.env` is public here (and `EXPO_PUBLIC_…` values are built into the app). A leaked Claude key can be used by anyone to run up your bill.
+
+**Which model, and what it costs.** Claude Opus 5.5 (`claude-opus-5-5`), the current Opus and Anthropic's default recommendation, at medium effort. Getting a vitamin profile right for "Haldiram Aloo Bhujia" or a café latte is a recall task, and Opus is the most reliable at it. Each food is asked about **once** and the answer is saved, so cost stays small even on the top model: about $4 per million tokens in and $20 out, roughly **1–4 cents per food**, typically a few cents a week. The function also caps calls: 40 per account and 100 in total per 24 hours (about $3 a day at the very most), and you can lower both. Prefer cheaper? Changing `MODEL` in `supabase/functions/estimate-nutrients/estimate.ts` to `claude-sonnet-5-5` (half the price) or `claude-haiku-5-5` (about 1/40) is a one-line change, at some cost in accuracy. If Claude's safety filter ever declines a request, the API retries it on its recommended fallback model (`fallbacks: "default"`).
+
+**One-time setup** (Windows Command Prompt, in `C:\Users\Manny\health-app`; `npx` downloads the Supabase CLI the first time):
+
+1. Run `supabase/migrations/20261014120000_ai_estimates.sql` in Supabase's SQL Editor (see above).
+2. Find your **project ref**: the 20 letters in your Supabase URL, `https://<ref>.supabase.co` (it's in `EXPO_PUBLIC_SUPABASE_URL` in your `.env`).
+3. Log the CLI in to your Supabase account (opens your browser):
+   ```
+   npx supabase login
+   ```
+4. Store your Claude key as a secret of the function. The name before the `=` is **`ANTHROPIC_API_KEY`**:
+   ```
+   npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-your-key-here --project-ref your-project-ref
+   ```
+   (Or in the Supabase dashboard: **Edge Functions → Secrets**, name `ANTHROPIC_API_KEY`, value your key.)
+5. Recommended: only your account may use AI, even though the app's publishable key is public:
+   ```
+   npx supabase secrets set AI_ALLOWED_EMAILS=the-email-you-sign-in-with --project-ref your-project-ref
+   ```
+   Optional limits: `AI_DAILY_LIMIT_PER_USER` (default 40) and `AI_DAILY_LIMIT_TOTAL` (default 100).
+6. Deploy the function (no Docker needed):
+   ```
+   npx supabase functions deploy estimate-nutrients --project-ref your-project-ref --use-api --no-verify-jwt
+   ```
+   `--no-verify-jwt` is safe: the function checks your sign-in itself, in a way that works with every kind of Supabase key.
+7. Open the app → tap the **Salt · Caffeine** line → Nutrients. Foods with gaps are asked about once ("Asking AI about foods with no data…"), then their numbers show the **AI** label.
+
+If something's off, the Nutrients screen says what: function not deployed, key missing or not accepted, SQL not run, or today's limit reached. Each call is logged in the `ai_calls` table (tokens used, model) for you to check in Supabase.
 
 ## For development
 

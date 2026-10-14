@@ -4,6 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ModalHeader } from '@/components/food/ModalHeader';
+import { AiBadge } from '@/components/nutrients/AiBadge';
 import { DayNav } from '@/components/foodlog/DayNav';
 import { AnimatedBar } from '@/components/ui/AnimatedBar';
 import { Card } from '@/components/ui/Card';
@@ -11,6 +12,7 @@ import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
 import { loadErrorMessage } from '@/features/auth/errors';
+import { aiMessage } from '@/features/nutrients/ai';
 import { useDayNutrients } from '@/features/nutrients/api';
 import { formatAmount, NUTRIENTS, saltFromSodium, type DayNutrient, type NutrientInfo, type NutrientTarget } from '@/features/nutrients/micros';
 import { fromISODate, toISODate } from '@/lib/dates';
@@ -59,15 +61,19 @@ export default function NutrientsScreen() {
           <Text variant="small" color="textSecondary">
             {n.entries === 0
               ? 'Nothing logged this day.'
-              : `From the ${n.entries} food${n.entries === 1 ? '' : 's'} you logged. ≈ marks an estimate; foods that don’t list a nutrient are named, never counted as zero.`}
+              : `From the ${n.entries} food${n.entries === 1 ? '' : 's'} you logged. ≈ marks an estimate and AI an AI estimate; foods that don’t list a nutrient are named, never counted as zero.`}
           </Text>
-          {n.filling ? (
+          {n.filling || n.asking ? (
             <View style={styles.filling} accessibilityLiveRegion="polite">
               <ActivityIndicator size="small" color={colors.textSecondary} />
               <Text variant="caption" color="textSecondary">
-                Looking up vitamins and minerals for your foods…
+                {n.filling ? 'Looking up vitamins and minerals for your foods…' : 'Asking AI about foods with no data…'}
               </Text>
             </View>
+          ) : aiMessage(n.aiStatus) ? (
+            <Text variant="caption" color="textSecondary" style={styles.aiNote} accessibilityLiveRegion="polite">
+              {aiMessage(n.aiStatus)}
+            </Text>
           ) : null}
         </View>
 
@@ -117,8 +123,9 @@ export default function NutrientsScreen() {
         {!n.pending && n.entries > 0 ? (
           <Text variant="caption" color="textTertiary">
             Numbers come from each food’s label (Open Food Facts, USDA, or what you typed). For simple foods like yoghurt, milk or oats, anything the label leaves out is
-            borrowed from USDA’s plain version of the same food and marked ≈. Caffeine for coffee, tea, cola and chocolate uses typical amounts unless the label says. Targets are
-            the US National Academies’ recommendations for your sex and age.
+            borrowed from USDA’s plain version of the same food and marked ≈. Caffeine for coffee, tea, cola and chocolate uses typical amounts unless the label says. What’s
+            still missing after that is estimated once per food by AI (Claude) from the food’s name, brand and macros, and marked AI; label and USDA numbers always come first.
+            Targets are the US National Academies’ recommendations for your sex and age.
           </Text>
         ) : null}
       </ScrollView>
@@ -159,7 +166,7 @@ function NutrientRow({
     <PressableScale
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}
-      accessibilityLabel={`${info.label}: ${amount}${salt && !noData ? `, ${Math.round(day.amount)} milligrams of sodium` : ''}, ${Math.round(fraction * 100)}% of ${of}${status ? `, ${status}` : ''}.${
+      accessibilityLabel={`${info.label}: ${amount}${day.ai && !noData ? ', includes an AI estimate' : ''}${salt && !noData ? `, ${Math.round(day.amount)} milligrams of sodium` : ''}, ${Math.round(fraction * 100)}% of ${of}${status ? `, ${status}` : ''}.${
         day.missing.length && !noData ? ` ${day.missing.length} food${day.missing.length === 1 ? '' : 's'} had no data.` : ''
       } Tap to see where it came from.`}
       pressedScale={1}
@@ -173,6 +180,11 @@ function NutrientRow({
         <Text variant="bodyStrong" color={noData ? 'textTertiary' : 'text'} tabular>
           {amount}
         </Text>
+        {day.ai && !noData ? (
+          <View style={styles.badge}>
+            <AiBadge />
+          </View>
+        ) : null}
         <Text variant="caption" color="textTertiary" tabular>
           {' '}
           / {of}
@@ -211,9 +223,12 @@ function NutrientRow({
                   {f.name}
                 </Text>
                 {f.note ? (
-                  <Text variant="caption" color="textTertiary" numberOfLines={2}>
-                    ≈ {f.note}
-                  </Text>
+                  <View style={styles.noteRow}>
+                    {f.ai ? <AiBadge /> : null}
+                    <Text variant="caption" color="textTertiary" numberOfLines={2} style={styles.flex}>
+                      ≈ {f.note}
+                    </Text>
+                  </View>
                 ) : null}
               </View>
               <Text variant="small" color="textSecondary" tabular>
@@ -239,6 +254,9 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   flex: { flex: 1 },
   filling: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xs },
+  aiNote: { marginTop: space.xs },
+  badge: { marginLeft: 6 },
+  noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   notice: { padding: space.lg, gap: space.xs },
   section: { gap: space.xs },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },

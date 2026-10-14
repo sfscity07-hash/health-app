@@ -225,6 +225,50 @@ begin
 end $$;
 commit;
 
+-- ---------------------------------------------------------------- AI allowance
+-- Users can't take from the AI allowance or write the log themselves.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+begin
+  begin
+    perform public.take_ai_call('00000000-0000-0000-0000-00000000000b', 'nutrients', null, 1000, 1000);
+    raise exception 'a user called the AI allowance directly';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.ai_calls (user_id, kind) values ('00000000-0000-0000-0000-00000000000b', 'nutrients');
+    raise exception 'a user wrote to the AI log';
+  exception when insufficient_privilege then null;
+  end;
+  assert (select ai_estimates from public.profiles), 'AI estimates are on unless you turn them off';
+end $$;
+commit;
+
+-- The Edge Function (service role) takes calls until a limit is reached.
+begin;
+set local role service_role;
+do $$
+begin
+  assert public.take_ai_call('00000000-0000-0000-0000-00000000000a', 'nutrients', null, 2, 3) is not null, 'first call allowed';
+  assert public.take_ai_call('00000000-0000-0000-0000-00000000000a', 'nutrients', null, 2, 3) is not null, 'second call allowed';
+  assert public.take_ai_call('00000000-0000-0000-0000-00000000000a', 'nutrients', null, 2, 3) is null, 'A''s daily limit holds';
+  assert public.take_ai_call('00000000-0000-0000-0000-00000000000b', 'nutrients', null, 2, 3) is not null, 'B still has calls';
+  assert public.take_ai_call('00000000-0000-0000-0000-00000000000b', 'nutrients', null, 2, 3) is null, 'the limit for everyone together holds';
+end $$;
+commit;
+
+-- Each user sees only their own AI calls.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$
+begin
+  assert (select count(*) from public.ai_calls) = 2, 'A sees their two AI calls';
+end $$;
+commit;
+
 -- A's data survived B's attempts.
 do $$
 begin

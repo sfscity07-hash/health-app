@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { AiBadge } from '@/components/nutrients/AiBadge';
 import { Icon } from '@/components/ui/Icon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Text } from '@/components/ui/Text';
@@ -30,7 +31,7 @@ export function NutrientsLine({ date, style }: { date: string; style?: StyleProp
       accessibilityLabel={
         n.entries === 0
           ? 'Nutrients: salt, caffeine, vitamins and minerals. Opens the Nutrients screen.'
-          : `Salt ${saltText}${saltOver ? ', over the limit' : ''}, caffeine ${caffeineText}${caffeineOver ? ', over the limit' : ''}. Opens vitamins, minerals and more.`
+          : `Salt ${saltText}${saltOver ? ', over the limit' : ''}${salt.ai ? ' (includes AI estimate)' : ''}, caffeine ${caffeineText}${caffeineOver ? ', over the limit' : ''}${caffeine.ai ? ' (includes AI estimate)' : ''}. Opens vitamins, minerals and more.`
       }
       haptic="tap"
       pressedScale={0.98}
@@ -42,30 +43,36 @@ export function NutrientsLine({ date, style }: { date: string; style?: StyleProp
         </Text>
       ) : (
         <View style={[styles.flex, styles.values]}>
-          <Text variant="caption" color="textSecondary">
-            Salt{' '}
-            <Text variant="caption" tabular>
-              {saltText}
-            </Text>
-            {saltOver ? (
-              <Text variant="caption" color="warn">
-                {' '}
-                over
+          <View style={styles.item}>
+            <Text variant="caption" color="textSecondary">
+              Salt{' '}
+              <Text variant="caption" tabular>
+                {saltText}
               </Text>
-            ) : null}
-          </Text>
-          <Text variant="caption" color="textSecondary">
-            Caffeine{' '}
-            <Text variant="caption" tabular>
-              {caffeineText}
+              {saltOver ? (
+                <Text variant="caption" color="warn">
+                  {' '}
+                  over
+                </Text>
+              ) : null}
             </Text>
-            {caffeineOver ? (
-              <Text variant="caption" color="warn">
-                {' '}
-                over
+            {salt.ai ? <AiBadge /> : null}
+          </View>
+          <View style={styles.item}>
+            <Text variant="caption" color="textSecondary">
+              Caffeine{' '}
+              <Text variant="caption" tabular>
+                {caffeineText}
               </Text>
-            ) : null}
-          </Text>
+              {caffeineOver ? (
+                <Text variant="caption" color="warn">
+                  {' '}
+                  over
+                </Text>
+              ) : null}
+            </Text>
+            {caffeine.ai ? <AiBadge /> : null}
+          </View>
         </View>
       )}
       <Text variant="caption" color="accent">
@@ -80,4 +87,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   flex: { flex: 1 },
   values: { flexDirection: 'row', gap: space.md },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });

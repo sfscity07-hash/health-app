@@ -5,8 +5,9 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useFoodLogs } from '@/features/dashboard/api';
 import { foodKeys, numOrNull, toFood } from '@/features/food/api';
 import { useDayBudget } from '@/features/food/useDayBudget';
+import { AI_BATCH, askAi } from '@/features/nutrients/ai';
 import { fillFoods, needsFill, type FoodUpdate } from '@/features/nutrients/fill';
-import { dayNutrients, nutrientTargets, recipeMicros, NO_ESTIMATE } from '@/features/nutrients/micros';
+import { aiWanted, dayNutrients, nutrientTargets, recipeMicros, wantsAi, NO_ESTIMATE } from '@/features/nutrients/micros';
 import { useProfile } from '@/features/profile/api';
 import { useFoodsByIds, useRecipeIds } from '@/features/recipes/api';
 import { ageOn, fromISODate } from '@/lib/dates';
@@ -96,6 +97,22 @@ export function useDayNutrients(date: string) {
     },
   });
 
+  // Then AI, for what's still unknown: once per food, a few foods per request.
+  const aiOn = profile?.ai_estimates !== false;
+  const forAi = (foods.data ?? []).filter((f) => wantsAi(f, recipeIds.has(f.id))).slice(0, AI_BATCH);
+  const aiKey = forAi.map((f) => f.id).sort().join(',');
+  const ai = useQuery({
+    queryKey: ['aiNutrients', aiKey],
+    enabled: Boolean(session) && ready === true && aiOn && forAi.length > 0 && !fill.isFetching && (toFill.length === 0 || fill.isFetched),
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async () => {
+      const result = await askAi(forAi.map((f) => ({ id: f.id, missing: aiWanted(f) })));
+      if (result.estimated > 0) await queryClient.invalidateQueries({ queryKey: ['foodsByIds'] });
+      return result;
+    },
+  });
+
   const day = useMemo(() => {
     const byId = new Map((foods.data ?? []).map((f) => [f.id, f]));
     return dayNutrients((logs.data ?? []).map((e) => ({ id: e.id, name: e.name, grams: e.grams, food: e.food_id ? (byId.get(e.food_id) ?? null) : null })));
@@ -110,6 +127,8 @@ export function useDayNutrients(date: string) {
     entries: (logs.data ?? []).length,
     ready,
     filling: fill.isFetching,
+    asking: ai.isFetching,
+    aiStatus: ai.data?.status,
     pending: logs.isPending || (ids.length > 0 && foods.isPending),
     error: logs.error ?? foods.error,
   };

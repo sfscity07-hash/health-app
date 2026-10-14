@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View
 
 import { AddUnitPanel } from '@/components/food/AddUnitPanel';
 import { DrinkWater } from '@/components/food/DrinkWater';
+import { AiBadge } from '@/components/nutrients/AiBadge';
 import { EditorFooter } from '@/components/food/EditorFooter';
 import { ImpactPreview } from '@/components/food/ImpactPreview';
 import { ModalHeader } from '@/components/food/ModalHeader';
@@ -98,7 +99,7 @@ export function FoodDetail(p: FoodDetailProps) {
   ).flatMap(([label, key, fmt]) => {
     const per100 = micros.values[key];
     if (per100 === undefined || (key === 'caffeine_mg' && per100 === 0)) return [];
-    return [`${label} ${micros.estimated[key] ? '≈' : ''}${fmt((per100 * grams) / 100)}`];
+    return [{ key, text: `${label} ${micros.estimated[key] ? '≈' : ''}${fmt((per100 * grams) / 100)}`, ai: Boolean(micros.ai[key]) }];
   });
   const pk = n.protein_g * 4;
   const ck = n.carbs_g * 4;
@@ -275,9 +276,17 @@ export function FoodDetail(p: FoodDetailProps) {
         {p.extra?.({ grams, kcal: n.kcal })}
 
         {extras.length ? (
-          <Text variant="caption" color="textSecondary" style={styles.extras}>
-            {extras.join(' · ')}
-          </Text>
+          <View style={styles.extras}>
+            {extras.map((x, i) => (
+              <View key={x.key} style={styles.extra}>
+                <Text variant="caption" color="textSecondary">
+                  {i > 0 ? '· ' : ''}
+                  {x.text}
+                </Text>
+                {x.ai ? <AiBadge /> : null}
+              </View>
+            ))}
+          </View>
         ) : null}
 
         {drinkMl !== null ? <DrinkWater ml={drinkMl} counts={counts} onChange={setWaterChoice} /> : null}
@@ -332,5 +341,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   group: { gap: space.sm },
-  extras: { marginTop: -space.md, paddingHorizontal: space.xs },
+  extras: { marginTop: -space.md, paddingHorizontal: space.xs, flexDirection: 'row', flexWrap: 'wrap', columnGap: 4, rowGap: 2 },
+  extra: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });

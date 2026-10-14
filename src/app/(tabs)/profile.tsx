@@ -74,6 +74,22 @@ export default function ProfileScreen() {
         />
       </Card>
 
+      {typeof profile?.ai_estimates === 'boolean' ? (
+        <Card style={styles.section}>
+          <Text variant="label">Nutrients</Text>
+          <SwitchRow
+            label="AI estimates for missing nutrients"
+            description={
+              profile.ai_estimates
+                ? 'When a food’s label and USDA don’t list a vitamin, mineral or its caffeine, Claude estimates it once from the name, brand and macros. Marked AI wherever it shows.'
+                : 'Off: foods without data show “no data” instead.'
+            }
+            value={profile.ai_estimates}
+            onChange={(v) => updateProfile.mutate({ ai_estimates: v })}
+          />
+        </Card>
+      ) : null}
+
       {drinkSetting.ready ? (
         <Card style={styles.section}>
           <Text variant="label">Water</Text>

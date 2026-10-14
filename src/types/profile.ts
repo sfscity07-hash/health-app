@@ -25,6 +25,8 @@ export type Profile = {
   exercise_addback: boolean;
   /** Milk, tea, juice and other drinks you log count toward water. Missing until the water-from-drinks SQL is run (counts as on). */
   count_drink_water?: boolean;
+  /** AI fills in nutrients no label or USDA gives (marked AI). Missing until the AI SQL is run (counts as on). */
+  ai_estimates?: boolean;
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;

@@ -44,3 +44,8 @@ example
 
 # local secrets (copy .env.example to .env)
 .env
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/
+supabase/functions/.env

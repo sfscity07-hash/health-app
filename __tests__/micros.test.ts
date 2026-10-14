@@ -1,6 +1,7 @@
 import { buildCustomFood, type CustomFoodForm } from '@/features/food/forms';
 import { borrow, borrowKind, closestGeneric, type Generic } from '@/features/nutrients/fill';
 import {
+  aiWanted,
   caffeinePer100,
   cleanMicros,
   dayNutrients,
@@ -13,6 +14,7 @@ import {
   nutrientTargets,
   recipeMicros,
   saltFromSodium,
+  wantsAi,
 } from '@/features/nutrients/micros';
 import { mapOffProduct } from '@/features/search/off';
 import { mapUsdaFood } from '@/features/search/usda';
@@ -269,5 +271,47 @@ describe('your own food’s label extras', () => {
   it('catches numbers that can’t be right', () => {
     expect(buildCustomFood(form({ saturated_fat_g: '6' }))).toEqual({ ok: false, error: 'Saturated fat is part of fat, so it can’t be more. Check the numbers.' });
     expect(buildCustomFood(form({ sodium_mg: 'a pinch' }))).toEqual({ ok: false, error: 'Sodium must be a plain number.' });
+  });
+});
+
+describe('AI estimates', () => {
+  const ai = { model: 'claude-opus-5-5', from: 'IFCT: bhujia', confidence: 'medium' as const, values: { sodium_mg: 9, potassium_mg: 520, iron_mg: 4.1, caffeine_mg: 0 } };
+  const bhujia = {
+    name: 'Aloo Bhujia',
+    kcal_100g: 597,
+    micros: { sodium_mg: 1050 },
+    micros_est: { by: 'usda' as const, from: 'Snacks, potato sticks', values: { potassium_mg: 900 }, ai },
+  };
+
+  it('fill only what the label, USDA and the caffeine list leave unknown, and say so', () => {
+    const fm = foodMicros(bhujia);
+    expect(fm.values.sodium_mg).toBe(1050);
+    expect(fm.values.potassium_mg).toBe(900);
+    expect(fm.values.iron_mg).toBe(4.1);
+    expect(fm.ai).toEqual({ iron_mg: true });
+    expect(fm.estimated.iron_mg).toBe('AI estimate, based on IFCT: bhujia');
+  });
+
+  it('marks a rough guess as rough', () => {
+    const fm = foodMicros({ ...bhujia, micros_est: { ...bhujia.micros_est, ai: { ...ai, confidence: 'low' as const } } });
+    expect(fm.estimated.iron_mg).toBe('AI estimate, based on IFCT: bhujia (rough)');
+  });
+
+  it('are asked for once, after the label and USDA, for whatever is still unknown', () => {
+    const plain = { name: 'Pre workout', kcal_100g: 350, micros: { sodium_mg: 200 }, micros_est: NO_ESTIMATE };
+    expect(aiWanted(plain)).toContain('caffeine_mg');
+    expect(aiWanted(plain)).not.toContain('sodium_mg');
+    expect(wantsAi(plain, false)).toBe(true);
+    expect(wantsAi(plain, true)).toBe(false);
+    expect(wantsAi({ ...plain, micros: null }, false)).toBe(false);
+    expect(wantsAi({ ...plain, micros_est: null }, false)).toBe(false);
+    expect(wantsAi(bhujia, false)).toBe(false);
+  });
+
+  it('show on the day', () => {
+    const day = dayNutrients([{ id: '1', name: 'Aloo Bhujia', grams: 50, food: bhujia }]);
+    expect(day.iron_mg.ai).toBe(true);
+    expect(day.iron_mg.from[0]).toMatchObject({ amount: 2.05, ai: true });
+    expect(day.sodium_mg.ai).toBe(false);
   });
 });

@@ -30,8 +30,14 @@ export const MICRO_KEYS = [
 export type MicroKey = (typeof MICRO_KEYS)[number];
 /** Amounts per 100 g; a key is there only when it's known. */
 export type Micros = Partial<Record<MicroKey, number>>;
-/** Where estimated amounts came from: a generic USDA food, a recipe's ingredients, or AI. "none": looked, nothing to borrow. */
-export type MicroEstimate = { by: 'usda' | 'recipe' | 'ai' | 'none'; from: string; values: Micros };
+/** Claude's estimate for what was still missing, with the food it based it on. Empty values: asked, nothing usable. */
+export type AiEstimate = { model: string; from: string; confidence: 'low' | 'medium' | 'high'; values: Micros };
+
+/**
+ * Where estimated amounts came from: a generic USDA food or a recipe's
+ * ingredients ("none": looked, nothing to borrow), plus what AI added on top.
+ */
+export type MicroEstimate = { by: 'usda' | 'recipe' | 'ai' | 'none'; from: string; values: Micros; ai?: AiEstimate };
 
 /** Stored once a food has been checked for estimates and there was nothing honest to borrow. */
 export const NO_ESTIMATE: MicroEstimate = { by: 'none', from: '', values: {} };
@@ -243,7 +249,13 @@ export type MicroFood = {
   sodium_mg_100g?: number | null;
 };
 
-export type FoodMicros = { values: Micros; estimated: Partial<Record<MicroKey, string>> };
+export type FoodMicros = {
+  values: Micros;
+  /** For each estimated nutrient, where the estimate came from. */
+  estimated: Partial<Record<MicroKey, string>>;
+  /** Nutrients whose amount is an AI estimate (shown with the AI label). */
+  ai: Partial<Record<MicroKey, true>>;
+};
 
 /**
  * Everything known about a food per 100 g: its label first, then estimates
@@ -272,8 +284,36 @@ export function foodMicros(f: MicroFood): FoodMicros {
       if (c > 0) estimated.caffeine_mg = 'typical amount';
     }
   }
-  return { values, estimated };
+  // Last, AI fills whatever is still unknown.
+  const ai: Partial<Record<MicroKey, true>> = {};
+  const fromAi = est?.ai;
+  if (fromAi?.values) {
+    for (const [k, v] of Object.entries(cleanMicros(fromAi.values)) as [MicroKey, number][]) {
+      if (values[k] !== undefined) continue;
+      values[k] = v;
+      ai[k] = true;
+      if (v > 0) estimated[k] = aiNote(fromAi);
+    }
+  }
+  return { values, estimated, ai };
 }
+
+/** "AI estimate, based on IFCT: bhujia", with "(rough)" when Claude wasn't sure. */
+export const aiNote = (a: AiEstimate) => `AI estimate${a.from ? `, based on ${a.from}` : ''}${a.confidence === 'low' ? ' (rough)' : ''}`;
+
+/** Nutrients still unknown after the label, USDA and the caffeine list: what AI is asked for. */
+export const aiWanted = (f: MicroFood): MicroKey[] => {
+  const { values } = foodMicros(f);
+  return MICRO_KEYS.filter((k) => values[k] === undefined);
+};
+
+/**
+ * Whether to ask AI about a food: once its label and USDA have been looked
+ * up, if something is still unknown and AI hasn't been asked yet. Recipes add
+ * up their ingredients instead.
+ */
+export const wantsAi = (f: MicroFood, isRecipe: boolean) =>
+  !isRecipe && f.micros !== null && f.micros !== undefined && f.micros_est !== null && f.micros_est !== undefined && !f.micros_est.ai && aiWanted(f).length > 0;
 
 /** "from USDA: Yogurt, Greek, plain", "from its ingredients", "AI estimate". */
 export function estimateNote(e: MicroEstimate): string {
@@ -339,7 +379,7 @@ export function recipeMicros(parts: RecipePart[], finishedWeight: number): { mic
 /** A quick add or quick ingredient: only its caffeine can be told, from its name. */
 function quickMicros(name: string): FoodMicros {
   const c = caffeinePer100(name);
-  return c === null ? { values: {}, estimated: {} } : { values: { caffeine_mg: c }, estimated: c > 0 ? { caffeine_mg: 'typical amount' } : {} };
+  return c === null ? { values: {}, estimated: {}, ai: {} } : { values: { caffeine_mg: c }, estimated: c > 0 ? { caffeine_mg: 'typical amount' } : {}, ai: {} };
 }
 
 export type LoggedItem = { id: string; name: string; grams: number | null; food: MicroFood | null };
@@ -349,15 +389,17 @@ export type DayNutrient = {
   amount: number;
   /** Some of the amount is an estimate. */
   estimated: boolean;
+  /** Some of it is an AI estimate. */
+  ai: boolean;
   /** Foods you logged that don't say how much of it they have. */
   missing: string[];
   /** Where it came from, the most first. */
-  from: { name: string; amount: number; note?: string }[];
+  from: { name: string; amount: number; note?: string; ai?: true }[];
 };
 
 /** The day's total of each nutrient, what it came from, and which foods had no data for it. */
 export function dayNutrients(items: LoggedItem[]): Record<MicroKey, DayNutrient> {
-  const out = Object.fromEntries(MICRO_KEYS.map((k) => [k, { key: k, amount: 0, estimated: false, missing: [], from: [] }])) as unknown as Record<MicroKey, DayNutrient>;
+  const out = Object.fromEntries(MICRO_KEYS.map((k) => [k, { key: k, amount: 0, estimated: false, ai: false, missing: [], from: [] }])) as unknown as Record<MicroKey, DayNutrient>;
   for (const item of items) {
     const fm = item.food ? foodMicros(item.food) : quickMicros(item.name);
     for (const key of MICRO_KEYS) {
@@ -371,9 +413,11 @@ export function dayNutrients(items: LoggedItem[]): Record<MicroKey, DayNutrient>
       }
       const amount = (per100 * item.grams) / 100;
       const note = fm.estimated[key];
+      const ai = fm.ai[key];
       d.amount += amount;
       if (note) d.estimated = true;
-      d.from.push({ name: item.name, amount, ...(note ? { note } : {}) });
+      if (ai) d.ai = true;
+      d.from.push({ name: item.name, amount, ...(note ? { note } : {}), ...(ai ? { ai } : {}) });
     }
   }
   for (const d of Object.values(out)) d.from.sort((a, b) => b.amount - a.amount);
