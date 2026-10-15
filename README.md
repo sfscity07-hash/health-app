@@ -453,7 +453,13 @@ select id from auth.users where email = 'the-email-you-sign-in-with'
 on conflict do nothing;
 ```
 
-It should say "Success. 1 row affected" (0 rows means the email doesn't match an account). Then open **Feedback** in the app: under the form you'll see **Everyone's feedback**, newest first, with who sent each one, when, and on which version and phone. To let someone else read it too, run the same line with their email; to remove a reader, `delete from public.feedback_readers where user_id = (select id from auth.users where email = 'their-email');`.
+The SQL Editor answers "Success. No rows returned" whether or not it added you, so check it worked:
+
+```sql
+select u.email from public.feedback_readers r join auth.users u on u.id = r.user_id;
+```
+
+Your email should be listed. If nothing comes back, the email didn't match your account exactly: `select email from auth.users;` lists them, so copy yours from there and run the insert again. Then open **Feedback** in the app: under the form you'll see **Everyone's feedback**, newest first, with who sent each one, when, and on which version and phone. To let someone else read it too, run the same line with their email; to remove a reader, `delete from public.feedback_readers where user_id = (select id from auth.users where email = 'their-email');`.
 
 **Or read it in Supabase:** **Table Editor → feedback**, or this in the SQL Editor:
 
