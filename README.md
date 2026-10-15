@@ -9,23 +9,27 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 ## What works right now
 
-Updated with every release. **Latest: ready to install as a real app. Everything for the APK is set up: it updates itself over the air, opens offline with your saved data, and shows placeholders in the shape of what's loading instead of spinners.** (Before that: AI estimates for nutrients no label lists; vitamins, minerals, salt and caffeine every day; a recipe from foods you logged; water from drinks; the blank-tabs fix.)
-
-**Your Expo project is linked** (October 14): its ID and update address are now in `app.json` here, so Steps 1–6 of the APK guide are done.
+Updated with every release. **Latest: Feedback & bugs. A Feedback button at the top right of the dashboard lets anyone using your Fuel report a bug or send an idea, and you read everyone's in the app.** (Before that: ready to install as a real app, with over-the-air updates, offline use and loading placeholders; AI estimates; vitamins, minerals, salt and caffeine.)
 
 **Before running this version:**
-1. Swap your `app.json` and `eas.json` for the repo's, then pull (once):
+1. Get it:
    ```
-   git checkout -- app.json eas.json
+   cd C:\Users\Manny\health-app
    git pull
    npm ci
    ```
-   (`npm ci` installs the new packages: over-the-air updates, network status and the offline cache.) No new SQL.
-2. **Build the installable app:** carry on from [Step 7](#part-2-build-the-apk-5-minutes-of-typing-then-a-wait) of the APK guide.
-3. Not done the AI setup yet? It's in [AI estimates (optional)](#ai-estimates-optional); it works the same in the installed app.
+   Haven't pulled since linking your Expo project? Run `git checkout -- app.json eas.json` first (once).
+2. **New SQL:** in Supabase's SQL Editor, run `supabase/migrations/20261015090000_feedback.sql` once (safe to run again).
+3. **Make yourself the one who reads everyone's feedback:** see [Feedback and bug reports](#feedback-and-bug-reports) (one SQL line with your email).
+4. **Installed the APK?** Send this version to it, and to your friends' phones, over the air:
+   ```
+   npx eas-cli@latest update --channel preview --platform android --message "Feedback button"
+   ```
+   If it asks `Select environment:`, pick **preview**. Never add `--environment`. Then open the app: **New version ready · Restart**. Not installed yet? Carry on from [Step 7](#part-2-build-the-apk-5-minutes-of-typing-then-a-wait) of the APK guide; the APK will have it.
 
 ✅ **Works**
 - Create an account, sign in, sign out.
+- **Feedback & bugs** (new, needs the new SQL): the **Feedback** chip at the top right of the dashboard (and **Send feedback** in Profile) opens a short form: Bug, Idea or Other, and a message. It's sent with the sender's email, the app version, the phone model and the screen it came from, so a bug can be found. Everyone sees what they've sent; you see **Everyone's feedback** with who sent what and when, once you've made yourself the reader. At most 20 messages a day per account.
 - **Opens offline** (new; in Expo Go your phone still needs your computer, so try it in the installed app): everything you've looked at is saved on the phone, so with no signal the app still opens on your day, Food log, weight, Progress, recipes and foods, with **Offline · saved data** at the top. It refreshes by itself when you're back online. Logging needs a connection (you'll see "Couldn't save… Check your connection"). Each account's saved data is kept separately and deleted when you sign out. If you open the app offline more than an hour after you last used it, you stay signed in (Supabase renews the sign-in once you're online).
 - **Loading placeholders** (new): grey shapes of what's coming (the day's food, meal cards, the weight chart, nutrient rows, recipes, saved meals, a food) instead of spinners. They hold still with your phone's *Remove animations* setting on.
 - **Updates itself** (new, installed app only): a new version downloads in the background; **New version ready · Restart** appears at the top when it's ready (or it opens next time you start the app). Profile → bottom shows the version and update date, with **Check for updates**.
@@ -352,6 +356,7 @@ You only need to do this once.
    8. `20261013090000_water_from_drinks.sql` (water from drinks; safe to run again)
    9. `20261014090000_micronutrients.sql` (vitamins, minerals, salt and caffeine on foods; safe to run again)
    10. `20261014120000_ai_estimates.sql` (AI estimate limits and switch; safe to run again)
+   11. `20261015090000_feedback.sql` (feedback and bug reports; safe to run again)
 
    "Success. No rows returned" means it worked. If you run a file a second time you'll see an error like `type "meal_type" already exists`. That's harmless: it stops at the first line and changes nothing.
 
@@ -365,7 +370,7 @@ You only need to do this once.
      (select count(*) from public.exercises) as exercises;
    ```
 
-   You should see **16** tables, **23** privacy rules and **29** exercises.
+   You should see **18** tables, **25** privacy rules and **29** exercises.
 3. Turn off email confirmation: go to **Authentication → Sign In / Providers → Email**, switch off **Confirm email**, and save.
 
    Fuel signs you in with an email and password. With confirmation on, every new account waits for an emailed link, and the free plan only sends a few emails an hour. If you leave it on, open the link from the email (the page it opens may not load, but your account is confirmed anyway), then sign in.
@@ -435,6 +440,31 @@ Claude fills in the vitamins, minerals and caffeine that no label or USDA lists,
 7. Open the app → tap the **Salt · Caffeine** line → Nutrients. Foods with gaps are asked about once ("Asking AI about foods with no data…"), then their numbers show the **AI** label.
 
 If something's off, the Nutrients screen says what: function not deployed, key missing or not accepted, SQL not run, or today's limit reached. Each call is logged in the `ai_calls` table (tokens used, model) for you to check in Supabase.
+
+## Feedback and bug reports
+
+Anyone signed in to your Fuel (you, and friends using your APK) can send feedback from the **Feedback** chip on the dashboard or **Profile → Send feedback**. Each message is stored in the `feedback` table in your Supabase with the sender's email, the kind (bug, idea, other), the app version, the phone and the screen it came from. People only ever see their own messages.
+
+**Make yourself the reader** (once, after running `20261015090000_feedback.sql`). In Supabase's SQL Editor, with the email you sign in to Fuel with:
+
+```sql
+insert into public.feedback_readers (user_id)
+select id from auth.users where email = 'the-email-you-sign-in-with'
+on conflict do nothing;
+```
+
+It should say "Success. 1 row affected" (0 rows means the email doesn't match an account). Then open **Feedback** in the app: under the form you'll see **Everyone's feedback**, newest first, with who sent each one, when, and on which version and phone. To let someone else read it too, run the same line with their email; to remove a reader, `delete from public.feedback_readers where user_id = (select id from auth.users where email = 'their-email');`.
+
+**Or read it in Supabase:** **Table Editor → feedback**, or this in the SQL Editor:
+
+```sql
+select created_at, email, kind, message, app_version, device, screen
+from public.feedback order by created_at desc;
+```
+
+You can delete messages there once dealt with (the app can't change or delete them).
+
+**Removing the button later:** tell me, or change `FEEDBACK_ON_DASHBOARD = true` to `false` in `src/features/feedback/logic.ts` and publish an update (Part 4 of the APK guide). The dashboard chip disappears for everyone; **Profile → Send feedback** stays, so you can still read everything.
 
 ## For development
 

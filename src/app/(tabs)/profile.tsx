@@ -132,6 +132,12 @@ export default function ProfileScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text variant="label">Feedback</Text>
+        <Text variant="caption">Found a bug, or have an idea? It goes straight to the person who builds Fuel.</Text>
+        <Button label="Send feedback" variant="secondary" icon="chat" onPress={() => router.push({ pathname: '/feedback', params: { from: 'profile' } })} />
+      </Card>
+
+      <Card style={styles.section}>
         <Text variant="label">Account</Text>
         <Button label="Sign out" variant="secondary" onPress={() => supabase?.auth.signOut()} />
         <Button label="Delete account" variant="ghost" icon="trash" onPress={() => router.push('/delete-account')} />

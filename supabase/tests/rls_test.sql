@@ -269,6 +269,104 @@ begin
 end $$;
 commit;
 
+-- ---------------------------------------------------------------- feedback
+-- A sends feedback; whatever the app claims, it's stamped as A's.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+insert into public.feedback (kind, message, screen, app_version, device) values ('bug', 'The + on Lunch added to Dinner', 'dashboard', '1.0.0', 'android 34 · Pixel 7');
+insert into public.feedback (user_id, email, kind, message)
+  values ('00000000-0000-0000-0000-00000000000b', 'b@example.com', 'idea', 'Dark mode for charts');
+do $$
+begin
+  assert (select count(*) from public.feedback) = 2, 'A sees both messages A sent';
+  assert (select bool_and(user_id = '00000000-0000-0000-0000-00000000000a' and email = 'a@example.com') from public.feedback),
+    'feedback is stamped with the real sender, not what the app sent';
+  begin
+    insert into public.feedback (kind, message) values ('other', '   ');
+    raise exception 'saved empty feedback';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.feedback (kind, message) values ('rant', 'hm');
+    raise exception 'saved feedback of an unknown kind';
+  exception when check_violation then null;
+  end;
+  assert public.can_read_all_feedback() = false, 'A is not a reader';
+end $$;
+-- Nobody changes or deletes feedback from the app, or makes themselves a reader.
+do $$
+begin
+  begin
+    update public.feedback set message = 'changed';
+    raise exception 'A could edit feedback';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.feedback;
+    raise exception 'A could delete feedback';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.feedback_readers (user_id) values ('00000000-0000-0000-0000-00000000000a');
+    raise exception 'A made themselves a reader';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+commit;
+
+-- B sees only B's own feedback, until B is made a reader (in the SQL Editor).
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+insert into public.feedback (kind, message) values ('idea', 'Show salt in grams');
+do $$
+begin
+  assert (select count(*) from public.feedback) = 1, 'B sees only B''s feedback';
+end $$;
+commit;
+insert into public.feedback_readers (user_id) values ('00000000-0000-0000-0000-00000000000b');
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+begin
+  assert public.can_read_all_feedback(), 'B is a reader';
+  assert (select count(*) from public.feedback) = 3, 'a reader sees everyone''s feedback';
+  assert (select count(*) from public.feedback where email = 'a@example.com') = 2, 'with who sent it';
+end $$;
+commit;
+
+-- At most 20 messages a day per account.
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+begin
+  for i in 2..20 loop
+    insert into public.feedback (kind, message) values ('other', 'note ' || i);
+  end loop;
+  begin
+    insert into public.feedback (kind, message) values ('other', 'one too many');
+    raise exception 'saved a 21st message in a day';
+  exception when raise_exception then null;
+  end;
+end $$;
+rollback;
+
+-- Signed out, nobody reads or sends feedback.
+begin;
+set local role anon;
+do $$
+begin
+  begin
+    perform count(*) from public.feedback;
+    raise exception 'anonymous callers can read feedback';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+commit;
+
 -- A's data survived B's attempts.
 do $$
 begin
@@ -294,6 +392,7 @@ begin
   assert (select count(*) from public.food_logs) = 0, 'food logs are removed with the account';
   assert (select count(*) from public.foods) = 0, 'foods are removed with the account';
   assert (select count(*) from public.profiles) = 1, 'only B''s profile remains';
+  assert (select count(*) from public.feedback where email = 'a@example.com') = 0, 'A''s feedback is removed with the account';
 end $$;
 
 -- Signed out, nobody can delete an account.

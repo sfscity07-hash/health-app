@@ -5,6 +5,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { CalorieGauge } from '@/components/CalorieGauge';
 import { DeficitLine } from '@/components/DeficitLine';
+import { FeedbackChip } from '@/components/FeedbackChip';
 import { Confetti, type Burst } from '@/components/dashboard/Confetti';
 import { FinishDayButton } from '@/components/dashboard/FinishDayButton';
 import { FoodTimeline } from '@/components/dashboard/FoodTimeline';
@@ -25,6 +26,7 @@ import { useExpenditure } from '@/features/checkin/api';
 import { budgetOn, isCheckinDue } from '@/features/checkin/logic';
 import { buildInsights } from '@/features/dashboard/insights';
 import { useWorkouts } from '@/features/exercise/api';
+import { FEEDBACK_ON_DASHBOARD } from '@/features/feedback/logic';
 import { workoutSummary } from '@/features/exercise/logic';
 import { goodDirection } from '@/features/weight/logic';
 import { useDayDeficit } from '@/features/deficit/useDayDeficit';
@@ -212,6 +214,7 @@ export default function DashboardScreen() {
         eyebrow={formatDayLabel(selectedDate)}
         title={isToday ? greetingFor(now) : dayName(selectedDate)}
         accessory={<StreakPill count={streak.current} />}
+        corner={FEEDBACK_ON_DASHBOARD ? <FeedbackChip from="dashboard" /> : undefined}
         onRefresh={refresh}>
         <WeekRings days={weekDays} selected={selected} onSelect={setSelected} />
 

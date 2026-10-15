@@ -17,11 +17,13 @@ type ScreenProps = PropsWithChildren<{
   title?: string;
   /** Element on the right of the title row, e.g. the streak counter. */
   accessory?: ReactNode;
+  /** Small element at the right end of the eyebrow line, e.g. the Feedback chip. */
+  corner?: ReactNode;
   /** Pull-to-refresh: called when you drag the screen down. */
   onRefresh?: () => Promise<unknown>;
 }>;
 
-export function Screen({ eyebrow, title, accessory, onRefresh, children }: ScreenProps) {
+export function Screen({ eyebrow, title, accessory, corner, onRefresh, children }: ScreenProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
@@ -51,9 +53,9 @@ export function Screen({ eyebrow, title, accessory, onRefresh, children }: Scree
           { paddingTop: insets.top + space.sm, paddingBottom: insets.bottom + TAB_BAR_CLEARANCE },
         ]}>
         {title ? (
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              {eyebrow || !online ? (
+          <View style={styles.headerBlock}>
+            {eyebrow || !online || corner ? (
+              <View style={styles.eyebrowRow}>
                 <View style={styles.eyebrow}>
                   {eyebrow ? <Text variant="label">{eyebrow}</Text> : null}
                   {online ? null : (
@@ -69,12 +71,15 @@ export function Screen({ eyebrow, title, accessory, onRefresh, children }: Scree
                     </View>
                   )}
                 </View>
-              ) : null}
-              <Text variant="title" accessibilityRole="header">
+                {corner}
+              </View>
+            ) : null}
+            <View style={styles.header}>
+              <Text variant="title" accessibilityRole="header" style={styles.title}>
                 {title}
               </Text>
+              {accessory}
             </View>
-            {accessory}
           </View>
         ) : null}
         {children}
@@ -86,8 +91,10 @@ export function Screen({ eyebrow, title, accessory, onRefresh, children }: Scree
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: gutter, gap: space.lg },
-  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  headerText: { gap: 3, flexShrink: 1 },
-  eyebrow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
+  headerBlock: { gap: 3 },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.sm },
+  title: { flexShrink: 1 },
+  eyebrow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap', flexShrink: 1 },
   offline: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.pill },
 });

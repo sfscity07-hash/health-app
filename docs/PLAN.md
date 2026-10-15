@@ -346,6 +346,8 @@ In order. Each step ships on its own, with "what works" notes before you try it.
 10. **Pantry → meal plan** (L)
    - Keep an inventory of what's at home (type it, scan barcodes, or tick foods you log). Choose the days and meals ("just breakfast for 3 days", "breakfast and lunch for 2"); AI drafts meals using only what you have, Fuel scales the portions to hit your targets, and each meal logs in one tap or saves as a meal.
 
+**Feedback & bugs** ✅ (added October 15, new SQL: `20261015090000_feedback.sql`): a Feedback chip at the top right of the dashboard (removable with `FEEDBACK_ON_DASHBOARD` in `features/feedback/logic.ts`) and Profile → Send feedback. Messages go to `feedback`, stamped by the database with the sender and their email (never trusted from the app), with kind, app version, phone and screen; 20 a day per account; nobody can edit or delete from the app. Senders see their own; accounts in `feedback_readers` (added in the SQL Editor only) see everyone's in the app.
+
 **Phase 13 (installable APK + over-the-air updates, skeletons, offline)** ✅ prepared on October 14, after step 7; once you've installed the APK, steps 8–10 arrive as over-the-air updates. Reading your steps from Health Connect needs native code, so it would come with a new APK.
 
 ---

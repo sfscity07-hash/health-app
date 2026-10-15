@@ -181,6 +181,7 @@ function RootStack() {
           <Stack.Screen name="nutrients" options={EDITOR} />
           <Stack.Screen name="goals" options={EDITOR} />
           <Stack.Screen name="export" options={EDITOR} />
+          <Stack.Screen name="feedback" options={EDITOR} />
           <Stack.Screen name="delete-account" options={EDITOR} />
           <Stack.Screen name="exercise/new" options={EDITOR} />
           <Stack.Screen name="exercise/[id]" options={EDITOR} />

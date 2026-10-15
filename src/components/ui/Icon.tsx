@@ -45,6 +45,8 @@ const ICONS = {
   pot: ['M3.5 9.5h17', 'M6.5 9.5a5.5 3 0 0 1 11 0M12 6.5V5', 'M5 9.5v6.5a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4V9.5', 'M5 13H2.5M19 13h2.5'],
   trash: ['M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3'],
   pencil: ['M4 20h4L19 9l-4-4L4 16z', 'M13.5 6.5l4 4'],
+  /** A speech bubble: feedback. */
+  chat: ['M5 5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5h-7.5l-4.5 3.5V16.5H5A1.5 1.5 0 0 1 3.5 15V6.5A1.5 1.5 0 0 1 5 5z', 'M8.5 10.5h7'],
   /** A circling arrow: a new version, or try again. */
   refresh: ['M19.5 12a7.5 7.5 0 1 1-2.2-5.3', 'M19.5 4.5v4h-4'],
   /** Wi-Fi with a line through it: no connection. */

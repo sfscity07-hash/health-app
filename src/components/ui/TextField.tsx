@@ -29,6 +29,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       <View
         style={[
           styles.box,
+          rest.multiline && styles.boxMultiline,
           {
             backgroundColor: colors.surface2,
             borderColor: error ? colors.warn : focused ? colors.accent : colors.hairline,
@@ -40,7 +41,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
           placeholderTextColor={colors.textTertiary}
           selectionColor={colors.accent}
           cursorColor={colors.accent}
-          style={[styles.input, { color: colors.text }, Platform.OS === 'web' && styles.noWebOutline]}
+          style={[styles.input, rest.multiline && styles.inputMultiline, { color: colors.text }, Platform.OS === 'web' && styles.noWebOutline]}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -86,6 +87,9 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
     fontVariant: ['tabular-nums'],
   },
+  // Several lines: text starts at the top and the box grows with it.
+  boxMultiline: { alignItems: 'flex-start' },
+  inputMultiline: { minHeight: 132, maxHeight: 260, textAlignVertical: 'top', fontVariant: [] },
   // The field's own border already shows focus; drop the browser's extra outline.
   noWebOutline: { outlineWidth: 0 },
 });
