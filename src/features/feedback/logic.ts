@@ -57,6 +57,32 @@ export function deviceLabel(os: string, version: string | number, constants: Rec
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** "iPhone · iOS 18.1 · Safari · Home Screen", from the browser's user agent. */
+export function webDeviceLabel(ua: string, standalone = false): string {
+  const apple = /iPhone|iPad|iPod/.exec(ua)?.[0];
+  const iosVersion = /OS (\d+)[_.](\d+)/.exec(ua);
+  const android = /Android (\d+(?:\.\d+)?)/.exec(ua);
+  const device = apple
+    ? `${apple} · iOS ${iosVersion ? `${iosVersion[1]}.${iosVersion[2]}` : '?'}`
+    : android
+      ? `Android ${android[1]}`
+      : /Macintosh/.test(ua)
+        ? 'Mac'
+        : /Windows/.test(ua)
+          ? 'Windows'
+          : 'Computer';
+  const browser = /Edg(e|iOS|A)?\//.test(ua)
+    ? 'Edge'
+    : /CriOS|Chrome\//.test(ua)
+      ? 'Chrome'
+      : /FxiOS|Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Safari\//.test(ua)
+          ? 'Safari'
+          : 'browser';
+  return ['Web', device, browser, standalone ? 'Home Screen' : null].filter(Boolean).join(' · ').slice(0, 200);
+}
+
 /** What to tell someone whose feedback didn't send. */
 export function sendErrorMessage(error: unknown): string {
   const e = error as { message?: string } | null;

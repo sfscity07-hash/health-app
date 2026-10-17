@@ -1,6 +1,7 @@
 import { render, screen, userEvent } from '@testing-library/react-native';
 
-import { deviceLabel, feedbackProblem, sendErrorMessage, sentAt, type Feedback } from '@/features/feedback/logic';
+import { deviceLabel, feedbackProblem, sendErrorMessage, sentAt, webDeviceLabel, type Feedback } from '@/features/feedback/logic';
+import { isAppleMobile, shouldShowInstallHint } from '@/features/web/install';
 
 const mockSend = { mutate: jest.fn(), isPending: false };
 const mockList = { data: [] as Feedback[], isPending: false, isError: false, error: null };
@@ -49,6 +50,36 @@ describe('feedback rules', () => {
     expect(deviceLabel('android', 34, { Release: '14', Brand: 'OnePlus', Model: 'OnePlus 11' })).toBe('Android 14 · OnePlus 11');
     expect(deviceLabel('android', 34)).toBe('Android 34');
     expect(deviceLabel('web', '')).toBe('Web');
+  });
+
+  it('names the browser and phone on the web version', () => {
+    const iphone =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+    expect(webDeviceLabel(iphone)).toBe('Web · iPhone · iOS 18.1 · Safari');
+    expect(webDeviceLabel(iphone, true)).toBe('Web · iPhone · iOS 18.1 · Safari · Home Screen');
+    expect(webDeviceLabel('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0 Mobile/15E148 Safari/604.1')).toBe(
+      'Web · iPhone · iOS 17.5 · Chrome',
+    );
+    expect(webDeviceLabel('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36')).toBe(
+      'Web · Android 14 · Chrome',
+    );
+    expect(webDeviceLabel('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36 Edg/129.0')).toBe(
+      'Web · Windows · Edge',
+    );
+  });
+
+  it('suggests the Home Screen only in a browser on an iPhone or iPad, until done or dismissed', () => {
+    const iphone = { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) Safari/604.1' };
+    const ipad = { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', platform: 'MacIntel', maxTouchPoints: 5 };
+    const mac = { userAgent: ipad.userAgent, platform: 'MacIntel', maxTouchPoints: 0 };
+    expect(isAppleMobile(iphone)).toBe(true);
+    expect(isAppleMobile(ipad)).toBe(true);
+    expect(isAppleMobile(mac)).toBe(false);
+    expect(shouldShowInstallHint(iphone, false, false)).toBe(true);
+    expect(shouldShowInstallHint(iphone, true, false)).toBe(false);
+    expect(shouldShowInstallHint(iphone, false, true)).toBe(false);
+    expect(shouldShowInstallHint({ userAgent: 'Mozilla/5.0 (Linux; Android 14)' }, false, false)).toBe(false);
+    expect(shouldShowInstallHint(null, false, false)).toBe(false);
   });
 
   it('explains why it didn’t send', () => {

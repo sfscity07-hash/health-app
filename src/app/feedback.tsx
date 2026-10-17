@@ -14,8 +14,9 @@ import { TextField } from '@/components/ui/TextField';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { loadErrorMessage } from '@/features/auth/errors';
 import { useFeedbackList, useFeedbackReader, useSendFeedback } from '@/features/feedback/api';
-import { deviceLabel, feedbackProblem, KINDS, MAX_LENGTH, sendErrorMessage, sentAt, type Feedback, type FeedbackKind } from '@/features/feedback/logic';
+import { deviceLabel, feedbackProblem, KINDS, MAX_LENGTH, sendErrorMessage, sentAt, webDeviceLabel, type Feedback, type FeedbackKind } from '@/features/feedback/logic';
 import { versionLabel } from '@/features/updates/ota';
+import { isStandalone, userAgent } from '@/features/web/install';
 import { success } from '@/lib/haptics';
 import { useToast } from '@/store/toast';
 import { useTheme } from '@/theme/theme';
@@ -28,7 +29,7 @@ function sentWith() {
   const expoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
   return {
     app_version: `${versionLabel(Constants.expoConfig?.version ?? '1.0.0')}${expoGo ? ' · Expo Go' : ''}`.slice(0, 120),
-    device: deviceLabel(Platform.OS, Platform.Version, Platform.constants as unknown as Record<string, unknown>),
+    device: Platform.OS === 'web' ? webDeviceLabel(userAgent() ?? '', isStandalone()) : deviceLabel(Platform.OS, Platform.Version, Platform.constants as unknown as Record<string, unknown>),
   };
 }
 

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { microsFromOff } from '@/features/nutrients/micros';
 import { measureToServing } from '@/features/search/measures';
 import type { ExternalFood } from '@/features/search/types';
@@ -21,7 +23,10 @@ const FIELDS = [
 ].join(',');
 
 /** Open Food Facts asks every app to say who it is. */
-const HEADERS = { Accept: 'application/json', 'User-Agent': 'Fuel/1.0 (personal calorie tracker)' };
+// Open Food Facts asks apps to name themselves. Browsers send their own user agent, and a
+// custom one would make them ask permission first (a CORS preflight), so the web version doesn't.
+const HEADERS: Record<string, string> =
+  Platform.OS === 'web' ? { Accept: 'application/json' } : { Accept: 'application/json', 'User-Agent': 'Fuel/1.0 (personal calorie tracker)' };
 
 export type OffProduct = {
   code?: string;

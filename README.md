@@ -9,7 +9,9 @@ fast food logging (search, barcode, quick add), macros, smart trend weight, an a
 
 ## What works right now
 
-Updated with every release. **Latest: Feedback & bugs. A Feedback button at the top right of the dashboard lets anyone using your Fuel report a bug or send an idea, and you read everyone's in the app.** (Before that: ready to install as a real app, with over-the-air updates, offline use and loading placeholders; AI estimates; vitamins, minerals, salt and caffeine.)
+Updated with every release. **Latest: Fuel on an iPhone. The same app runs in Safari: publish it once with two commands ([Use Fuel on an iPhone](#use-fuel-on-an-iphone-web-version)), send the link, and it goes on the Home Screen with its own icon.** Before that: **Feedback & bugs. A Feedback button at the top right of the dashboard lets anyone using your Fuel report a bug or send an idea, and you read everyone's in the app.** (Before that: ready to install as a real app, with over-the-air updates, offline use and loading placeholders; AI estimates; vitamins, minerals, salt and caffeine.)
+
+**For the iPhone version:** follow [Use Fuel on an iPhone](#use-fuel-on-an-iphone-web-version). Nothing changes for you on Android, and no new SQL; the steps below are still the ones for Feedback & bugs if you haven't done them.
 
 **Before running this version:**
 1. Get it:
@@ -339,6 +341,52 @@ Profile → bottom shows `Fuel 1.0.0 · update of …` with the update's date, a
 - **The update opens but can't load anything**: it was published with `--environment`, or without a `.env`. Publish again with the command above.
 - **`git pull` complains about `app.json`**: see Step 6.
 - **Limits**: Expo's free plan has a monthly allowance of builds and update downloads, far more than one person's app needs.
+
+## Use Fuel on an iPhone (web version)
+
+Fuel can't be installed on an iPhone without a paid Apple developer account, but the very same app runs in Safari: same screens, same Supabase, same account system. You publish it to a web address once; your friend opens it, adds it to her Home Screen, and it opens full screen from its own icon like an app.
+
+**Part 1: publish it (on your computer, about 5 minutes the first time)**
+
+Your Expo account hosts it (EAS Hosting). In Command Prompt:
+
+```
+cd C:\Users\Manny\health-app
+git pull
+npm ci
+npx expo export --platform web
+npx eas-cli@latest deploy --prod
+```
+
+- `expo export` builds the web version into a `dist` folder (with the keys from your `.env`, like the APK). It takes a minute or two.
+- The first time, `deploy` asks `Choose a preview URL for your project:`. Type a short name with letters, numbers and dashes, like `fuel-manny`, and Enter.
+- It ends by printing the addresses. The one marked **Production** is the link to send, like `https://fuel-manny.expo.app`. Open it on your own phone first to check it loads.
+- Expo's free plan includes a monthly allowance for web hosting, far more than two people use. If it ever asks you to upgrade, tell me and I'll move it to another free host.
+
+**Part 2: on her iPhone**
+
+1. Open the link in **Safari**.
+2. Tap the **Share** button (the square with an arrow, at the bottom), scroll down, tap **Add to Home Screen**, then **Add**. A small card on the dashboard explains this too, until she taps **Got it**.
+3. Open **Fuel** from the Home Screen icon (not from Safari) and tap **Create account**. The Home Screen app keeps its own sign-in, separate from Safari's, so she signs in there.
+4. Want AI estimates for her too? Add her email to `AI_ALLOWED_EMAILS` ([how](#ai-estimates-optional): the list is comma-separated).
+
+**Part 3: updates.** The installed APK updates over the air, but the web version updates when you publish it again. After a `git pull`, run the same two commands:
+
+```
+npx expo export --platform web
+npx eas-cli@latest deploy --prod
+```
+
+She gets the new version the next time she opens Fuel (closing and reopening it). My release notes will say **Web: publish again** when there's something new for her.
+
+**What's different on an iPhone**
+- **No reminders:** browsers can't schedule them, so the Reminders card says so.
+- **Offline:** once Fuel is open it shows saved data without a connection, but starting it with no connection at all doesn't work (the web version loads from the internet).
+- **Barcode scanning** uses the camera through Safari: allow the camera when asked. If a barcode won't read, **Type the number instead** always works.
+- **No vibration** on taps (iPhones don't allow it for websites).
+- If she doesn't open Fuel for a few weeks, the iPhone may clear its storage and ask her to sign in again. Her data is safe in Supabase.
+- **Feedback** works the same, and says it came from "Web · iPhone · iOS … · Safari", so you can tell bug reports apart.
+- If food search only finds her own foods on the web but works on Android, tell me: that would be a database refusing requests from websites, which I couldn't test from here.
 
 ## Connect your free Supabase backend
 

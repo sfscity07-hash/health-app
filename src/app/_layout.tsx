@@ -7,6 +7,7 @@ import {
 } from '@expo-google-fonts/geist';
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
+import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -38,10 +39,17 @@ export default function RootLayout() {
     GeistMono_500Medium,
   });
 
-  if (!fontsLoaded && !fontError) return null;
+  // The browser tab's name on the web version, set even before anything else shows.
+  const head = (
+    <Head>
+      <title>Fuel</title>
+    </Head>
+  );
+  if (!fontsLoaded && !fontError) return head;
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      {head}
       <SafeAreaProvider>
         <AuthProvider>
           <QueryProvider>

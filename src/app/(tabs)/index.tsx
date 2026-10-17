@@ -6,6 +6,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { CalorieGauge } from '@/components/CalorieGauge';
 import { DeficitLine } from '@/components/DeficitLine';
 import { FeedbackChip } from '@/components/FeedbackChip';
+import { InstallHint } from '@/components/InstallHint';
 import { Confetti, type Burst } from '@/components/dashboard/Confetti';
 import { FinishDayButton } from '@/components/dashboard/FinishDayButton';
 import { FoodTimeline } from '@/components/dashboard/FoodTimeline';
@@ -216,6 +217,7 @@ export default function DashboardScreen() {
         accessory={<StreakPill count={streak.current} />}
         corner={FEEDBACK_ON_DASHBOARD ? <FeedbackChip from="dashboard" /> : undefined}
         onRefresh={refresh}>
+        <InstallHint />
         <WeekRings days={weekDays} selected={selected} onSelect={setSelected} />
 
         {checkinDue ? <CheckinBanner onPress={() => router.push('/checkin')} /> : null}
